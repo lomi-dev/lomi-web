@@ -1,0 +1,41 @@
+---
+import geistFont from '@fontsource-variable/geist/files/geist-latin-wght-normal.woff2?url';
+import serifFont from '@fontsource/instrument-serif/files/instrument-serif-latin-400-italic.woff2?url';
+import '../styles/global.css';
+import { site } from '../data/site';
+
+const canonical = Astro.site ? new URL(Astro.url.pathname, Astro.site) : undefined;
+const socialImage = Astro.site ? new URL('/social-card.png', Astro.site) : undefined;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f7f8f3" />
+    <meta name="description" content={site.description} />
+    <meta name="color-scheme" content="light" />
+    <title>{site.title}</title>
+    <link rel="icon" href="/icons/lomi-v1.3.ico" sizes="any" />
+    <link rel="icon" type="image/png" href="/icons/lomi-v1.3-32.png" sizes="32x32" />
+    <link rel="icon" type="image/svg+xml" href="/icons/lomi-v1.3.svg" sizes="any" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
+    <link rel="preload" href={geistFont} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={serifFont} as="font" type="font/woff2" crossorigin />
+    {canonical && <link rel="canonical" href={canonical} />}
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="lomi" />
+    <meta property="og:title" content={site.title} />
+    <meta property="og:description" content={site.description} />
+    {canonical && <meta property="og:url" content={canonical} />}
+    {socialImage && <meta property="og:image" content={socialImage} />}
+    {socialImage && <meta property="og:image:width" content="1200" />}
+    {socialImage && <meta property="og:image:height" content="630" />}
+    <meta name="twitter:card" content="summary_large_image" />
+    <slot name="head" />
+  </head>
+  <body id="top">
+    <a class="skip-link" href="#main">Skip to content</a>
+    <slot />
+  </body>
+</html>
