@@ -7,21 +7,21 @@ export const site = {
   docs: 'https://github.com/lomi-dev/lomi#readme',
 };
 
-// These are verified v0.4.0 assets. Update together when a new release ships.
-const release = `${site.releases}/download/v0.4.0`;
+// Resolve downloads through the release page until Lomi installers are published.
+const release = `${site.releases}/latest`;
 export const downloads = [
   { name: 'macOS', icon: 'apple' as const, subtitle: 'Made for your Mac', options: [
-    { label: 'Apple Silicon', href: `${release}/SimpleBench_0.4.0_aarch64.dmg` },
-    { label: 'Intel', href: `${release}/SimpleBench_0.4.0_x64.dmg` },
+    { label: 'Apple Silicon', href: release },
+    { label: 'Intel', href: release },
   ] },
   { name: 'Windows', icon: 'windows' as const, subtitle: 'A new home for your workflow', options: [
-    { label: 'Windows x64', href: `${release}/SimpleBench_0.4.0_x64-setup.exe` },
-    { label: 'MSI installer', href: `${release}/SimpleBench_0.4.0_x64_en-US.msi` },
+    { label: 'Windows x64', href: release },
+    { label: 'MSI installer', href: release },
   ] },
   { name: 'Linux', icon: 'linux' as const, subtitle: 'Right at home on Linux', options: [
-    { label: 'AppImage', href: `${release}/SimpleBench_0.4.0_amd64.AppImage` },
-    { label: '.deb', href: `${release}/SimpleBench_0.4.0_amd64.deb` },
-    { label: '.rpm', href: `${release}/SimpleBench-0.4.0-1.x86_64.rpm` },
+    { label: 'AppImage', href: release },
+    { label: '.deb', href: release },
+    { label: '.rpm', href: release },
   ] },
 ];
 
@@ -31,5 +31,5 @@ export const faqs = [
   { question: 'Is lomi free and open source?', answer: 'Yes. Lomi is free to download, and its source code is available under the Apache 2.0 license. You can explore the code, modify it, and contribute. Any third-party AI services you connect have their own pricing.' },
   { question: 'Which operating systems are supported?', answer: 'Desktop packages are available for macOS on Apple Silicon and Intel, Windows x64, and Linux x86_64. You can choose your package below. Individual features can vary by platform and release; the release notes describe what is included.' },
   { question: 'Where does my work live?', answer: 'Your projects, workspace state, and chat history live locally on your computer. When you use an AI provider or CLI agent, the content you send is handled by that service under its own policies. You choose which tools and providers to connect.' },
-  { question: 'Why do the downloads say SimpleBench?', answer: 'Lomi grew out of SimpleBench. The current desktop packages and product screenshots still carry that earlier name while the project moves to lomi. The download links on this page point to the real releases in our GitHub repository.' },
+  { question: 'Where can I download lomi?', answer: 'Open the latest release on GitHub and choose the installer for your operating system. The release page lists the available packages and installation notes.' },
 ];

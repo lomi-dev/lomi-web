@@ -2,7 +2,7 @@
 
 ## Brand identity
 
-Official assets copied from the user-supplied `lomi-system-v1.3/assets/logos` package:
+Official assets copied from the user-supplied `../brandbook/assets/logos` package:
 
 - `lomi-wordmark-transparent-tight.svg` → `src/assets/lomi-wordmark.svg`.
 - `lomi-favicon.svg` → `public/favicon.svg`.
@@ -29,7 +29,7 @@ Exact generation prompt:
 
 Both screenshots come from the supplied local `lomi` repository. They are real native application captures, not reconstructed interfaces. Their capture procedure is documented in that repository's `docs/screenshots.md`.
 
-The screenshots still show the former SimpleBench name. The website intentionally preserves their original content and explains the transition to visitors.
+The current work-in-progress page does not display application screenshots. Capture new screenshots from a Lomi build before adding them to the site.
 
 ## Typography
 
