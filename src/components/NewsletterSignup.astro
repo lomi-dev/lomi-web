@@ -1,0 +1,140 @@
+---
+const isConfigured = import.meta.env.PUBLIC_PLUNK_API_KEY?.startsWith('pk_');
+---
+
+<section class="newsletter" aria-labelledby="newsletter-title">
+  <h2 id="newsletter-title">Get the next update.</h2>
+  <p>Occasional notes on what we’re building. Unsubscribe anytime.</p>
+  <form id="newsletter-form">
+    <label for="newsletter-email">Email address</label>
+    <div class="newsletter-controls">
+      <input
+        id="newsletter-email"
+        name="email"
+        type="email"
+        inputmode="email"
+        autocomplete="email"
+        placeholder="you@example.com"
+        maxlength="254"
+        required
+        disabled
+      />
+      <button type="submit" disabled>Subscribe</button>
+    </div>
+    <p id="newsletter-status" class="newsletter-status" role="status" aria-live="polite">
+      {!isConfigured && 'Newsletter signup is temporarily unavailable.'}
+    </p>
+  </form>
+</section>
+
+<noscript><p class="newsletter-noscript">Enable JavaScript to subscribe to the newsletter.</p></noscript>
+
+<script>
+  const form = document.querySelector<HTMLFormElement>('#newsletter-form');
+  const emailInput = document.querySelector<HTMLInputElement>('#newsletter-email');
+  const submitButton = form?.querySelector<HTMLButtonElement>('button[type="submit"]');
+  const status = document.querySelector<HTMLElement>('#newsletter-status');
+  const publicKey = import.meta.env.PUBLIC_PLUNK_API_KEY;
+
+  emailInput?.addEventListener('input', () => {
+    if (status?.dataset.state) {
+      status.textContent = '';
+      status.removeAttribute('data-state');
+    }
+  });
+
+  form?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!emailInput || !submitButton || !status || submitButton.disabled || !form.reportValidity() || !publicKey?.startsWith('pk_')) return;
+
+    const email = emailInput.value.trim();
+    submitButton.disabled = true;
+    submitButton.textContent = 'Subscribing…';
+    status.textContent = '';
+    status.removeAttribute('data-state');
+
+    try {
+      const response = await fetch('https://next-api.useplunk.com/v1/track', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${publicKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          event: 'newsletter_signup',
+          subscribed: true,
+          data: { source: 'lomi_web' },
+        }),
+      });
+
+      if (!response.ok) throw new Error(`Plunk returned ${response.status}`);
+
+      form.reset();
+      status.textContent = 'You’re on the list. Thanks for joining!';
+      status.dataset.state = 'success';
+    } catch {
+      status.textContent = 'Something went wrong. Please try again.';
+      status.dataset.state = 'error';
+    } finally {
+      submitButton.disabled = false;
+      submitButton.textContent = 'Subscribe';
+    }
+  });
+
+  if (publicKey?.startsWith('pk_') && emailInput && submitButton) {
+    emailInput.disabled = false;
+    submitButton.disabled = false;
+  }
+</script>
+
+<style>
+  .newsletter { width: min(100%, 440px); margin: 48px auto 0; text-align: left; }
+  .newsletter h2 { font-size: 15px; font-weight: 600; letter-spacing: -.02em; }
+  .newsletter > p { margin-top: 5px; color: var(--color-text-secondary); font-size: 12px; line-height: 1.6; }
+  .newsletter form { margin-top: 18px; }
+  .newsletter label { display: block; margin-bottom: 8px; font-size: 12px; font-weight: 500; }
+  .newsletter-controls { display: flex; gap: 8px; }
+  .newsletter input {
+    min-width: 0;
+    flex: 1;
+    min-height: 48px;
+    padding: 0 14px;
+    border: 1px solid #a9b0a8;
+    border-radius: 9px;
+    background: #fff;
+    color: var(--color-ink);
+    font: inherit;
+    font-size: 14px;
+  }
+  .newsletter input::placeholder { color: #68716a; }
+  .newsletter button {
+    min-height: 48px;
+    padding: 0 19px;
+    border: 1px solid var(--color-ink);
+    border-radius: 9px;
+    background: var(--color-lime);
+    color: var(--color-ink);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  .newsletter button:active { background: var(--color-lime-pressed); }
+  .newsletter button:disabled { cursor: wait; opacity: .65; }
+  .newsletter input:disabled { background: #f2f3ef; }
+  .newsletter input:focus-visible, .newsletter button:focus-visible { outline-offset: 3px; }
+  .newsletter-status { min-height: 20px; margin-top: 9px; font-size: 12px; line-height: 1.5; }
+  .newsletter-status[data-state="success"] { color: #245a3b; }
+  .newsletter-status[data-state="error"] { color: #a02424; }
+  .newsletter-noscript { text-align: center; font-size: 12px; }
+
+  @media (hover: hover) and (pointer: fine) {
+    .newsletter button:not(:disabled):hover { background: var(--color-lime-hover); }
+  }
+  @media (max-width: 460px) {
+    .newsletter { margin-top: 38px; }
+    .newsletter-controls { flex-direction: column; }
+    .newsletter input { flex: auto; width: 100%; }
+  }
+</style>

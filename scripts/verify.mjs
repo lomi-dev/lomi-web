@@ -19,6 +19,7 @@ try {
   await expect(page).toHaveTitle('lomi: Work in progress');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Follow the progress' })).toHaveAttribute('href', 'https://github.com/lomi-dev/lomi');
+  await expect(page.getByRole('heading', { name: 'Get the next update.' })).toBeVisible();
   await expect(page.locator('nav, footer, dialog')).toHaveCount(0);
 
   for (const width of [320, 390, 768, 1024, 1440, 1920]) {
@@ -39,7 +40,40 @@ try {
     await writeFile(`artifacts/accessibility-${width}.json`, JSON.stringify(results.violations, null, 2));
     expect(results.violations, `Accessibility at ${width}px`).toEqual([]);
   }
-  expect(await page.locator('astro-island, script').count()).toBe(0);
+  const email = page.getByRole('textbox', { name: 'Email address' });
+  const subscribe = page.getByRole('button', { name: 'Subscribe' });
+  if (await subscribe.isEnabled()) {
+    let requestBody;
+    let authorization;
+    await page.route('https://next-api.useplunk.com/v1/track', async (route) => {
+      requestBody = route.request().postDataJSON();
+      authorization = route.request().headers().authorization;
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true }) });
+    });
+    await email.fill('reader@example.com');
+    await subscribe.click();
+    await expect(page.getByRole('status')).toHaveText('You’re on the list. Thanks for joining!');
+    expect(requestBody).toEqual({
+      email: 'reader@example.com',
+      event: 'newsletter_signup',
+      subscribed: true,
+      data: { source: 'lomi_web' },
+    });
+    expect(authorization).toMatch(/^Bearer pk_/);
+    await expect(email).toHaveValue('');
+
+    await page.unroute('https://next-api.useplunk.com/v1/track');
+    await page.route('https://next-api.useplunk.com/v1/track', (route) => route.fulfill({ status: 500 }));
+    await email.fill('reader@example.com');
+    await subscribe.click();
+    await expect(page.getByRole('status')).toHaveText('Something went wrong. Please try again.');
+    await expect(subscribe).toBeEnabled();
+  } else {
+    await expect(email).toBeDisabled();
+    await expect(page.getByRole('status')).toHaveText('Newsletter signup is temporarily unavailable.');
+  }
+
+  expect(await page.locator('astro-island').count()).toBe(0);
   expect(errors).toEqual([]);
 
   const staticContext = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
@@ -47,12 +81,14 @@ try {
   await staticPage.goto(url);
   await expect(staticPage.getByRole('heading', { level: 1 })).toBeVisible();
   await expect(staticPage.getByRole('link', { name: 'Follow the progress' })).toBeVisible();
+  await expect(staticPage.getByRole('button', { name: 'Subscribe' })).toBeDisabled();
+  await expect(staticPage.locator('.newsletter-noscript')).toBeVisible();
   await staticPage.keyboard.press('Tab');
   await expect(staticPage.getByRole('link', { name: 'Skip to content' })).toBeFocused();
   await staticPage.keyboard.press('Enter');
   await expect(staticPage.locator('#main')).toBeFocused();
   await staticContext.close();
-  console.log('Passed: 6 viewport widths, short landscape layout, GitHub link, keyboard access, no-JS rendering, zero client scripts, and mobile/desktop accessibility.');
+  console.log('Passed: 6 viewport widths, short landscape layout, GitHub link, newsletter form, keyboard access, no-JS rendering, and mobile/desktop accessibility.');
 } finally {
   await browser.close();
 }
