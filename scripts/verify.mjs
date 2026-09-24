@@ -19,7 +19,7 @@ try {
   await expect(page).toHaveTitle('lomi: Work in progress');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Follow the progress on GitHub' })).toHaveAttribute('href', 'https://github.com/lomi-dev/lomi');
-  await expect(page.getByRole('heading', { name: 'Get the next update.' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Newsletter signup' })).toBeVisible();
   await expect(page.locator('nav, footer, dialog')).toHaveCount(0);
 
   for (const width of [320, 390, 768, 1024, 1440, 1920]) {

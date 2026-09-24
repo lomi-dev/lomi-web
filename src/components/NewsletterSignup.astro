@@ -2,8 +2,7 @@
 const isConfigured = import.meta.env.PUBLIC_PLUNK_API_KEY?.startsWith('pk_');
 ---
 
-<section class="newsletter" aria-labelledby="newsletter-title">
-  <h2 id="newsletter-title">Get the next update.</h2>
+<section class="newsletter" aria-label="Newsletter signup">
   <form id="newsletter-form">
     <label for="newsletter-email">Email address</label>
     <div class="newsletter-controls">
@@ -94,8 +93,7 @@ const isConfigured = import.meta.env.PUBLIC_PLUNK_API_KEY?.startsWith('pk_');
     margin: 42px auto 0;
     text-align: center;
   }
-  .newsletter h2 { font-size: 17px; font-weight: 600; letter-spacing: -.025em; }
-  .newsletter form { margin-top: 20px; }
+  .newsletter form { margin: 0; }
   .newsletter label { display: block; margin-bottom: 8px; font-size: 12px; font-weight: 500; text-align: left; }
   .newsletter-controls { display: flex; gap: 8px; }
   .newsletter input {
