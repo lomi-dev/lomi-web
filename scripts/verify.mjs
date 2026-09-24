@@ -18,7 +18,7 @@ try {
   expect(response.status()).toBe(200);
   await expect(page).toHaveTitle('lomi: Work in progress');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Follow the progress' })).toHaveAttribute('href', 'https://github.com/lomi-dev/lomi');
+  await expect(page.getByRole('link', { name: 'Follow the progress on GitHub' })).toHaveAttribute('href', 'https://github.com/lomi-dev/lomi');
   await expect(page.getByRole('heading', { name: 'Get the next update.' })).toBeVisible();
   await expect(page.locator('nav, footer, dialog')).toHaveCount(0);
 
@@ -29,8 +29,8 @@ try {
   }
   await page.setViewportSize({ width: 844, height: 390 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(844);
-  await page.getByRole('link', { name: 'Follow the progress' }).scrollIntoViewIfNeeded();
-  await expect(page.getByRole('link', { name: 'Follow the progress' })).toBeInViewport();
+  await page.getByRole('link', { name: 'Follow the progress on GitHub' }).scrollIntoViewIfNeeded();
+  await expect(page.getByRole('link', { name: 'Follow the progress on GitHub' })).toBeInViewport();
 
   for (const width of [390, 1440]) {
     await page.setViewportSize({ width, height: 900 });
@@ -80,7 +80,7 @@ try {
   const staticPage = await staticContext.newPage();
   await staticPage.goto(url);
   await expect(staticPage.getByRole('heading', { level: 1 })).toBeVisible();
-  await expect(staticPage.getByRole('link', { name: 'Follow the progress' })).toBeVisible();
+  await expect(staticPage.getByRole('link', { name: 'Follow the progress on GitHub' })).toBeVisible();
   await expect(staticPage.getByRole('button', { name: 'Subscribe' })).toBeDisabled();
   await expect(staticPage.locator('.newsletter-noscript')).toBeVisible();
   await staticPage.keyboard.press('Tab');
