@@ -68,13 +68,11 @@ h1, p { margin: 0; }
 h1 { font-size: clamp(54px, 7.1vw, 100px); font-weight: 480; line-height: 1.05; letter-spacing: -.065em; text-wrap: balance; }
 h1 em { display: inline-block; padding-right: .06em; font-family: var(--font-serif); font-weight: 400; font-size: 1.08em; letter-spacing: -.035em; }
 .wip-description { margin-top: 30px; font-size: 15px; line-height: 1.8; color: var(--color-text-secondary); text-wrap: balance; }
-.github-link { display: inline-flex; justify-content: center; align-items: center; gap: 9px; min-height: 44px; margin-top: 18px; color: #39463d; font-size: 13px; font-weight: 500; }
-.github-link span { text-decoration: underline; text-decoration-color: #9ba79d; text-underline-offset: 4px; }
+.github-button { display: inline-flex; justify-content: center; align-items: center; gap: 11px; min-height: 49px; margin-top: 22px; padding: 0 22px; background: var(--color-lime); color: var(--color-ink); border: 1px solid var(--color-ink); border-radius: 9px; font-size: 13px; font-weight: 500; box-shadow: 0 3px 8px #0b0d0c0a; }
 @media (hover: hover) and (pointer: fine) {
-  .github-link:hover { color: var(--color-ink); }
-  .github-link:hover span { text-decoration-color: currentColor; }
+  .github-button:hover { background: var(--color-lime-hover); }
 }
-.github-link:active { color: var(--color-focus); }
+.github-button:active { background: var(--color-lime-pressed); }
 
 @media (max-width: 600px) {
   .wip-page { padding: 132px 20px 88px; }
@@ -82,7 +80,7 @@ h1 em { display: inline-block; padding-right: .06em; font-family: var(--font-ser
   .wordmark svg { width: 96px; }
   h1 { font-size: clamp(44px, 11.5vw, 66px); }
   .wip-description { margin-top: 25px; font-size: 13px; line-height: 1.9; }
-  .github-link { margin-top: 14px; }
+  .github-button { margin-top: 18px; }
   .sky-background img { object-position: 47% center; }
 }
 @media (max-height: 600px) and (min-width: 601px) {
@@ -91,5 +89,5 @@ h1 em { display: inline-block; padding-right: .06em; font-family: var(--font-ser
   .wordmark svg { width: 96px; }
   h1 { font-size: 64px; }
   .wip-description { margin-top: 20px; }
-  .github-link { margin-top: 8px; }
+  .github-button { margin-top: 12px; }
 }
