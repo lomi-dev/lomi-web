@@ -90,11 +90,11 @@ const isConfigured = import.meta.env.PUBLIC_PLUNK_API_KEY?.startsWith('pk_');
 <style>
   .newsletter {
     width: min(100%, 510px);
-    margin: 42px auto 0;
+    margin: 26px auto 0;
     text-align: center;
   }
   .newsletter form { margin: 0; }
-  .newsletter label { display: block; margin-bottom: 8px; font-size: 12px; font-weight: 500; text-align: left; }
+  .newsletter label { display: block; margin-bottom: 6px; font-size: 12px; font-weight: 500; text-align: left; }
   .newsletter-controls { display: flex; gap: 8px; }
   .newsletter input {
     min-width: 0;
@@ -125,7 +125,7 @@ const isConfigured = import.meta.env.PUBLIC_PLUNK_API_KEY?.startsWith('pk_');
   .newsletter button:disabled { cursor: wait; opacity: .65; }
   .newsletter input:disabled { background: #f2f3ef; }
   .newsletter input:focus-visible, .newsletter button:focus-visible { outline-offset: 3px; }
-  .newsletter-status { min-height: 18px; margin-top: 8px; font-size: 12px; line-height: 1.5; }
+  .newsletter-status { min-height: 16px; margin-top: 5px; font-size: 12px; line-height: 1.5; }
   .newsletter-status[data-state="success"] { color: #245a3b; }
   .newsletter-status[data-state="error"] { color: #a02424; }
   .newsletter-note { color: var(--color-text-secondary); font-size: 12px; line-height: 1.6; }
@@ -135,11 +135,11 @@ const isConfigured = import.meta.env.PUBLIC_PLUNK_API_KEY?.startsWith('pk_');
     .newsletter button:not(:disabled):hover { background: var(--color-lime-hover); }
   }
   @media (max-width: 460px) {
-    .newsletter { margin-top: 36px; }
+    .newsletter { margin-top: 24px; }
     .newsletter-controls { flex-direction: column; }
     .newsletter input { flex: auto; width: 100%; }
   }
   @media (max-height: 600px) and (min-width: 601px) {
-    .newsletter { margin-top: 25px; }
+    .newsletter { margin-top: 18px; }
   }
 </style>
