@@ -4,7 +4,6 @@ const isConfigured = import.meta.env.PUBLIC_PLUNK_API_KEY?.startsWith('pk_');
 
 <section class="newsletter" aria-labelledby="newsletter-title">
   <h2 id="newsletter-title">Get the next update.</h2>
-  <p>Occasional notes on what we’re building. Unsubscribe anytime.</p>
   <form id="newsletter-form">
     <label for="newsletter-email">Email address</label>
     <div class="newsletter-controls">
@@ -25,6 +24,7 @@ const isConfigured = import.meta.env.PUBLIC_PLUNK_API_KEY?.startsWith('pk_');
       {!isConfigured && 'Newsletter signup is temporarily unavailable.'}
     </p>
   </form>
+  <p class="newsletter-note">Occasional notes on what we’re building. Unsubscribe anytime.</p>
 </section>
 
 <noscript><p class="newsletter-noscript">Enable JavaScript to subscribe to the newsletter.</p></noscript>
@@ -89,11 +89,19 @@ const isConfigured = import.meta.env.PUBLIC_PLUNK_API_KEY?.startsWith('pk_');
 </script>
 
 <style>
-  .newsletter { width: min(100%, 440px); margin: 48px auto 0; text-align: left; }
-  .newsletter h2 { font-size: 15px; font-weight: 600; letter-spacing: -.02em; }
-  .newsletter > p { margin-top: 5px; color: var(--color-text-secondary); font-size: 12px; line-height: 1.6; }
-  .newsletter form { margin-top: 18px; }
-  .newsletter label { display: block; margin-bottom: 8px; font-size: 12px; font-weight: 500; }
+  .newsletter {
+    width: min(100%, 510px);
+    margin: 40px auto 0;
+    padding: 26px 30px 21px;
+    border: 1px solid #d7ded5;
+    border-radius: 16px;
+    background: #f7f8f3e8;
+    box-shadow: 0 12px 38px #183a2b0a;
+    text-align: center;
+  }
+  .newsletter h2 { font-size: 17px; font-weight: 600; letter-spacing: -.025em; }
+  .newsletter form { margin-top: 20px; }
+  .newsletter label { display: block; margin-bottom: 8px; font-size: 12px; font-weight: 500; text-align: left; }
   .newsletter-controls { display: flex; gap: 8px; }
   .newsletter input {
     min-width: 0;
@@ -124,17 +132,21 @@ const isConfigured = import.meta.env.PUBLIC_PLUNK_API_KEY?.startsWith('pk_');
   .newsletter button:disabled { cursor: wait; opacity: .65; }
   .newsletter input:disabled { background: #f2f3ef; }
   .newsletter input:focus-visible, .newsletter button:focus-visible { outline-offset: 3px; }
-  .newsletter-status { min-height: 20px; margin-top: 9px; font-size: 12px; line-height: 1.5; }
+  .newsletter-status { min-height: 18px; margin-top: 8px; font-size: 12px; line-height: 1.5; }
   .newsletter-status[data-state="success"] { color: #245a3b; }
   .newsletter-status[data-state="error"] { color: #a02424; }
+  .newsletter-note { color: var(--color-text-secondary); font-size: 12px; line-height: 1.6; }
   .newsletter-noscript { text-align: center; font-size: 12px; }
 
   @media (hover: hover) and (pointer: fine) {
     .newsletter button:not(:disabled):hover { background: var(--color-lime-hover); }
   }
   @media (max-width: 460px) {
-    .newsletter { margin-top: 38px; }
+    .newsletter { margin-top: 34px; padding: 23px 20px 19px; }
     .newsletter-controls { flex-direction: column; }
     .newsletter input { flex: auto; width: 100%; }
+  }
+  @media (max-height: 600px) and (min-width: 601px) {
+    .newsletter { margin-top: 25px; }
   }
 </style>
