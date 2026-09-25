@@ -1,0 +1,452 @@
+---
+interface Props {
+  apiUrl: string;
+  releaseUrl: string;
+}
+
+const { apiUrl, releaseUrl } = Astro.props;
+---
+
+<div class="download-cta" data-download-cta hidden>
+  <button
+    class="download-trigger"
+    type="button"
+    aria-haspopup="dialog"
+    aria-controls="download-dialog"
+    data-download-open
+  >
+    Download the prerelease
+  </button>
+  <p>Early access for macOS, Windows, and Linux</p>
+</div>
+<noscript>
+  <a class="download-trigger download-noscript" href={releaseUrl}>Browse releases on GitHub</a>
+</noscript>
+
+<dialog
+  class="download-dialog"
+  id="download-dialog"
+  aria-labelledby="download-title"
+  aria-describedby="download-description"
+  data-api-url={apiUrl}
+  data-release-url={releaseUrl}
+>
+  <div class="download-panel">
+    <button class="download-close" type="button" aria-label="Close download options" data-download-close>
+      <span aria-hidden="true">×</span>
+    </button>
+    <p class="download-eyebrow">Lomi early access</p>
+    <h2 id="download-title">Choose your download</h2>
+    <p id="download-description" class="download-description">
+      Select your computer and package type to get the latest build.
+    </p>
+
+    <div class="download-fields">
+      <div class="download-field">
+        <label for="download-os">Operating system</label>
+        <div class="download-select-wrap download-os-select" data-download-os-icon data-selected-os="">
+          <img class="download-os-icon" data-os-icon="macos" src="/icons/download-macos.svg" alt="" aria-hidden="true" width="19" height="19" />
+          <img class="download-os-icon" data-os-icon="windows" src="/icons/download-windows.svg" alt="" aria-hidden="true" width="19" height="19" />
+          <img class="download-os-icon" data-os-icon="linux" src="/icons/download-linux.svg" alt="" aria-hidden="true" width="19" height="19" />
+          <select id="download-os" name="os" autocomplete="off" data-download-os autofocus>
+            <option value="">Choose an operating system</option>
+            <option value="macos">macOS</option>
+            <option value="windows">Windows</option>
+            <option value="linux">Linux</option>
+          </select>
+        </div>
+      </div>
+      <div class="download-field">
+        <label for="download-type">Package type</label>
+        <div class="download-select-wrap">
+          <select id="download-type" name="type" autocomplete="off" data-download-type disabled>
+            <option value="">Choose an operating system first</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <p class="download-status" role="status" aria-live="polite" data-download-status>
+      Select an operating system to see the available packages.
+    </p>
+    <a class="download-action" href={releaseUrl} data-download-action>
+      Open latest release
+    </a>
+    <button class="download-cancel" type="button" data-download-close>Cancel</button>
+  </div>
+</dialog>
+
+<script>
+  const dialog = document.querySelector<HTMLDialogElement>('#download-dialog');
+  const openButton = document.querySelector<HTMLButtonElement>('[data-download-open]');
+  const cta = document.querySelector<HTMLElement>('[data-download-cta]');
+  const closeButtons = document.querySelectorAll<HTMLButtonElement>('[data-download-close]');
+  const osSelect = document.querySelector<HTMLSelectElement>('[data-download-os]');
+  const osIconWrap = document.querySelector<HTMLElement>('[data-download-os-icon]');
+  const typeSelect = document.querySelector<HTMLSelectElement>('[data-download-type]');
+  const actionLink = document.querySelector<HTMLAnchorElement>('[data-download-action]');
+  const status = document.querySelector<HTMLElement>('[data-download-status]');
+  cta?.removeAttribute('hidden');
+
+  const packageOptions: Record<string, Array<{ value: string; label: string }>> = {
+    macos: [
+      { value: 'apple-silicon', label: 'Apple Silicon (DMG)' },
+      { value: 'intel', label: 'Intel (DMG)' },
+    ],
+    windows: [
+      { value: 'exe', label: 'Windows installer (EXE)' },
+      { value: 'msi', label: 'MSI installer' },
+    ],
+    linux: [
+      { value: 'appimage', label: 'AppImage' },
+      { value: 'deb', label: 'Debian package (.deb)' },
+      { value: 'rpm', label: 'RPM package (.rpm)' },
+    ],
+  };
+
+  const version = String.raw`\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?`;
+  const assetPatterns: Record<string, RegExp> = {
+    'macos:apple-silicon': new RegExp(`^Lomi_${version}_aarch64\\.dmg$`),
+    'macos:intel': new RegExp(`^Lomi_${version}_x64\\.dmg$`),
+    'windows:exe': new RegExp(`^Lomi_${version}_x64-setup\\.exe$`),
+    'windows:msi': new RegExp(`^Lomi_${version}_x64_en-US\\.msi$`),
+    'linux:appimage': new RegExp(`^Lomi_${version}_amd64\\.AppImage$`),
+    'linux:deb': new RegExp(`^Lomi_${version}_amd64\\.deb$`),
+    'linux:rpm': new RegExp(`^Lomi-${version}-\\d+\\.x86_64\\.rpm$`),
+  };
+
+  type GithubAsset = { name: string; browser_download_url: string };
+  type GithubRelease = { assets: GithubAsset[]; html_url: string; tag_name: string; draft: boolean; published_at: string | null };
+
+  let latestRelease: GithubRelease | null = null;
+  let releaseError = false;
+  let openRequest = 0;
+  let returnFocus: HTMLElement | null = null;
+  let typeInteracted = false;
+
+  function detectedDesktop() {
+    const uaData = (navigator as unknown as {
+      userAgentData?: { platform: string; mobile: boolean };
+    }).userAgentData;
+    const userAgent = navigator.userAgent.toLowerCase();
+    const platform = (uaData?.platform || navigator.platform || userAgent).toLowerCase();
+    const isMobile = uaData?.mobile || /android|iphone|ipad|ipod|mobile/.test(userAgent)
+      || (platform.includes('mac') && navigator.maxTouchPoints > 1);
+
+    if (isMobile) return { os: '', type: '' };
+
+    if (platform.includes('mac') || userAgent.includes('macintosh')) {
+      // Safari commonly reports MacIntel on Apple Silicon, so use Apple Silicon
+      // as the best-effort default until UA-CH confirms an Intel architecture.
+      return { os: 'macos', type: 'apple-silicon' };
+    }
+    if (platform.includes('win')) return { os: 'windows', type: 'exe' };
+    if (platform.includes('linux') || platform.includes('x11')) return { os: 'linux', type: 'appimage' };
+    return { os: '', type: '' };
+  }
+
+  async function detectedMacType() {
+    const uaData = (navigator as unknown as {
+      userAgentData?: {
+        getHighEntropyValues?: (hints: string[]) => Promise<{ architecture?: string }>;
+      };
+    }).userAgentData;
+    try {
+      const hints = await uaData?.getHighEntropyValues?.(['architecture']);
+      const architecture = hints?.architecture?.toLowerCase() || '';
+      return /^(x86|x86_64|x64|ia32|i386)$/.test(architecture) ? 'intel' : 'apple-silicon';
+    } catch {
+      return 'apple-silicon';
+    }
+  }
+
+  function detectMacSelection(requestId: number) {
+    if (!dialog || !osSelect || osSelect.value !== 'macos') return;
+    if (typeInteracted) return;
+    void detectedMacType().then((type) => {
+      if (requestId !== openRequest || !dialog.open || osSelect.value !== 'macos') return;
+      if (!typeInteracted) {
+        updatePackages(type);
+      }
+      updateAction();
+    });
+  }
+
+  function updatePackages(preferredType = '') {
+    if (!osSelect || !typeSelect) return;
+    if (osIconWrap) osIconWrap.dataset.selectedOs = osSelect.value;
+    const options = packageOptions[osSelect.value] || [];
+    typeSelect.replaceChildren();
+    typeSelect.disabled = options.length === 0;
+
+    if (options.length === 0) {
+      typeSelect.add(new Option('Choose an operating system first', ''));
+      return;
+    }
+
+    for (const option of options) typeSelect.add(new Option(option.label, option.value));
+    typeSelect.value = options.some((option) => option.value === preferredType)
+      ? preferredType
+      : options[0].value;
+  }
+
+  function getSelectedAsset() {
+    if (!latestRelease || !osSelect?.value || !typeSelect?.value) return null;
+    const pattern = assetPatterns[`${osSelect.value}:${typeSelect.value}`];
+    if (!pattern) return null;
+    return latestRelease.assets?.find((asset) => pattern.test(asset.name)) || null;
+  }
+
+  function updateAction() {
+    if (!dialog || !actionLink || !status) return;
+    const fallbackUrl = latestRelease?.html_url || dialog.dataset.releaseUrl || '#';
+    const asset = getSelectedAsset();
+    const hasSelection = Boolean(osSelect?.value && typeSelect?.value);
+
+    if (asset?.browser_download_url && latestRelease) {
+      actionLink.href = asset.browser_download_url;
+      actionLink.textContent = 'Download prerelease';
+      status.textContent = '';
+      return;
+    }
+
+    actionLink.href = fallbackUrl;
+    actionLink.textContent = 'Open latest release';
+    if (releaseError) {
+      status.textContent = 'We couldn’t check installer availability. Browse the latest release on GitHub.';
+    } else if (!latestRelease) {
+      status.textContent = hasSelection
+        ? 'Checking the latest release…'
+        : 'Select an operating system to see the available packages.';
+    } else if (hasSelection) {
+      status.textContent = 'This package is not in the latest release. Browse its files and notes on GitHub.';
+    } else {
+      status.textContent = `Latest release: ${latestRelease.tag_name}. Select a package to continue.`;
+    }
+  }
+
+  async function fetchLatestRelease(requestId: number) {
+    if (!dialog) return;
+    latestRelease = null;
+    releaseError = false;
+    updateAction();
+
+    try {
+      const apiUrl = dialog.dataset.apiUrl;
+      if (!apiUrl) throw new Error('Release API URL is missing');
+      const response = await fetch(apiUrl, {
+        headers: { Accept: 'application/vnd.github+json' },
+        cache: 'no-store',
+      });
+      if (!response.ok) throw new Error(`GitHub returned ${response.status}`);
+
+      const releases = await response.json() as GithubRelease[];
+      if (requestId !== openRequest) return;
+      if (!Array.isArray(releases)) throw new Error('Invalid release response');
+
+      const release = releases
+        .filter((candidate) => !candidate.draft && candidate.published_at)
+        .sort((first, second) => Date.parse(second.published_at || '') - Date.parse(first.published_at || ''))[0];
+      if (!release || !Array.isArray(release.assets) || !release.html_url) throw new Error('No published release found');
+
+      latestRelease = release;
+      updateAction();
+    } catch {
+      if (requestId !== openRequest) return;
+      releaseError = true;
+      updateAction();
+    }
+  }
+
+  openButton?.addEventListener('click', () => {
+    if (!dialog || dialog.open) return;
+    returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : openButton;
+    typeInteracted = false;
+    const defaults = detectedDesktop();
+    if (osSelect) osSelect.value = defaults.os;
+    updatePackages(defaults.type);
+    dialog.showModal();
+    const requestId = ++openRequest;
+    if (defaults.os === 'macos') {
+      detectMacSelection(requestId);
+    }
+    updateAction();
+    void fetchLatestRelease(requestId);
+  });
+
+  osSelect?.addEventListener('change', () => {
+    typeInteracted = false;
+    updatePackages();
+    if (osSelect.value === 'macos') detectMacSelection(openRequest);
+    updateAction();
+  });
+  typeSelect?.addEventListener('change', () => {
+    typeInteracted = true;
+    updateAction();
+  });
+
+  closeButtons.forEach((button) => {
+    button.addEventListener('click', () => dialog?.close());
+  });
+
+  dialog?.addEventListener('click', (event) => {
+    if (event.target === dialog) dialog.close();
+  });
+  dialog?.addEventListener('close', () => {
+    returnFocus?.focus();
+    returnFocus = null;
+  });
+</script>
+
+<style>
+  .download-cta { margin: 25px auto 0; }
+  .download-cta p { margin-top: 9px; color: var(--color-text-secondary); font-size: 12px; line-height: 1.5; }
+  .download-trigger {
+    min-height: 50px;
+    padding: 0 23px;
+    border: 1px solid var(--color-ink);
+    border-radius: 9px;
+    background: var(--color-lime);
+    color: var(--color-ink);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 560;
+    cursor: pointer;
+  }
+  .download-trigger:active { background: var(--color-lime-pressed); }
+  .download-noscript { display: inline-flex; justify-content: center; align-items: center; margin-top: 25px; }
+  .download-trigger:focus-visible, .download-close:focus-visible,
+  .download-action:focus-visible, .download-cancel:focus-visible,
+  .download-field select:focus-visible { outline-offset: 3px; }
+
+  .download-dialog {
+    width: min(calc(100vw - 32px), 460px);
+    max-width: none;
+    max-height: min(90vh, 640px);
+    margin: auto;
+    padding: 0;
+    overflow: visible;
+    border: 0;
+    background: transparent;
+    color: var(--color-ink);
+  }
+  .download-dialog::backdrop { background: rgb(11 13 12 / 44%); backdrop-filter: blur(4px); }
+  .download-panel {
+    position: relative;
+    max-height: min(90vh, 640px);
+    overflow: auto;
+    padding: 33px;
+    border: 1px solid #d9ded7;
+    border-radius: 18px;
+    background: var(--color-chalk);
+    box-shadow: 0 24px 80px rgb(11 13 12 / 22%);
+    text-align: left;
+  }
+  .download-close {
+    position: absolute;
+    top: 13px;
+    right: 13px;
+    display: grid;
+    width: 38px;
+    height: 38px;
+    place-items: center;
+    border: 1px solid #d9ded7;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--color-ink);
+    font: inherit;
+    font-size: 26px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .download-eyebrow { margin: 0 48px 10px 0; color: #4c5d3e; font-size: 11px; font-weight: 650; letter-spacing: .11em; text-transform: uppercase; }
+  .download-panel h2 { margin: 0; font-size: 28px; font-weight: 520; letter-spacing: -.045em; line-height: 1.15; }
+  .download-description { margin: 9px 0 23px; color: var(--color-text-secondary); font-size: 13px; line-height: 1.6; }
+  .download-fields { display: grid; gap: 16px; }
+  .download-field label { display: block; margin-bottom: 8px; font-size: 12px; font-weight: 550; }
+  .download-select-wrap { position: relative; }
+  .download-os-icon {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 15px;
+    width: 19px;
+    height: 19px;
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+  .download-os-select[data-selected-os='macos'] [data-os-icon='macos'],
+  .download-os-select[data-selected-os='windows'] [data-os-icon='windows'],
+  .download-os-select[data-selected-os='linux'] [data-os-icon='linux'] { display: block; }
+  .download-os-select:not([data-selected-os='']) select { padding-left: 46px; }
+  .download-select-wrap::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: 18px;
+    width: 8px;
+    height: 8px;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: translateY(-70%) rotate(45deg);
+    pointer-events: none;
+  }
+  .download-field select {
+    width: 100%;
+    min-height: 50px;
+    padding: 0 44px 0 15px;
+    border: 1px solid #a9b0a8;
+    border-radius: 9px;
+    background: #fff;
+    color: var(--color-ink);
+    font: inherit;
+    font-size: 14px;
+    appearance: none;
+    cursor: pointer;
+  }
+  .download-field select:disabled { background: #f0f1ed; color: #68716a; cursor: not-allowed; }
+  .download-status { margin: 14px 0 0; color: var(--color-text-secondary); font-size: 12px; line-height: 1.55; }
+  .download-status:empty { display: none; }
+  .download-action {
+    display: flex;
+    min-height: 48px;
+    margin-top: 20px;
+    justify-content: center;
+    align-items: center;
+    border: 1px solid var(--color-ink);
+    border-radius: 8px;
+    background: var(--color-lime);
+    color: var(--color-ink);
+    font-size: 13px;
+    font-weight: 560;
+  }
+  .download-action:active { background: var(--color-lime-pressed); }
+  .download-cancel {
+    display: block;
+    min-height: 42px;
+    margin: 7px auto -8px;
+    padding: 0 15px;
+    border: 0;
+    background: transparent;
+    color: var(--color-text-secondary);
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .download-trigger:hover, .download-action:hover { background: var(--color-lime-hover); }
+    .download-close:hover, .download-cancel:hover { color: var(--color-ink); }
+  }
+  @media (max-width: 460px) {
+    .download-dialog { width: calc(100vw - 28px); }
+    .download-panel { padding: 29px 21px 24px; }
+    .download-description { margin-bottom: 19px; }
+  }
+  @media (max-height: 600px) {
+    .download-panel { padding-top: 24px; padding-bottom: 18px; }
+    .download-description { margin-bottom: 14px; }
+    .download-status { min-height: 30px; margin-top: 11px; margin-bottom: 11px; }
+    .download-fields { gap: 10px; }
+  }
+</style>

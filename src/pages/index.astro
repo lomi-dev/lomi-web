@@ -3,8 +3,12 @@ import Layout from '../layouts/Layout.astro';
 import Icon from '../components/Icon';
 import CloudBackdrop from '../components/CloudBackdrop.astro';
 import NewsletterSignup from '../components/NewsletterSignup.astro';
+import DownloadDialog from '../components/DownloadDialog.astro';
 import { site } from '../data/site';
 import logo from '../assets/lomi-wordmark.svg?raw';
+
+const repoPath = new URL(site.releases).pathname.replace(/\/releases\/?$/, '');
+const releaseApi = `https://api.github.com/repos${repoPath}/releases?per_page=10`;
 ---
 
 <Layout>
@@ -14,6 +18,7 @@ import logo from '../assets/lomi-wordmark.svg?raw';
     <section class="wip-hero" aria-labelledby="hero-title">
       <h1 id="hero-title">Something good<br /><em>is taking shape.</em></h1>
       <p class="wip-description">An open-source workspace for building with AI.<br />We’re working on what comes next.</p>
+      <DownloadDialog apiUrl={releaseApi} releaseUrl={site.releases} />
       <NewsletterSignup />
       <a class="github-link" href={site.github}>
         <Icon name="github" width={17} height={17} />
