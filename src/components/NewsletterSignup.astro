@@ -126,9 +126,10 @@ const isConfigured = import.meta.env.PUBLIC_PLUNK_API_KEY?.startsWith('pk_');
   .newsletter input:disabled { background: #f2f3ef; }
   .newsletter input:focus-visible, .newsletter button:focus-visible { outline-offset: 3px; }
   .newsletter-status { min-height: 16px; margin-top: 5px; font-size: 12px; line-height: 1.5; }
+  .newsletter-status:empty { display: none; }
   .newsletter-status[data-state="success"] { color: #245a3b; }
   .newsletter-status[data-state="error"] { color: #a02424; }
-  .newsletter-note { color: var(--color-text-secondary); font-size: 12px; line-height: 1.6; }
+  .newsletter-note { margin-top: 10px; color: var(--color-text-secondary); font-size: 12px; line-height: 1.6; }
   .newsletter-noscript { text-align: center; font-size: 12px; }
 
   @media (hover: hover) and (pointer: fine) {
