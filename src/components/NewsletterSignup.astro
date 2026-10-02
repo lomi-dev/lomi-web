@@ -3,7 +3,7 @@ const endpoint = import.meta.env.PUBLIC_NEWSLETTER_ENDPOINT || '';
 if (endpoint) {
   const url = new URL(endpoint);
   if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash ||
-      url.pathname !== '/v1/newsletter/confirmation' || url.toString() !== endpoint) {
+      url.pathname !== '/v1/newsletter/subscribe' || url.toString() !== endpoint) {
     throw new Error('Invalid PUBLIC_NEWSLETTER_ENDPOINT');
   }
 }
@@ -31,7 +31,7 @@ const isConfigured = Boolean(endpoint);
       {!isConfigured && 'Newsletter signup is temporarily unavailable.'}
     </p>
   </form>
-  <p class="newsletter-note">Confirm by email to receive occasional updates. Unsubscribe anytime.</p>
+  <p class="newsletter-note">Occasional notes on what we’re building. Unsubscribe anytime.</p>
 </section>
 
 <noscript><p class="newsletter-noscript">Enable JavaScript to subscribe to the newsletter.</p></noscript>
@@ -56,7 +56,7 @@ const isConfigured = Boolean(endpoint);
 
     const email = emailInput.value.trim();
     submitButton.disabled = true;
-    submitButton.textContent = 'Sending…';
+    submitButton.textContent = 'Subscribing…';
     status.textContent = '';
     status.removeAttribute('data-state');
 
@@ -70,11 +70,11 @@ const isConfigured = Boolean(endpoint);
         body: JSON.stringify({ email }),
       });
       if (response.status !== 202 || (await response.json()).accepted !== true) {
-        throw new Error('Confirmation request unavailable');
+        throw new Error('Signup request unavailable');
       }
 
       form.reset();
-      status.textContent = 'Check your inbox to confirm your subscription.';
+      status.textContent = 'You’re on the list. Thanks for joining!';
       status.dataset.state = 'success';
     } catch {
       status.textContent = 'Something went wrong. Please try again.';
