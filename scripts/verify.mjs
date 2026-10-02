@@ -21,6 +21,7 @@ await context.addInitScript(() => {
 });
 const page = await context.newPage();
 const errors = [];
+await page.route('https://next-api.useplunk.com/**', () => { throw new Error('Browser must not call Plunk'); });
 page.on('pageerror', (error) => errors.push(error.message));
 await mkdir('artifacts', { recursive: true });
 
@@ -99,29 +100,35 @@ try {
   if (await subscribe.isEnabled()) {
     let requestBody;
     let authorization;
-    await page.route('https://next-api.useplunk.com/v1/track', async (route) => {
+    let cookie;
+    const endpoint = await page.locator('#newsletter-form').getAttribute('data-endpoint');
+    await page.route(endpoint, async (route) => {
       requestBody = route.request().postDataJSON();
       authorization = route.request().headers().authorization;
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true }) });
+      cookie = route.request().headers().cookie;
+      await route.fulfill({ status: 202, contentType: 'application/json', body: JSON.stringify({ accepted: true }) });
     });
     await email.fill('reader@example.com');
     await subscribe.click();
-    await expect(page.getByRole('status')).toHaveText('You’re on the list. Thanks for joining!');
-    expect(requestBody).toEqual({
-      email: 'reader@example.com',
-      event: 'newsletter_signup',
-      subscribed: true,
-      data: { source: 'lomi_web' },
-    });
-    expect(authorization).toMatch(/^Bearer pk_/);
+    await expect(page.getByRole('status')).toHaveText('Check your inbox to confirm your subscription.');
+    expect(requestBody).toEqual({ email: 'reader@example.com' });
+    expect(authorization).toBeUndefined();
+    expect(cookie).toBeUndefined();
     await expect(email).toHaveValue('');
 
-    await page.unroute('https://next-api.useplunk.com/v1/track');
-    await page.route('https://next-api.useplunk.com/v1/track', (route) => route.fulfill({ status: 500 }));
-    await email.fill('reader@example.com');
-    await subscribe.click();
-    await expect(page.getByRole('status')).toHaveText('Something went wrong. Please try again.');
-    await expect(subscribe).toBeEnabled();
+    await page.unroute(endpoint);
+    for (const result of [
+      { status: 500, body: '{}' },
+      { status: 200, body: '{"accepted":true}' },
+      { status: 202, body: '{"accepted":false}' },
+    ]) {
+      await page.route(endpoint, (route) => route.fulfill({ ...result, contentType: 'application/json' }));
+      await email.fill('reader@example.com');
+      await subscribe.click();
+      await expect(page.getByRole('status')).toHaveText('Something went wrong. Please try again.');
+      await expect(subscribe).toBeEnabled();
+      await page.unroute(endpoint);
+    }
   } else {
     await expect(email).toBeDisabled();
     await expect(page.getByRole('status')).toHaveText('Newsletter signup is temporarily unavailable.');

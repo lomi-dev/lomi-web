@@ -35,7 +35,7 @@ Colors follow the supplied lomi system v1.3 light theme: Soft Chalk (`#F7F8F3`) 
 
 - `src/pages/index.astro`: hero content and the GitHub link.
 - `src/components/DownloadDialog.astro`: preview download dialog and installer selection.
-- `src/components/NewsletterSignup.astro`: newsletter form and Plunk request.
+- `src/components/NewsletterSignup.astro`: newsletter form and backend confirmation request.
 - `src/styles/global.css`: typography and responsive composition.
 - `src/components/CloudBackdrop.astro`: the static background.
 - `src/data/site.ts`: page metadata and project links.
@@ -51,13 +51,27 @@ The operating-system symbols are local SVGs downloaded from Iconify's [Simple Ic
 
 ## Newsletter setup
 
-In your Plunk project, open **Settings → API Keys** and copy the **public** key (`pk_…`). Add it to `.env.local` for local development or set `PUBLIC_PLUNK_API_KEY` in your host's build environment. Restart the dev server or rebuild after changing it. The form stays disabled when the key is missing. Never use the secret key (`sk_…`) in this variable.
+Newsletter signup is unavailable by default. The browser sends only an email to
+an explicitly configured HTTPS auth backend, without cookies or authorization.
+It never calls Plunk directly, embeds a provider key or changes subscription state.
+An accepted request asks the visitor to check their inbox and confirm before
+receiving marketing updates.
+
+First complete the operator prerequisites in
+[auth-app/NEWSLETTER.md](../auth-app/NEWSLETTER.md): revoke/rotate the old published
+public Plunk key, qualify a transactional template with its provider-hosted
+`{{subscribeUrl}}`, and enable the server only after confirming new and previously
+unsubscribed contacts remain unsubscribed until recipient confirmation. This
+source change does not perform provider-side qualification or key rotation.
+
+Then set `PUBLIC_NEWSLETTER_ENDPOINT` in the site's build environment to the HTTPS
+auth service URL with exactly `/v1/newsletter/confirmation` and rebuild. It must
+have no credentials, query or fragment. Remove the obsolete
+`PUBLIC_PLUNK_API_KEY` environment setting; never replace it with a secret key.
 
 ```sh
-PUBLIC_PLUNK_API_KEY=pk_your_public_key SITE_URL=https://your-domain.example bun run build
+PUBLIC_NEWSLETTER_ENDPOINT=https://auth.example.com/v1/newsletter/confirmation SITE_URL=https://your-domain.example bun run build
 ```
-
-The browser calls Plunk's `POST /v1/track` endpoint with the `newsletter_signup` event and `subscribed: true`. Plunk creates a subscribed contact or resubscribes an existing contact. Sending the newsletter itself is managed in Plunk. The public key is intentionally visible in the browser and can only call this tracking endpoint.
 
 Cloud provenance and the original generation prompt are recorded in [docs/assets.md](docs/assets.md). `public/social-card.png` is a 1200 × 630 browser render of the current hero for link previews.
 
@@ -76,7 +90,7 @@ bunx playwright install firefox
 VERIFY_BROWSER=firefox bun run verify
 ```
 
-Override the preview URL with `VERIFY_URL`. The check covers six viewport widths, a short landscape screen, the GitHub link, download selection and fallback, newsletter form states, keyboard access, JavaScript-disabled rendering, and mobile/desktop accessibility with axe. To test a configured form without adding a real Plunk contact, build with a dummy `pk_…` key; the verification script mocks Plunk's response. Screenshots and audit output go to ignored `artifacts/`.
+Override the preview URL with `VERIFY_URL`. The check covers six viewport widths, a short landscape screen, the GitHub link, download selection and fallback, newsletter form states, keyboard access, JavaScript-disabled rendering, and mobile/desktop accessibility with axe. To test a configured form without sending email, build with `PUBLIC_NEWSLETTER_ENDPOINT=https://auth.example.test/v1/newsletter/confirmation`; the verification script mocks the backend and blocks direct Plunk calls. Also build without that variable to verify the unavailable state. Screenshots and audit output go to ignored `artifacts/`.
 
 ## Publish
 
