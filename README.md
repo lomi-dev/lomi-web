@@ -148,7 +148,8 @@ to the screenshot. Shift+Tab from the player returns to the dialog.
 The official YouTube IFrame API loads only after activation. It mutes the player
 before starting playback automatically; YouTube's native controls provide volume
 adjustment. The same workbench image used in the hero remains visible during
-loading. The first `PLAYING` event, followed by two animation frames, reveals the
+loading with a centered spinner, which stays still under reduced motion.
+The first `PLAYING` event, followed by two animation frames, reveals the
 player. This is the closest documented playback signal; the cross-origin embed
 does not expose a first-painted-frame event. If autoplay is blocked, the player
 reports an error, or loading times out, the native controls become available for

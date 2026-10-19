@@ -5,9 +5,10 @@ import workbench from '../assets/product/workbench.png';
 
 <dialog class="video-dialog" id="video-dialog" aria-label="Watch Lomi" aria-describedby="video-instructions" tabindex="0" autofocus>
   <p class="video-instructions" id="video-instructions">Press Escape to close, or click outside the video.</p>
-  <div class="video-player" data-video-player data-video-status="loading">
+  <div class="video-player" data-video-player data-video-status="loading" aria-busy="true">
     <div class="video-poster" data-video-poster aria-hidden="true">
       <Picture src={workbench} alt="" formats={['avif', 'webp']} widths={[640, 960, 1440, 1920]} sizes="(min-width: 1112px) 1080px, calc(100vw - 32px)" loading="eager" decoding="async" />
+      <span class="video-loading" data-video-loading><span class="video-loading-ring"></span></span>
     </div>
     <div class="video-mount" data-video-mount inert></div>
   </div>
@@ -83,6 +84,7 @@ import workbench from '../assets/product/workbench.png';
     clearTimeout(playbackTimeout);
     mount.inert = false;
     player.dataset.videoStatus = status;
+    player.setAttribute('aria-busy', 'false');
   }
 
   function clearPlayback() {
@@ -95,7 +97,10 @@ import workbench from '../assets/product/workbench.png';
     try { active?.destroy(); } catch { /* Removing the iframe below also stops playback. */ }
     mount?.replaceChildren();
     if (mount) mount.inert = true;
-    if (player) player.dataset.videoStatus = 'loading';
+    if (player) {
+      player.dataset.videoStatus = 'loading';
+      player.setAttribute('aria-busy', 'true');
+    }
   }
 
   function startPlayback() {
@@ -265,6 +270,12 @@ import workbench from '../assets/product/workbench.png';
   .video-poster { pointer-events: none; }
   .video-poster :global(picture), .video-poster :global(img) { display: block; width: 100%; height: 100%; }
   .video-poster :global(img) { object-fit: cover; object-position: left top; }
+  .video-loading { position: absolute; inset: 0; display: grid; place-items: center; background: rgb(5 7 5 / 16%); opacity: 0; transition: opacity 150ms ease; }
+  .video-loading-ring { display: grid; width: 64px; height: 64px; place-items: center; border: 1px solid #ffffff26; border-radius: 50%; background: rgb(5 7 5 / 76%); box-shadow: 0 8px 24px #0003; }
+  .video-loading-ring::after { content: ''; width: 25px; height: 25px; border: 2px solid #ffffff26; border-top-color: var(--color-lime); border-radius: 50%; animation: video-loading-spin 900ms linear infinite; animation-play-state: paused; }
+  .video-dialog[open]:not([data-state='closing']) .video-player[data-video-status='loading'] .video-loading { opacity: 1; }
+  .video-dialog[open]:not([data-state='closing']) .video-player[data-video-status='loading'] .video-loading-ring::after { animation-play-state: running; }
+  @keyframes video-loading-spin { to { transform: rotate(360deg); } }
   .video-mount { opacity: 0; pointer-events: none; }
   .video-player[data-video-status='playing'] .video-mount, .video-player[data-video-status='fallback'] .video-mount { opacity: 1; pointer-events: auto; }
   .video-player[data-video-status='playing'] .video-poster, .video-player[data-video-status='fallback'] .video-poster { opacity: 0; }
@@ -274,5 +285,6 @@ import workbench from '../assets/product/workbench.png';
   }
   @media (prefers-reduced-motion: reduce) {
     .video-dialog::backdrop, .video-dialog[data-state='closing']::backdrop { transition-duration: 100ms; }
+    .video-loading-ring::after { animation: none; }
   }
 </style>
