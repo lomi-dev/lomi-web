@@ -1,0 +1,67 @@
+---
+import CloudBackdrop from './CloudBackdrop.astro';
+import Icon from './Icon';
+import { site } from '../data/site';
+import type { Landing } from '../../content/landing-schema';
+
+interface Props { content: Landing['hero'] }
+const { content } = Astro.props;
+---
+
+<section class="hero" aria-labelledby="hero-title">
+  <div class="hero-panorama" aria-hidden="true"><CloudBackdrop /></div>
+  <div class="hero-content shell">
+    <p class="hero-eyebrow">{content.eyebrow}</p>
+    <h1 id="hero-title">{content.title}<span>{content.accent}</span></h1>
+    <p class="hero-description">{content.description}</p>
+    <div class="hero-actions">
+      <a class="hero-download" href={site.releases} data-download-open aria-haspopup="dialog" aria-controls="download-dialog">{content.primaryLabel}<Icon name="download" width={19} height={19} /></a>
+      <a class="hero-explore" href="#workflow">{content.secondaryLabel}<span aria-hidden="true">↓</span></a>
+    </div>
+    <p class="hero-note">{content.note}</p>
+  </div>
+  <div class="hero-ground" aria-hidden="true"><span>lomi</span><span>Terminal · Editor · Browser · Git</span></div>
+</section>
+
+<style>
+  .hero { position: relative; isolation: isolate; overflow: hidden; display: flex; align-items: center; min-height: 740px; min-height: max(740px, 94svh); padding-block: 185px 125px; color: #fff; background: #202825; }
+  .hero-panorama { position: absolute; inset: 0; z-index: -2; }
+  .hero-panorama :global(.sky-background) { position: absolute; inset: 0; overflow: hidden; }
+  .hero-panorama :global(picture), .hero-panorama :global(img) { width: 100%; height: 100%; object-fit: cover; object-position: center 53%; }
+  .hero-panorama :global(img) { filter: grayscale(1) contrast(1.08); }
+  .hero::before { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, rgb(8 15 12 / 88%) 0%, rgb(8 15 12 / 74%) 36%, rgb(8 15 12 / 21%) 74%, rgb(8 15 12 / 10%) 100%); }
+  .hero-content { position: relative; }
+  .hero-eyebrow { margin: 0 0 25px; color: #e1e7dd; font-size: 13px; font-weight: 450; }
+  h1 { max-width: 1000px; margin: 0 0 30px -.045em; font-size: clamp(64px, 7.2vw, 104px); font-weight: 520; letter-spacing: -.065em; line-height: 1.01; overflow-wrap: anywhere; }
+  h1 > span { display: block; }
+  .hero-description { max-width: 440px; margin: 0; color: #f0f2ec; font-size: 15px; line-height: 1.8; }
+  .hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 15px; margin-top: 30px; }
+  .hero-download, .hero-explore { display: inline-flex; justify-content: center; align-items: center; min-height: 52px; gap: 23px; padding: 0 21px; border: 1px solid transparent; border-radius: 6px; font-size: 13px; font-weight: 550; }
+  .hero-download { color: var(--color-ink); background: var(--color-lime); }
+  .hero-download:hover { background: var(--color-lime-hover); }
+  .hero-download:active { background: var(--color-lime-pressed); }
+  .hero-explore { background: rgb(9 17 12 / 20%); border-color: #afbaaa; }
+  .hero-explore:hover { background: rgb(9 17 12 / 55%); }
+  .hero-explore > span { font-size: 18px; }
+  .hero-note { margin-top: 19px; color: #e4e9df; font-size: 11px; line-height: 1.8; }
+  .hero-ground { position: absolute; bottom: 26px; inset-inline: 48px; display: flex; justify-content: space-between; gap: 20px; color: #f0f2ec; font-family: var(--font-mono); font-size: 9px; line-height: 1.7; }
+  .hero-ground > span:first-child { font-family: var(--font-sans); font-size: 15px; font-weight: 500; letter-spacing: -.05em; }
+  .hero :focus-visible { outline-color: var(--color-lime); }
+  @media (min-width: 1700px) { .hero-content { padding-bottom: 15px; } }
+  @media (max-width: 1000px) { .hero { min-height: 730px; padding-block: 170px 110px; } h1 { font-size: clamp(62px, 8.2vw, 82px); } .hero-ground { inset-inline: 32px; } }
+  @media (max-width: 767px) {
+    .hero { min-height: 680px; min-height: max(680px, 94svh); padding-block: 145px 90px; align-items: center; }
+    .hero-panorama :global(img) { object-position: 40% center; }
+    .hero::before { background: linear-gradient(90deg, rgb(8 15 12 / 88%), rgb(8 15 12 / 57%)); }
+    .hero-eyebrow { font-size: 11px; margin-bottom: 24px; }
+    h1 { font-size: clamp(45px, 11.2vw, 76px); line-height: 1.03; margin-bottom: 24px; }
+    .hero-description { font-size: 13px; max-width: 440px; }
+    .hero-actions { gap: 10px; margin-top: 25px; }
+    .hero-download, .hero-explore { min-height: 48px; padding-inline: 14px; gap: 14px; font-size: 11px; }
+    .hero-note { font-size: 9px; margin-top: 18px; }
+    .hero-ground { inset-inline: 20px; bottom: 21px; font-size: 7px; gap: 14px; }
+    .hero-ground > span:first-child { font-size: 13px; }
+  }
+  @media (max-width: 374px) { .hero-actions { align-items: stretch; flex-direction: column; } .hero-explore, .hero-download { justify-content: space-between; } .hero-ground > span:last-child { font-size: 6px; } }
+  @media (max-height: 600px) and (min-width: 768px) { .hero { min-height: 680px; padding-top: 160px; padding-bottom: 90px; } h1 { font-size: 76px; } }
+</style>

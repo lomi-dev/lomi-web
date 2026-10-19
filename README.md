@@ -17,11 +17,16 @@ required to work on the layout.
 
 The page includes:
 
-- Responsive navigation and an asymmetric hero with a cropped cloud window.
-- A keyboard-accessible Build / Preview / Review selector with real app captures.
+- A floating navigation bar over panoramic clouds and contrasting hero text.
+- A keyboard-accessible Build / Preview / Review selector below the hero, with real app captures.
 - A workflow sequence, dark tools manifest, and local/source/customization details.
-- A roadmap ledger separating available features from proposed work.
-- Native expandable FAQ, preview downloads, newsletter, and a full footer.
+- A three-column timeline separating available features from proposed work.
+- Native expandable FAQ, preview downloads, newsletter, and a Lime footer that
+  fills exactly one viewport in both dimensions.
+
+The footer follows the current viewport height with `100dvh` (`100vh` fallback).
+Its content scrolls inside the footer when a narrow or short window cannot fit
+everything; the outer footer keeps its exact size and every link stays reachable.
 
 The roadmap is explicitly a draft, with no invented release dates. Product copy
 comes from the desktop application's README. Feature/platform restrictions are
@@ -128,7 +133,9 @@ Browser verification covers seven viewport widths, short landscape, section
 anchors, unique IDs, keyboard navigation, mobile menu, FAQ, newsletter states,
 all seven installer mappings, release failures, dialog focus, no-JavaScript
 fallbacks, workspace selection, reduced motion, and desktop/mobile/dialog
-accessibility with axe. The 640px check covers the available CSS width of a
+accessibility with axe. Footer dimensions, resizing, and keyboard access to every
+link are checked at eight window sizes from 320 × 200 to 1920 × 1080, both with
+and without JavaScript. The 640px check covers the available CSS width of a
 1280px window at 200% zoom. Screenshots and
 audit output are written to ignored `artifacts/`.
 

@@ -67,6 +67,98 @@ await page.route(/^https:\/\/api\.github\.com\/repos\/lomi-dev\/lomi\/releases\?
   await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(releaseFixture) });
 });
 
+const footerViewports = [
+  { width: 1440, height: 900 },
+  { width: 1920, height: 1080 },
+  { width: 390, height: 844 },
+  { width: 320, height: 568 },
+  { width: 844, height: 390 },
+  { width: 1440, height: 500 },
+  { width: 320, height: 320 },
+  { width: 320, height: 200 },
+];
+
+async function verifyViewportFooter(targetPage, screenshots = false, viewports = footerViewports) {
+  const footer = targetPage.locator('.site-footer');
+  const links = footer.locator('a[href]');
+  const linkCount = await links.count();
+  const regionStops = await footer.locator('[tabindex="0"]:not(a[href])').count();
+  expect(linkCount, 'Footer links remain available').toBeGreaterThan(0);
+  for (const viewport of viewports) {
+    await targetPage.setViewportSize(viewport);
+    await footer.evaluate((element) => element.scrollIntoView({ block: 'start', behavior: 'instant' }));
+    const dimensions = await footer.evaluate((element) => {
+      const bounds = element.getBoundingClientRect();
+      return {
+        left: bounds.left, width: bounds.width, height: bounds.height,
+        viewportWidth: document.documentElement.clientWidth, viewportHeight: innerHeight,
+      };
+    });
+    const label = `Footer at ${viewport.width}x${viewport.height}`;
+    expect(Math.abs(dimensions.left), `${label}: left edge`).toBeLessThanOrEqual(1);
+    expect(Math.abs(dimensions.width - dimensions.viewportWidth), `${label}: exact viewport width`).toBeLessThanOrEqual(1);
+    expect(Math.abs(dimensions.height - dimensions.viewportHeight), `${label}: exact viewport height`).toBeLessThanOrEqual(1);
+    expect(await targetPage.evaluate(() => document.documentElement.scrollWidth), `${label}: no horizontal overflow`).toBe(dimensions.viewportWidth);
+
+    await links.first().focus();
+    for (let index = 0; index < linkCount; index++) {
+      const link = links.nth(index);
+      for (let stop = 0; stop < regionStops && !await link.evaluate((element) => element === document.activeElement); stop++) {
+        expect(await footer.evaluate((element) => element.contains(document.activeElement)
+          && document.activeElement.matches('[tabindex="0"]:not(a[href])')), `${label}: explicit region stop before link ${index + 1}`).toBe(true);
+        await targetPage.keyboard.press('Tab');
+      }
+      await expect(link, `${label}: link ${index + 1} in keyboard order`).toBeFocused();
+      await link.evaluate((element) => element.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' }));
+      await expect.poll(() => link.evaluate((element) => {
+        const bounds = element.getBoundingClientRect();
+        let left = 0, top = 0, right = document.documentElement.clientWidth, bottom = innerHeight;
+        for (let ancestor = element.parentElement; ancestor; ancestor = ancestor.parentElement) {
+          const style = getComputedStyle(ancestor);
+          const clip = ancestor.getBoundingClientRect();
+          if (/(auto|scroll|hidden|clip)/.test(style.overflowX)) {
+            left = Math.max(left, clip.left + ancestor.clientLeft);
+            right = Math.min(right, clip.left + ancestor.clientLeft + ancestor.clientWidth);
+          }
+          if (/(auto|scroll|hidden|clip)/.test(style.overflowY)) {
+            top = Math.max(top, clip.top + ancestor.clientTop);
+            bottom = Math.min(bottom, clip.top + ancestor.clientTop + ancestor.clientHeight);
+          }
+        }
+        return bounds.width > 0 && bounds.height > 0 && bounds.left >= left - 1 && bounds.right <= right + 1
+          && bounds.top >= top - 1 && bounds.bottom <= bottom + 1;
+      }), `${label}: focused link ${index + 1} is fully visible`).toBe(true);
+      if (index < linkCount - 1) await targetPage.keyboard.press('Tab');
+    }
+    if (screenshots && ((viewport.width === 1440 && viewport.height === 900) || (viewport.width === 390 && viewport.height === 844))) {
+      await footer.evaluate((element) => {
+        if (element.contains(document.activeElement)) document.activeElement.blur();
+        element.querySelector('.footer-frame').scrollTop = 0;
+        window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' });
+      });
+      // Capture the visible viewport without the locator's extra auto-scroll.
+      await targetPage.screenshot({ path: `artifacts/footer-${viewport.width}.png` });
+    }
+  }
+}
+
+async function verifyLongFooterColophon(targetPage) {
+  const colophon = targetPage.locator('.site-footer .footer-credits > p');
+  const original = await colophon.textContent();
+  // footer.colophon accepts trimmed text from 1 through 2000 characters.
+  const longColophon = 'Made in the open, with room for every project. '.repeat(12).slice(0, 520).trim();
+  expect(longColophon.length, 'Representative long CMS colophon').toBeGreaterThanOrEqual(500);
+  expect(longColophon.length).toBeLessThanOrEqual(2000);
+  try {
+    await colophon.evaluate((element, value) => { element.textContent = value; }, longColophon);
+    // Just above the short-window breakpoint: long copy must not squeeze links out.
+    await verifyViewportFooter(targetPage, false, [{ width: 320, height: 400 }]);
+  } finally {
+    await colophon.evaluate((element, value) => { element.textContent = value; }, original);
+  }
+  await expect(colophon).toHaveText(original);
+}
+
 try {
   const response = await page.goto(url, { waitUntil: 'networkidle' });
   expect(response.status()).toBe(200);
@@ -181,6 +273,8 @@ try {
       expect(await heading.evaluate((element) => element.scrollWidth <= element.clientWidth), 'Heading reflows at 200% equivalent width').toBe(true);
     }
   }
+  await verifyViewportFooter(page, true);
+  await verifyLongFooterColophon(page);
   await page.setViewportSize({ width: 844, height: 390 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(844);
   await page.locator('#download').scrollIntoViewIfNeeded();
@@ -412,13 +506,16 @@ try {
   await expect(staticFaq.locator('p')).toBeVisible();
   await staticPage.keyboard.press('Space');
   await expect(staticFaq.locator('p')).not.toBeVisible();
+  await verifyViewportFooter(staticPage);
+  await verifyLongFooterColophon(staticPage);
+  await staticPage.setViewportSize({ width: 390, height: 844 });
   await staticPage.goto(url);
   await staticPage.keyboard.press('Tab');
   await expect(staticPage.getByRole('link', { name: 'Skip to content' })).toBeFocused();
   await staticPage.keyboard.press('Enter');
   await expect(staticPage.locator('#main')).toBeFocused();
   await staticContext.close();
-  console.log('Passed: complete landing sections and anchors, 7 viewport widths including 200% equivalent reflow and landscape, workspace views/keyboard/reduced motion/no-JS, mobile navigation and FAQ keyboard behavior, newsletter form, all 7 download packages, release fallback, every download trigger and focus restoration, no-JS reading and release links, and mobile/desktop/dialog accessibility.');
+  console.log('Passed: complete landing sections and anchors, 7 viewport widths including 200% equivalent reflow and landscape, workspace views/keyboard/reduced motion/no-JS, exact viewport footer/keyboard access across 8 sizes plus long CMS copy at 320x400 with and without JS, mobile navigation and FAQ keyboard behavior, newsletter form, all 7 download packages, release fallback, every download trigger and focus restoration, no-JS reading and release links, and mobile/desktop/dialog accessibility.');
 } finally {
   await browser.close();
 }

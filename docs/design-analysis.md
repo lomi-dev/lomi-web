@@ -74,9 +74,9 @@ rozumienie nagrań i przechowywanie. Zmieniają się skala oraz rodzaj materiał
 Chmury należą do tej samej tożsamości co produktowe ramy i przyciski.
 
 Lomi przejmuje zasadę wyboru scenariusza, lecz osadza ją w swoim pulpicie.
-Własne chmury zostały wykadrowane w oknie ze ściętym narożnikiem. Zachowują
-ciągłość marki, a obok dużego tekstu działają jak otwór w technicznej planszy.
-Nie odtwarzają krajobrazu ani obramowań Cap.
+Własne chmury zajmują teraz całą panoramę hero. Ciemna warstwa pod białym tekstem
+utrzymuje kontrast, a jaśniejsza prawa część zostawia miejsce na fotografię.
+Wybrany przez właściciela kierunek łączy ten kadr z prostą, pływającą nawigacją.
 
 ### Wave Terminal
 
@@ -130,9 +130,9 @@ zastosowania i kolejne prezentacje. Duża objętość wizualna służy pokazaniu
 związku między tworzeniem aplikacji, zarządzaniem treścią i wynikiem.
 
 Dla Lomi znaczenie mają odważne proporcje i powiązanie kilku narzędzi w jeden
-obraz. Nowe hero przesuwa ekran na prawo względem tekstu. Sekcje zmieniają
-gęstość i kontrast. Rozbudowany kolaż Payload zastąpiono jednym czytelnym
-zrzutem naraz, aby użytkownik mógł rozpoznać konkretny stan projektu.
+obraz. Podgląd aplikacji zajmuje osobny, szeroki pas bezpośrednio pod hero.
+Sekcje zmieniają gęstość i kontrast. Rozbudowany kolaż Payload zastąpiono jednym
+czytelnym zrzutem naraz, aby użytkownik mógł rozpoznać konkretny stan projektu.
 
 ## Wnioski z artykułów o AI slop
 
@@ -169,16 +169,23 @@ spójność decyzji z działaniem aplikacji i wartość informacji dla odwiedzaj
 
 | Obszar | Decyzja | Znaczenie dla użytkownika |
 | --- | --- | --- |
-| Hero | Duży tekst po lewej, osobny kadr chmur, ekran przesunięty w prawo | Produkt ma własną kompozycję i jest widoczny przed listą funkcji |
+| Hero | Panoramiczne chmury, biały tekst i prosty, pływający navbar | Wyraźne otwarcie strony z czytelną drogą do pobrania |
 | Demonstracja | Build / Preview / Review z prawdziwymi zrzutami | Wybór pokazuje zmianę rodzaju pracy w tym samym środowisku |
 | Typografia | Geist dla treści, lokalny JetBrains Mono dla metadanych | Wyraźny podział między komunikatem a technicznym opisem |
 | Kolor | Firmowe Chalk, Ink i Lime; ciemny rozdział narzędzi | Akcent wskazuje działanie, a kontrast rozdziela części opowieści |
 | Funkcje | Numerowany rejestr zamiast sześciu kart | Szybkie porównanie narzędzi i ich zastosowania |
-| Roadmapa | Poziome wpisy ze stanem i zakresem | Czytelna różnica między wersją dostępną a propozycjami |
+| Roadmapa | Przywrócona oś w trzech kolumnach, pionowa na telefonie | Czytelna różnica między wersją dostępną a propozycjami |
+| Stopka | Pełne tło Lime, duże zaproszenie i grupy linków w jednym widoku | Wyraźne zakończenie strony, dopasowane do bieżącego rozmiaru okna |
 | Tekst | Nazwy czynności, narzędzi i ograniczeń | Wiadomo, co sprawdzić przed instalacją |
 | Ruch | Reakcja na wybór, brak automatycznej karuzeli | Odbiorca kontroluje tempo oglądania |
 | Dostępność | Przyciski natywne, widoczny fokus, treść bez JS | Podgląd i nawigacja działają z klawiatury, a brak skryptów nie blokuje pobrania |
 | CMS | Zachowany model Payload i opublikowane treści | Redesign nie usuwa edytowalnych sekcji ani wersji roboczych |
+
+Stopka ma dokładną wysokość widoku (`100dvh` z zapasem zgodności `100vh`)
+i pełną szerokość strony. W niskich oknach jej wnętrze może się przewijać,
+dzięki czemu wszystkie odnośniki pozostają dostępne bez zwiększania wysokości
+zewnętrznego elementu. Test przeglądarkowy sprawdza rozmiar po zmianach okna
+i dostęp klawiaturą do każdego linku, również bez JavaScriptu.
 
 Obietnice i wymagania produktu sprawdzono w `../lomi/README.md` i dokumentacji
 projektu. Uniknięto absolutnej deklaracji o braku konta, ponieważ różne części

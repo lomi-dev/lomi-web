@@ -12,17 +12,17 @@ Official assets copied from the user-supplied `../brandbook/assets/logos` packag
 The document references versioned favicon copies in `public/icons/` (`lomi-v1.3.svg`, `lomi-v1.3.ico`, and `lomi-v1.3-32.png`) so previously cached site icons do not reuse the old URLs. The PNG is the package's original `lomi-favicon-32.png`; root favicon files remain available for browser fallback.
 
 The original SVG geometry is unchanged. Its paths inherit `currentColor`: Ink
-in the header and Chalk on the dark footer. The header wordmark is 96 px wide.
+in the header and near-black on the Lime footer. The header wordmark is 96 px wide.
 The social preview is a browser capture of the page with this logo.
 
 ## Cloud background
 
 Final workspace source: `src/assets/clouds.png` (1536 × 1024).
 
-The landing page displays the original image in a cropped hero window with a
-chamfered corner, static grayscale treatment, and a light Chalk wash. On narrow
-screens it becomes a small translucent image behind the heading. There is no
-animation or parallax. The source asset remains unchanged.
+The landing page displays the original image across the full hero, with a static
+grayscale treatment and a dark overlay strongest behind the text. The panorama
+also fills the hero on narrow screens. There is no animation or parallax. The
+source asset remains unchanged.
 
 Created using the built-in `image_gen` tool. The two user-supplied landing-page images were visual direction references, not copied into the website. Astro exports responsive AVIF and WebP versions with PNG fallbacks at build time.
 
@@ -48,8 +48,9 @@ The older root-level `workbench.png`, `workbench-light.png`, and
 `source-control.png` assets remain unused. No interface was reconstructed or
 generated. Review the captures against the final launch release.
 
-`public/social-card.png` is a 1200 × 630 browser capture of the landing hero,
-replacing the previous work-in-progress message in social previews.
+`public/social-card.png` is a 1200 × 630 browser capture of the current panoramic
+hero. The release note and bottom metadata are hidden for this crop, keeping
+partial text out of social previews.
 
 ## Typography
 

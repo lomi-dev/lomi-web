@@ -2,7 +2,7 @@
 import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
 import Icon from '../components/Icon';
-import CloudBackdrop from '../components/CloudBackdrop.astro';
+import Hero from '../components/Hero.astro';
 import WorkspaceDeck from '../components/WorkspaceDeck.astro';
 import Features from '../components/Features';
 import Footer from '../components/Footer.astro';
@@ -21,23 +21,8 @@ const statusLabels = { available: 'Current preview', next: 'Proposed next', late
 <Layout title={content.seo.title} description={content.seo.description}>
   <Header content={content.navigation} />
   <main id="main" tabindex="-1">
-    <section class="hero shell" aria-labelledby="hero-title">
-      <div class="hero-kicker"><p class="eyebrow">{hero.eyebrow}</p><a href={`${site.github}/blob/main/LICENSE`}>Apache 2.0 <Icon name="diagonal" width={12} height={12} /></a></div>
-      <div class="hero-heading">
-        <h1 id="hero-title">{hero.title}<span>{hero.accent}</span></h1>
-        <div class="hero-window" aria-hidden="true"><CloudBackdrop /><span class="window-corner corner-top"></span><span class="window-corner corner-bottom"></span></div>
-      </div>
-      <div class="hero-body">
-        <div class="hero-copy">
-          <p class="hero-description">{hero.description}</p>
-          <div class="hero-actions"><a class="button button-primary" href={site.releases} data-download-open aria-haspopup="dialog" aria-controls="download-dialog">{hero.primaryLabel}<Icon name="download" width={17} height={17} /></a><a class="text-link hero-explore" href="#workflow">{hero.secondaryLabel}<span aria-hidden="true">↓</span></a></div>
-          <p class="hero-note">{hero.note}</p>
-          <a class="hero-repository" href={site.github}><Icon name="github" width={15} height={15} /><span>lomi-dev/lomi</span><Icon name="diagonal" width={13} height={13} /></a>
-        </div>
-        <div class="hero-product"><WorkspaceDeck caption={hero.previewCaption} alt={hero.previewAlt} /></div>
-      </div>
-      <div class="hero-baseline"><span>One project folder</span><span class="baseline-path" aria-hidden="true"></span><span>Terminals / Files / Browser / Git</span></div>
-    </section>
+    <Hero content={hero} />
+    <div class="product-showcase shell"><WorkspaceDeck caption={hero.previewCaption} alt={hero.previewAlt} /></div>
 
     <section id="workflow" class="section shell workflow-section" aria-labelledby="workflow-title">
       <div class="section-marker"><span>01</span><p>{workflow.eyebrow}</p></div>
@@ -65,10 +50,11 @@ const statusLabels = { available: 'Current preview', next: 'Proposed next', late
     <section id="roadmap" class="section shell roadmap-section" aria-labelledby="roadmap-title">
       <div class="section-marker"><span>04</span><p>{roadmap.eyebrow}</p></div>
       <div class="section-heading section-heading-split"><h2 id="roadmap-title">{roadmap.title}</h2><p class="section-description">{roadmap.description}</p></div>
-      <div class="roadmap-ledger">{roadmap.items.map((item, index) => <article class="roadmap-item" data-status={item.status}>
-        <div class="roadmap-state"><span class="ledger-index" aria-hidden="true">0{index + 1}</span><span class="roadmap-status"><span aria-hidden="true"></span>{statusLabels[item.status]}</span></div>
-        <div class="roadmap-subject"><p class="roadmap-phase">{item.phase}</p><h3>{item.title}</h3><p class="roadmap-description">{item.description}</p></div>
-        <ul>{item.points.map((point) => <li><span aria-hidden="true">{item.status === 'available' ? '✓' : '—'}</span>{point.label}</li>)}</ul>
+      <div class="roadmap-grid">{roadmap.items.map((item) => <article class="roadmap-item" data-status={item.status}>
+        <div class="roadmap-track" aria-hidden="true"><span></span></div>
+        <div class="roadmap-phase"><p>{item.phase}</p><span class="roadmap-status">{statusLabels[item.status]}</span></div>
+        <h3>{item.title}</h3><p class="roadmap-description">{item.description}</p>
+        <ul>{item.points.map((point) => <li><Icon name={item.status === 'available' ? 'check' : 'plus'} width={15} height={15} />{point.label}</li>)}</ul>
       </article>)}</div><a class="text-link roadmap-link" href={`${site.github}/issues`}>{roadmap.linkLabel}<Icon name="diagonal" width={16} height={16} /></a>
     </section>
 
