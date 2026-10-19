@@ -779,14 +779,18 @@ async function verifyAdaptiveHeader(targetPage) {
     const panelStyle = () => targetPage.locator(mobile ? '.mobile-panel' : '.product-panel').evaluate((panel) => ({
       background: getComputedStyle(panel).backgroundColor,
       title: getComputedStyle(panel.querySelector('.product-link-title')).color,
-      description: getComputedStyle(panel.querySelector('.product-link-description')).color,
+      groupHeading: getComputedStyle(panel.querySelector('.product-group-label')).color,
     }));
     const originalPanelStyle = await panelStyle();
     await scrollSurface('#features');
-    await expectControls('light');
-    expect(await panelStyle(), 'Open dropdown panels retain their readable route palette while bar controls adapt').toEqual(originalPanelStyle);
+    await expectControls('dark');
+    expect(await panelStyle(), 'Open dropdown panels retain their readable route palette while the page scrolls').toEqual(originalPanelStyle);
     const accessibility = await new AxeBuilder({ page: targetPage }).include('.site-header').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
-    expect(accessibility.violations, `Dropdown readability while local navigation follows the page at ${width}px`).toEqual([]);
+    expect(accessibility.violations, `Unified Product navigation readability at ${width}px`).toEqual([]);
+    await close();
+    await expectControls('light');
+    await open();
+    await expectControls('dark');
     await scrollSurface('#roadmap');
     await expectControls('dark');
     await close();
@@ -1055,9 +1059,7 @@ try {
   const productDestinations = await productMenu.locator('.product-link').evaluateAll((links) => links.map((link) => link.getAttribute('href')));
   expect(productDestinations).toEqual(['#workspace', '#features', '#workflow', '#principles', '#faq', '#download']);
   for (const link of await productMenu.locator('.product-link').all()) {
-    await expect(link.locator('.product-icon svg')).toHaveCount(1);
     await expect(link.locator('.product-link-title')).toHaveText(/\S/);
-    await expect(link.locator('.product-link-description')).toHaveText(/\S/);
   }
   await page.locator('.wordmark').focus();
   await productSummary.hover();
@@ -1101,7 +1103,10 @@ try {
   await expect(productMenu).not.toHaveAttribute('open');
   await productSummary.click();
   await expect(productMenu).toHaveAttribute('open', '');
-  await page.mouse.click(8, 180);
+  const openProductPanel = await productMenu.locator('.product-panel').boundingBox();
+  const outsideProductY = openProductPanel.y + openProductPanel.height + 12;
+  expect(outsideProductY, 'The outside-dismissal point lies below the full-width Product panel').toBeLessThan(page.viewportSize().height);
+  await page.mouse.click(8, outsideProductY);
   await expect(productMenu).not.toHaveAttribute('open');
   await expect(productSummary, 'Outside dismissal returns focus from closed Product').toBeFocused();
   await productSummary.click();

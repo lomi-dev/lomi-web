@@ -1,6 +1,5 @@
 ---
 import Icon from './Icon';
-import type { IconName } from './Icon';
 import logo from '../assets/lomi-wordmark.svg?raw';
 import { site } from '../data/site';
 import type { Landing } from '../../content/landing-schema';
@@ -9,18 +8,18 @@ const { content } = Astro.props;
 const isHome = Astro.url.pathname === '/';
 const homeHref = (href: string) => href.startsWith('#') && !isHome ? `/${href}` : href;
 const downloadAttributes = isHome ? { 'data-download-open': true, 'aria-haspopup': 'dialog' as const, 'aria-controls': 'download-dialog' } : {};
-const productGroups: { label: string; links: { label: string; description: string; href: string; icon: IconName }[] }[] = [
-  { label: 'Inside lomi', links: [
-    { label: 'The workspace', description: 'Terminal, editor, browser and Git. Together.', href: '#workspace', icon: 'panels' },
-    { label: 'Built-in tools', description: 'A closer look at what’s in your workspace.', href: '#features', icon: 'code' },
+const productGroups: { label: string; links: { label: string; href: string }[] }[] = [
+  { label: 'Workspace', links: [
+    { label: 'Overview', href: '#workspace' },
+    { label: 'Features', href: '#features' },
   ] },
   { label: 'How it works', links: [
-    { label: 'Your workflow', description: 'Open a project. Pick up where you left off.', href: '#workflow', icon: 'terminal' },
-    { label: 'Built in the open', description: 'Local workspaces. Source you can inspect.', href: '#principles', icon: 'git' },
+    { label: 'Workflow', href: '#workflow' },
+    { label: 'Open source', href: '#principles' },
   ] },
-  { label: 'Start here', links: [
-    { label: 'Questions & answers', description: 'Platforms, agents and everyday use.', href: '#faq', icon: 'plus' },
-    { label: 'Get lomi', description: 'Find a build for your desktop.', href: '#download', icon: 'download' },
+  { label: 'Get started', links: [
+    { label: 'FAQ', href: '#faq' },
+    { label: 'Download lomi', href: '#download' },
   ] },
 ];
 ---
@@ -34,7 +33,9 @@ const productGroups: { label: string; links: { label: string; description: strin
       <details class="product-menu" id="product-menu">
         <summary>Product<svg class="menu-chevron" width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m4 6 4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" /></svg></summary>
         <div class="product-panel">
-          {productGroups.map((group) => <div class="product-group"><p class="product-group-label">{group.label}</p>{group.links.map((link) => <a class="product-link" href={homeHref(link.href)}><span class="product-icon"><Icon name={link.icon} width={21} height={21} /></span><span><span class="product-link-title">{link.label}<Icon name="arrow" width={15} height={15} /></span><span class="product-link-description">{link.description}</span></span></a>)}</div>)}
+          <div class="product-panel-inner">
+            {productGroups.map((group) => <div class="product-group"><p class="product-group-label">{group.label}</p>{group.links.map((link) => <a class="product-link" href={homeHref(link.href)}><span class="product-link-title">{link.label}</span></a>)}</div>)}
+          </div>
         </div>
       </details>
       {content.links.map((link) => <a class="navigation-link" href={homeHref(link.href)} aria-current={link.href.replace(/\/$/, '') === Astro.url.pathname.replace(/\/$/, '') ? 'page' : undefined}>{link.label}</a>)}
@@ -49,7 +50,7 @@ const productGroups: { label: string; links: { label: string; description: strin
         <details class="mobile-product" id="mobile-product">
           <summary><span class="mobile-product-enter">Product<Icon name="arrow" width={17} height={17} /></span><span class="mobile-product-back"><Icon name="arrow" width={16} height={16} />Back</span></summary>
           <div class="mobile-product-panel">
-            {productGroups.map((group) => <div class="product-group"><p class="product-group-label">{group.label}</p>{group.links.map((link) => <a class="product-link" href={homeHref(link.href)}><span class="product-icon"><Icon name={link.icon} width={20} height={20} /></span><span><span class="product-link-title">{link.label}</span><span class="product-link-description">{link.description}</span></span></a>)}</div>)}
+            {productGroups.map((group) => <div class="product-group"><p class="product-group-label">{group.label}</p>{group.links.map((link) => <a class="product-link" href={homeHref(link.href)}><span class="product-link-title">{link.label}</span></a>)}</div>)}
           </div>
         </details>
         {content.links.map((link) => <a class="mobile-root-link" href={homeHref(link.href)} aria-current={link.href.replace(/\/$/, '') === Astro.url.pathname.replace(/\/$/, '') ? 'page' : undefined}>{link.label}<Icon name="arrow" width={16} height={16} /></a>)}
@@ -164,9 +165,14 @@ const productGroups: { label: string; links: { label: string; description: strin
   const syncHeaderSurface = () => {
     if (!header) return;
     header.toggleAttribute('data-scrolled', window.scrollY > 24);
-    // Background colors come entirely from the native backdrop blur. Only
-    // each individual control's foreground needs a local contrast adjustment.
     if (!frostedBackdrop || document.querySelector('dialog[open]')) return;
+    if (product?.open || mobile?.open) {
+      const contrast = header.dataset.theme === 'dark' ? 'light' : 'dark';
+      contrastTargets.forEach((target) => { if (target.dataset.contrast !== contrast) target.dataset.contrast = contrast; });
+      return;
+    }
+    // When menus are closed, colors come from the native backdrop blur. Only
+    // each individual control's foreground needs a local contrast adjustment.
     contrastTargets.forEach((target) => {
       const bounds = target.getBoundingClientRect();
       if (!bounds.width || !bounds.height) return;
@@ -232,11 +238,13 @@ const productGroups: { label: string; links: { label: string; description: strin
   }
   .site-header::before { content: ''; position: absolute; z-index: 0; inset: 0; pointer-events: none; background: rgb(255 255 255 / 6%); -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px); opacity: 0; transition: opacity 180ms ease; }
   .site-header[data-scrolled]::before, .site-header:not([data-navigation-ready])::before, .site-header:has(.product-menu[open], .mobile-navigation[open])::before { opacity: 1; }
+  .site-header:has(.product-menu[open], .mobile-navigation[open])::before { background: var(--header-panel); -webkit-backdrop-filter: none; backdrop-filter: none; }
   .site-header:not([data-navigation-ready])::before { background: var(--header-surface); }
   .site-header[data-theme='light'] { --header-surface: rgb(255 255 255 / 72%); --header-panel: #fff; --header-line: #dfe5d8; --header-text: #202c18; --header-muted: #3f4b36; --header-subtle: #5c6b4e; --header-hover: #eef3e8; --header-icon: #4b6c16; --header-focus: var(--color-focus); }
   .site-header [data-contrast] { transition: background-color 150ms ease; }
   .site-header [data-contrast='light'] { --header-text: #fff; --header-muted: #fff; --header-line: rgb(255 255 255 / 30%); --header-hover: rgb(255 255 255 / 12%); --header-focus: var(--color-lime); color: var(--header-text); }
   .site-header [data-contrast='dark'] { --header-text: #000; --header-muted: #000; --header-line: rgb(11 14 11 / 25%); --header-hover: rgb(11 14 11 / 7%); --header-focus: var(--color-focus); color: var(--header-text); }
+  .site-header:has(.product-menu[open], .mobile-navigation[open]) [data-contrast] { --header-text: inherit; --header-muted: inherit; --header-line: inherit; --header-hover: inherit; --header-focus: inherit; }
   .navigation-backdrop { position: fixed; inset: 0; z-index: -1; visibility: hidden; opacity: 0; background: rgb(5 10 5 / 26%); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); transition: opacity 180ms ease, visibility 180ms; }
   .site-header[data-theme='light'] .navigation-backdrop { background: rgb(30 43 21 / 10%); }
   .site-header[data-navigation-ready]:has(.product-menu[open], .mobile-navigation[open]) .navigation-backdrop { visibility: visible; opacity: 1; }
@@ -253,15 +261,12 @@ const productGroups: { label: string; links: { label: string; description: strin
   .navigation-link[aria-current], .product-menu[open] > summary { color: var(--header-text); background: var(--header-hover); }
   .menu-chevron { transition: transform 180ms var(--ease-out); }
   .product-menu[open] .menu-chevron { transform: rotate(180deg); }
-  .product-panel { position: absolute; top: calc(100% + 8px); left: 0; right: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; padding: 24px; max-height: calc(100dvh - var(--site-header-height) - 24px); overflow: auto; overscroll-behavior: contain; border: 1px solid var(--header-line); border-radius: 12px; background: var(--header-panel); box-shadow: 0 16px 48px rgb(0 0 0 / 12%); }
-  .product-group-label { margin-bottom: 8px; padding: 0 12px 12px; border-bottom: 1px solid var(--header-line); font-family: var(--font-mono); font-size: 9px; letter-spacing: .035em; color: var(--header-subtle); }
-  .product-link { display: flex; align-items: flex-start; gap: 12px; padding: 16px 12px; border-radius: 8px; transition: background-color 150ms ease; }
-  .product-icon { display: inline-flex; color: var(--header-icon); padding-top: 1px; }
-  .product-link > span:last-child { flex: 1; min-width: 0; }
-  .product-link-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 14px; font-weight: 500; line-height: 1.5; color: var(--header-text); }
-  .product-link-title :global(svg) { opacity: 0; transform: translateX(-4px); transition: opacity 150ms ease, transform 150ms var(--ease-out); }
-  .product-link:focus-visible .product-link-title :global(svg) { opacity: 1; transform: none; }
-  .product-link-description { display: block; margin-top: 4px; font-size: 12px; line-height: 1.65; color: var(--header-subtle); }
+  .product-panel { position: fixed; top: var(--site-header-height); inset-inline: 0; padding-block: 22px 32px; max-height: calc(100dvh - var(--site-header-height)); overflow: auto; overscroll-behavior: contain; background: var(--header-panel); box-shadow: 0 12px 24px -20px rgb(0 0 0 / 18%); }
+  .product-panel-inner { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px; width: min(1440px, calc(100% - clamp(40px, 10.4vw, 160px))); margin-inline: auto; }
+  .product-group-label { margin: 0 0 6px; font-size: 13px; font-weight: 400; line-height: 1.5; color: var(--header-subtle); }
+  .product-link { display: flex; align-items: center; width: fit-content; min-width: 44px; max-width: 100%; min-height: 44px; padding-block: 8px; text-decoration-thickness: 1px; text-underline-offset: 4px; }
+  .product-link-title { font-size: 16px; font-weight: 400; line-height: 1.5; color: var(--header-text); }
+  .product-link:focus-visible { text-decoration-line: underline; }
   .header-actions { display: flex; align-items: center; flex-shrink: 0; gap: 12px; padding-left: 20px; }
   .header-source { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-width: 44px; min-height: 44px; padding-inline: 10px; border-radius: 6px; color: var(--header-muted); font-size: 12px; font-weight: 500; transition: color 150ms ease, background-color 150ms ease; }
   .header-action { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 44px; padding: 0 17px; border: 1px solid #b6e43b; border-radius: 8px; color: #0b0e0b; background: var(--color-lime); font-size: 12px; font-weight: 550; transition: background-color 150ms ease, transform 150ms ease-out; }
@@ -272,12 +277,11 @@ const productGroups: { label: string; links: { label: string; description: strin
   @keyframes panel-enter { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
   @media (hover: hover) {
     .navigation-link:hover, .product-fallback:hover, .product-menu > summary:hover, .header-source:hover { color: var(--header-text); background: var(--header-hover); }
-    .product-link:hover { background: var(--header-hover); }
-    .product-link:hover .product-link-title :global(svg) { opacity: 1; transform: none; }
+    .product-link:hover { text-decoration-line: underline; }
     .header-action:hover { background: #dcff83; }
   }
   @media (max-width: 1100px) { .header-source > span { display: none; } }
-  @media (max-width: 1000px) { .header-inner { gap: 16px; } .desktop-navigation { gap: 2px; margin-left: 8px; } .navigation-link, .product-fallback, .product-menu > summary { padding-inline: 10px; font-size: 12px; } .header-actions { gap: 8px; padding-left: 12px; } .header-action { padding-inline: 13px; font-size: 11px; } .product-panel { gap: 12px; padding: 20px 16px; } .product-link { gap: 10px; padding-inline: 9px; } .product-link-title { font-size: 13px; } .product-link-description { font-size: 11px; } }
+  @media (max-width: 1000px) { .header-inner { gap: 16px; } .desktop-navigation { gap: 2px; margin-left: 8px; } .navigation-link, .product-fallback, .product-menu > summary { padding-inline: 10px; font-size: 12px; } .header-actions { gap: 8px; padding-left: 12px; } .header-action { padding-inline: 13px; font-size: 11px; } }
   @media (max-width: 767px) {
     .header-inner { width: calc(100% - 40px); justify-content: space-between; }
     .wordmark :global(svg) { width: 64px; }
@@ -306,14 +310,14 @@ const productGroups: { label: string; links: { label: string; description: strin
     .mobile-utilities { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding-top: 20px; }
     .mobile-utilities > a { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 44px; font-size: 12px; }
     .mobile-utilities .mobile-download { padding-inline: 14px; border: 1px solid #b6e43b; border-radius: 8px; background: var(--color-lime); color: #0b0e0b; font-weight: 550; }
-    .product-group-label { margin: 0; padding: 16px 0 10px; font-size: 9px; }
-    .product-link { min-height: 72px; padding: 16px 0; gap: 13px; }
-    .product-link-title { font-size: 14px; }
-    .product-link-description { font-size: 12px; }
+    .mobile-product-panel { padding-bottom: 8px; }
+    .product-group + .product-group { margin-top: 20px; }
+    .product-group-label { margin-bottom: 4px; }
+    .product-link-title { font-size: 17px; }
   }
   @media (prefers-reduced-motion: reduce) {
     .product-menu[open] .product-panel, .mobile-navigation[open] > .mobile-panel { animation: none; }
-    .site-header::before, .menu-chevron, .product-link-title :global(svg), .navigation-backdrop { transition: none; }
+    .site-header::before, .menu-chevron, .navigation-backdrop { transition: none; }
     .header-action:active { transform: none; }
   }
   @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
