@@ -56,7 +56,7 @@ export function initFeatureGallery(root: HTMLElement) {
     }
   }
 
-  function outgoingLayer(source: HTMLElement, kind: 'media' | 'copy') {
+  function outgoingLayer(source: HTMLElement) {
     const layer = source.cloneNode(true) as HTMLElement;
     for (const element of [layer, ...layer.querySelectorAll<HTMLElement>('*')]) {
       for (const attribute of Array.from(element.attributes)) {
@@ -64,12 +64,12 @@ export function initFeatureGallery(root: HTMLElement) {
           || attribute.name.startsWith('data-feature-')) element.removeAttribute(attribute.name);
       }
     }
+    layer.removeAttribute('hidden');
     layer.inert = true;
     layer.setAttribute('aria-hidden', 'true');
-    layer.dataset.featureMotionLayer = kind;
+    layer.dataset.featureMotionLayer = 'slide';
     Object.assign(layer.style, {
-      position: 'absolute', inset: '0', width: '100%', height: '100%',
-      margin: '0', pointerEvents: 'none', overflow: kind === 'copy' ? 'hidden auto' : 'hidden', zIndex: '2',
+      pointerEvents: 'none', zIndex: '2',
     });
     motionLayers.add(layer);
     return layer;
@@ -156,58 +156,32 @@ export function initFeatureGallery(root: HTMLElement) {
     if (requested === selected || !dialog!.open || closing) return;
     const direction = requestedDirection;
     const outgoing = slides[selected]!;
-    const previousPicture = outgoing.querySelector<HTMLElement>('[data-feature-modal-media] picture');
     const previousCopy = outgoing.querySelector<HTMLElement>('[data-feature-copy]');
     const previousScroll = previousCopy?.scrollTop ?? 0;
-    const previousCopyWidth = previousCopy?.getBoundingClientRect().width ?? 0;
     const focusInSlide = outgoing.contains(document.activeElement);
     cancelAnimations();
     select(requested);
     const version = generation;
     const incoming = slides[selected]!;
-    const media = incoming.querySelector<HTMLElement>('[data-feature-modal-media]');
-    const picture = media?.querySelector<HTMLElement>('picture');
     const copy = incoming.querySelector<HTMLElement>('[data-feature-copy]');
-    const content = copy?.querySelector<HTMLElement>('[data-feature-copy-content]');
     if (focusInSlide) copy?.focus({ preventScroll: true });
     navigating = true;
     dialog!.dataset.state = 'navigating';
     const transitions: Promise<void>[] = [];
 
     if (reducedMotion.matches) {
-      for (const element of [picture, content]) {
-        if (element) transitions.push(animate(element, [{ opacity: 0.65 }, { opacity: 1 }], 80, navigationEasing));
-      }
+      transitions.push(animate(incoming, [{ opacity: 0.65 }, { opacity: 1 }], 80, navigationEasing));
     } else {
-      if (media && picture) {
-        if (previousPicture) {
-          const layer = outgoingLayer(previousPicture, 'media');
-          media.append(layer);
-          transitions.push(animateLayer(layer, [
-            { transform: 'translateX(0)' }, { transform: `translateX(${-direction * 100}%)` },
-          ], 280));
-        }
-        transitions.push(animate(picture, [
-          { transform: `translateX(${direction * 100}%)` }, { transform: 'translateX(0)' },
-        ], 280, navigationEasing));
-      }
-      if (copy && content) {
-        if (previousCopy) {
-          const layer = outgoingLayer(previousCopy, 'copy');
-          // Keep the outgoing line breaks and scrollbar gutter while fading.
-          layer.style.width = `${previousCopyWidth}px`;
-          copy.append(layer);
-          layer.scrollTop = previousScroll;
-          transitions.push(animateLayer(layer, [
-            { opacity: 1, transform: 'translateX(0)' },
-            { opacity: 0, transform: `translateX(${-direction * 22}px)` },
-          ], 160));
-        }
-        transitions.push(animate(content, [
-          { opacity: 0, transform: `translateX(${direction * 22}px)` },
-          { opacity: 1, transform: 'translateX(0)' },
-        ], 220, navigationEasing));
-      }
+      const layer = outgoingLayer(outgoing);
+      incoming.parentElement!.append(layer);
+      const outgoingCopy = layer.querySelector<HTMLElement>('.feature-modal-copy');
+      if (outgoingCopy) outgoingCopy.scrollTop = previousScroll;
+      transitions.push(animateLayer(layer, [
+        { transform: 'translateX(0)' }, { transform: `translateX(${-direction * 100}%)` },
+      ], 280));
+      transitions.push(animate(incoming, [
+        { transform: `translateX(${direction * 100}%)` }, { transform: 'translateX(0)' },
+      ], 280, navigationEasing));
     }
     void Promise.all(transitions).then(() => {
       if (generation !== version || !dialog!.open || closing) return;

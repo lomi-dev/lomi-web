@@ -137,6 +137,18 @@ async function directionStep(page, control, index, direction) {
   // Seek native animations in the same task as the click, so direction is
   // measured from rendered geometry without racing a short transition.
   const motion = await dialog(page).evaluate((element, selector) => {
+    const beforeSlide = element.querySelector('[data-feature-slide]:not([hidden])');
+    const left = (root, selector) => root.querySelector(selector).getBoundingClientRect().left;
+    const box = (item) => { const rect = item.getBoundingClientRect(); return { x: rect.x, y: rect.y, width: rect.width, height: rect.height }; };
+    const before = {
+      slide: beforeSlide.getBoundingClientRect().left,
+      media: left(beforeSlide, '[data-feature-modal-media]'),
+      picture: left(beforeSlide, 'picture'),
+      copy: left(beforeSlide, '[data-feature-copy]'),
+      description: left(beforeSlide, '.feature-modal-description'),
+      close: box(element.querySelector('[data-feature-close]')),
+      navigation: box(element.querySelector('.feature-modal-navigation')),
+    };
     element.querySelector(selector).click();
     const animations = element.getAnimations({ subtree: true }).filter((animation) => animation.constructor.name === 'Animation');
     for (const animation of animations) {
@@ -144,38 +156,56 @@ async function directionStep(page, control, index, direction) {
       animation.currentTime = Number(animation.effect.getTiming().duration) * .35;
     }
     const slide = element.querySelector('[data-feature-slide]:not([hidden])');
-    const frame = slide.querySelector('[data-feature-modal-media]');
-    const picture = [...frame.querySelectorAll('picture')].find((item) => !item.closest('[data-feature-motion-layer]'));
-    const outgoing = element.querySelector('[data-feature-motion-layer="media"]');
-    const copy = slide.querySelector('[data-feature-copy-content]');
-    const bounds = frame.getBoundingClientRect();
-    const offset = (item) => {
-      if (!item) return null;
-      const rect = item.getBoundingClientRect();
-      return (rect.left + rect.right - bounds.left - bounds.right) / 2;
-    };
-    const transform = copy && getComputedStyle(copy).transform;
+    const frame = element.querySelector('[data-feature-pages]');
+    const outgoing = element.querySelector('[data-feature-motion-layer="slide"]');
+    const copy = slide.querySelector('[data-feature-copy]');
     const layers = [...element.querySelectorAll('[data-feature-motion-layer]')];
     return {
-      incoming: offset(picture), outgoing: offset(outgoing),
-      copyX: transform && transform !== 'none' ? new DOMMatrixReadOnly(transform).m41 : 0,
-      copyOpacity: copy ? Number(getComputedStyle(copy).opacity) : 1,
+      incoming: slide.getBoundingClientRect().left - before.slide,
+      outgoing: outgoing ? outgoing.getBoundingClientRect().left - before.slide : null,
+      displacements: {
+        media: left(slide, '[data-feature-modal-media]') - before.media,
+        picture: left(slide, 'picture') - before.picture,
+        copy: left(slide, '[data-feature-copy]') - before.copy,
+        description: left(slide, '.feature-modal-description') - before.description,
+      },
+      outgoingDisplacements: outgoing ? {
+        media: left(outgoing, '.feature-modal-media') - before.media,
+        picture: left(outgoing, 'picture') - before.picture,
+        copy: left(outgoing, '.feature-modal-copy') - before.copy,
+        description: left(outgoing, '.feature-modal-description') - before.description,
+      } : null,
+      opacity: [slide, copy, slide.querySelector('.feature-modal-description'), slide.querySelector('picture'), slide.querySelector('[data-feature-modal-media]'),
+        outgoing, outgoing?.querySelector('.feature-modal-copy'), outgoing?.querySelector('picture'), outgoing?.querySelector('.feature-modal-media')]
+        .map((item) => item ? Number(getComputedStyle(item).opacity) : null),
+      ownership: animations.map((animation) => animation.effect.target === slide ? 'incoming' : animation.effect.target === outgoing ? 'outgoing' : 'child'),
       clipped: ['hidden', 'clip'].includes(getComputedStyle(frame).overflowX),
+      fixedControls: { before: { close: before.close, navigation: before.navigation },
+        after: { close: box(element.querySelector('[data-feature-close]')), navigation: box(element.querySelector('.feature-modal-navigation')) } },
       layers: layers.map((layer) => ({ kind: layer.dataset.featureMotionLayer,
-        inert: layer.inert, hidden: layer.getAttribute('aria-hidden'), ids: layer.querySelectorAll('[id]').length + Number(layer.hasAttribute('id')) })),
+        inert: layer.inert, hidden: layer.getAttribute('aria-hidden'), ids: layer.querySelectorAll('[id]').length + Number(layer.hasAttribute('id')),
+        media: layer.querySelectorAll('.feature-modal-media').length, copy: layer.querySelectorAll('.feature-modal-copy').length })),
       duplicateIds: [...element.querySelectorAll('[id]')].map((item) => item.id).filter((id, index, all) => all.indexOf(id) !== index),
     };
   }, control);
   await selected(page, index);
-  if (index === 1 && direction === 1) await page.screenshot({ path: `artifacts/features-${browserType.name()}-navigation-midpoint.png` });
-  expect(motion.incoming * direction, 'Incoming picture enters from the requested side').toBeGreaterThan(1);
-  expect(motion.outgoing * direction, 'Outgoing picture moves in the opposite direction').toBeLessThan(-1);
-  expect(motion.copyX * direction, 'Description follows the requested horizontal direction').toBeGreaterThan(.1);
-  expect(Math.abs(motion.copyX), 'Description movement remains short').toBeLessThan(30);
-  expect(motion.copyOpacity, 'Incoming description fades in').toBeLessThan(1);
-  expect(motion.clipped, 'Moving pictures stay inside a clipped media frame').toBe(true);
-  expect(motion.layers.map((layer) => layer.kind).sort()).toEqual(['copy', 'media']);
-  for (const layer of motion.layers) expect(layer, 'Outgoing visual copies stay inert, hidden and ID-free').toMatchObject({ inert: true, hidden: 'true', ids: 0 });
+  if (direction === 1 && (index === 1 || (index === 0 && page.viewportSize().width < 900))) {
+    await page.screenshot({ path: `artifacts/features-${browserType.name()}-navigation-midpoint${page.viewportSize().width < 900 ? '-mobile' : ''}.png` });
+  }
+  expect(motion.incoming * direction, 'Incoming feature enters from the requested side').toBeGreaterThan(1);
+  expect(motion.outgoing * direction, 'Outgoing feature moves in the opposite direction').toBeLessThan(-1);
+  for (const [part, displacement] of Object.entries(motion.displacements)) {
+    expect(Math.abs(displacement - motion.incoming), `Incoming ${part} moves with the whole slide`).toBeLessThanOrEqual(1);
+  }
+  for (const [part, displacement] of Object.entries(motion.outgoingDisplacements || {})) {
+    expect(Math.abs(displacement - motion.outgoing), `Outgoing ${part} moves with the whole slide`).toBeLessThanOrEqual(1);
+  }
+  expect(motion.opacity, 'Media and copy retain full opacity during the swipe').toEqual([1, 1, 1, 1, 1, 1, 1, 1, 1]);
+  expect(motion.ownership.sort(), 'Only the incoming and outgoing whole slides own motion').toEqual(['incoming', 'outgoing']);
+  expect(motion.clipped, 'Both complete features stay inside the shared clipped viewport').toBe(true);
+  expect(motion.fixedControls.after, 'Close and navigation remain stationary').toEqual(motion.fixedControls.before);
+  expect(motion.layers.map((layer) => layer.kind)).toEqual(['slide']);
+  for (const layer of motion.layers) expect(layer, 'One outgoing feature contains image and copy, inert, hidden and ID-free').toMatchObject({ inert: true, hidden: 'true', ids: 0, media: 1, copy: 1 });
   expect(motion.duplicateIds, 'Visual copies do not duplicate accessible IDs').toEqual([]);
   await dialog(page).evaluate((element) => element.getAnimations({ subtree: true }).filter((animation) => animation.playState === 'paused').forEach((animation) => animation.play()));
   await settled(page, index);
@@ -190,13 +220,12 @@ async function verifyNavigationMotion(page) {
   await directionStep(page, '[data-feature-next]', 0, 1);
 
   await dialog(page).evaluate((element) => {
-    const probe = { starts: 0, maxMedia: 0, maxCopy: 0 };
+    const probe = { starts: 0, maxSlides: 0 };
     const observer = new MutationObserver((records) => {
       for (const record of records) for (const node of record.addedNodes) {
-        if (node instanceof Element) probe.starts += Number(node.matches('[data-feature-motion-layer="media"]')) + node.querySelectorAll('[data-feature-motion-layer="media"]').length;
+        if (node instanceof Element) probe.starts += Number(node.matches('[data-feature-motion-layer="slide"]')) + node.querySelectorAll('[data-feature-motion-layer="slide"]').length;
       }
-      probe.maxMedia = Math.max(probe.maxMedia, element.querySelectorAll('[data-feature-motion-layer="media"]').length);
-      probe.maxCopy = Math.max(probe.maxCopy, element.querySelectorAll('[data-feature-motion-layer="copy"]').length);
+      probe.maxSlides = Math.max(probe.maxSlides, element.querySelectorAll('[data-feature-motion-layer="slide"]').length);
     });
     observer.observe(element, { childList: true, subtree: true });
     window.__featureMotionProbe = { probe, observer };
@@ -210,8 +239,7 @@ async function verifyNavigationMotion(page) {
   });
   expect(rapid.starts, 'Fifteen clicks animate the current transition and latest intent only').toBeGreaterThan(0);
   expect(rapid.starts).toBeLessThanOrEqual(2);
-  expect(rapid.maxMedia, 'Media layers never stack across queued intents').toBeLessThanOrEqual(1);
-  expect(rapid.maxCopy, 'Copy layers never stack across queued intents').toBeLessThanOrEqual(1);
+  expect(rapid.maxSlides, 'Whole-slide layers never stack across queued intents').toBeLessThanOrEqual(1);
 
   await dialog(page).locator('[data-feature-dot="0"]').click();
   await settled(page, 0);
@@ -236,6 +264,8 @@ async function verifyNavigationMotion(page) {
   await settled(page, 5);
   await controlsVisible(page);
   expect(await dialog(page).evaluate((element) => element.contains(document.activeElement)), 'Resizing retains focus inside the modal').toBe(true);
+  await directionStep(page, '[data-feature-next]', 0, 1);
+  await directionStep(page, '[data-feature-prev]', 5, -1);
   await page.setViewportSize({ width: 1440, height: 900 });
   await settled(page, 5);
 
@@ -458,10 +488,9 @@ try {
           element.querySelector('[data-feature-next]').click();
           element.getAnimations({ subtree: true }).filter((animation) => animation.constructor.name === 'Animation').forEach((animation) => { animation.pause(); animation.currentTime = 0; });
           const incoming = element.querySelector('[data-feature-slide]:not([hidden]) [data-feature-copy]');
-          return { before, outgoing: measure(element.querySelector('[data-feature-motion-layer="copy"]')),
+          return { before, outgoing: measure(element.querySelector('[data-feature-motion-layer="slide"] .feature-modal-copy')),
             incoming: { clientWidth: incoming.clientWidth, scrollHeight: incoming.scrollHeight, clientHeight: incoming.clientHeight },
-            mediaLayers: element.querySelectorAll('[data-feature-motion-layer="media"]').length,
-            copyLayers: element.querySelectorAll('[data-feature-motion-layer="copy"]').length };
+            slideLayers: element.querySelectorAll('[data-feature-motion-layer="slide"]').length };
         });
         if (browserType === chromium) expect(geometry.before.width - geometry.before.clientWidth, 'Fixture exposes a classic scrollbar gutter').toBeGreaterThan(10);
         expect(geometry.before.scrollTop, 'Long outgoing copy starts from a real scrolled position').toBeGreaterThan(0);
@@ -469,8 +498,7 @@ try {
         for (const property of ['width', 'clientWidth', 'scrollTop', 'textWidth', 'textHeight']) {
           expect(Math.abs(geometry.outgoing[property] - geometry.before[property]), `Outgoing ${property} preserves scrolled text geometry at ${viewport.width}px`).toBeLessThanOrEqual(1);
         }
-        expect(geometry.mediaLayers).toBe(1);
-        expect(geometry.copyLayers).toBe(1);
+        expect(geometry.slideLayers).toBe(1);
         await dialog(fixture.page).evaluate((element) => element.getAnimations({ subtree: true }).filter((animation) => animation.playState === 'paused').forEach((animation) => animation.play()));
         await expect(dialog(fixture.page).locator('[data-feature-motion-layer]')).toHaveCount(0);
         const after = await dialog(fixture.page).locator('[data-feature-slide]:not([hidden]) [data-feature-copy]').evaluate((copy) => ({
@@ -527,7 +555,7 @@ try {
     await staticRun.context.close();
   }
   expect(errors, 'No runtime errors in feature scenarios').toEqual([]);
-  console.log(`Passed (${browserType.name()}): all feature cards, accessible names/descriptions, wrapping arrows/dots/keyboard, directional clipped media/copy transitions, bounded latest-intent queue, reverse/resize/reduced-motion/close cleanup, rapid input and reopen, native focus containment/Escape/backdrop, focus and scroll restoration, resize/mobile/tablet/short desktop, reduced motion/live cancellation, CMS 1/12 items and long copy, no-JS fallback, local pictures, no overflow and axe.`);
+  console.log(`Passed (${browserType.name()}): all feature cards, accessible names/descriptions, wrapping arrows/dots/keyboard, directional whole-feature swipes with image/copy in lockstep, bounded latest-intent queue, reverse/resize/reduced-motion/close cleanup, rapid input and reopen, native focus containment/Escape/backdrop, focus and scroll restoration, resize/mobile/tablet/short desktop, reduced motion/live cancellation, CMS 1/12 items and long copy, no-JS fallback, local pictures, no overflow and axe.`);
 } finally {
   await browser.close();
 }
