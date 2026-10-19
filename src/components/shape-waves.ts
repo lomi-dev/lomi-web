@@ -17,6 +17,24 @@ const fieldLevel = (x: number, y: number, time: number) => Math.floor(sampleFiel
 const levelRadius = (level: number) => 3.2 + level / (LEVELS - 1) * 0.8;
 
 type Cell = { x: number; y: number; radius: number; shape: number };
+type Rgb = [number, number, number];
+
+/** Canvas resolves named colors and short/modern rgb syntax before parsing. */
+function normalizedSrgb(context: CanvasRenderingContext2D, color: string, fallback: string): Rgb {
+  context.fillStyle = fallback;
+  context.fillStyle = color;
+  const resolved = String(context.fillStyle);
+  const hex = /^#([\da-f]{6})$/i.exec(resolved)?.[1];
+  if (hex) return [0, 2, 4].map((offset) => parseInt(hex.slice(offset, offset + 2), 16)) as Rgb;
+  const rgb = /^rgba?\(([^)]+)\)$/i.exec(resolved);
+  const srgb = /^color\(srgb\s+([^)]+)\)$/i.exec(resolved);
+  const channels = (rgb?.[1] ?? srgb?.[1])?.split(/[\s,/]+/).slice(0, 3).map((value) => {
+    const scale = value.endsWith('%') ? 255 / 100 : srgb ? 255 : 1;
+    return Math.round(Math.max(0, Math.min(255, parseFloat(value) * scale)));
+  });
+  if (channels?.length === 3 && channels.every(Number.isFinite)) return channels as Rgb;
+  return [0, 2, 4].map((offset) => parseInt(fallback.slice(offset + 1, offset + 3), 16)) as Rgb;
+}
 
 // Broad, continuous bands: adjacent cells sample nearby values rather than
 // independent random shapes. Time is elapsed active time, so pausing freezes it.
@@ -86,7 +104,8 @@ export function registerShapeWaves() {
     private height = 0;
     private visible = false;
     private failed = false;
-    private color = '#4f633a';
+    private background = '#0b0e0b';
+    private interactionRgb: Rgb = [255, 255, 255];
     private hoverColors: string[] = [];
     private glowSprite: HTMLCanvasElement | null = null;
     private glowDpr = 0;
@@ -118,13 +137,13 @@ export function registerShapeWaves() {
         this.finePointer = matchMedia('(any-pointer: fine)');
         const bounds = this.getBoundingClientRect();
         this.visible = bounds.bottom > 0 && bounds.top < innerHeight && bounds.right > 0 && bounds.left < innerWidth;
-        this.color = getComputedStyle(this).getPropertyValue('--shape-waves-color').trim() || '#4f633a';
-        // Canvas normalizes the site's sRGB shape color before tinting it.
-        this.context.fillStyle = this.color;
-        const hex = /^#([\da-f]{6})$/i.exec(this.context.fillStyle)?.[1] ?? '4f633a';
-        const rgb = [0, 2, 4].map((offset) => parseInt(hex.slice(offset, offset + 2), 16));
+        const style = getComputedStyle(this);
+        const background = normalizedSrgb(this.context, style.getPropertyValue('--shape-waves-background').trim(), '#0b0e0b');
+        this.background = `rgb(${background.join(',')})`;
+        const rgb = normalizedSrgb(this.context, style.getPropertyValue('--shape-waves-color').trim(), '#4f633a');
+        this.interactionRgb = normalizedSrgb(this.context, style.getPropertyValue('--shape-waves-interaction-color').trim(), '#ffffff');
         this.hoverColors = Array.from({ length: TINT_LEVELS }, (_, index) =>
-          `rgb(${rgb.map((channel) => Math.round(channel + (255 - channel) * index / (TINT_LEVELS - 1))).join(',')})`,
+          `rgb(${rgb.map((channel, channelIndex) => Math.round(channel + (this.interactionRgb[channelIndex] - channel) * index / (TINT_LEVELS - 1))).join(',')})`,
         );
         this.resize();
         this.resizeObserver = new ResizeObserver(this.resize);
@@ -297,9 +316,10 @@ export function registerShapeWaves() {
         if (glow) {
           glow.setTransform(this.glowSprite.width / 14, 0, 0, this.glowSprite.height / 14, 0, 0);
           const gradient = glow.createRadialGradient(7, 7, 0, 7, 7, 6.5);
-          gradient.addColorStop(0, 'rgba(255,255,255,0.24)');
-          gradient.addColorStop(0.5, 'rgba(255,255,255,0.1)');
-          gradient.addColorStop(1, 'rgba(255,255,255,0)');
+          const color = this.interactionRgb.join(',');
+          gradient.addColorStop(0, `rgba(${color},0.24)`);
+          gradient.addColorStop(0.5, `rgba(${color},0.1)`);
+          gradient.addColorStop(1, `rgba(${color},0)`);
           glow.fillStyle = gradient;
           glow.fillRect(0, 0, 14, 14);
         }
@@ -347,7 +367,7 @@ export function registerShapeWaves() {
 
         const paths: (Path2D | undefined)[] = new Array(3 * TINT_LEVELS);
         this.context.globalAlpha = 1;
-        this.context.fillStyle = '#0b0e0b';
+        this.context.fillStyle = this.background;
         if (this.fullRedraw) this.context.fillRect(0, 0, this.width, this.height);
         else this.context.beginPath();
         for (let dirty = 0; dirty < dirtyCount; dirty++) {

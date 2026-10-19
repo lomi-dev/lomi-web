@@ -17,13 +17,13 @@ required to work on the layout.
 
 The page includes:
 
-- A dark hero with geometric shape waves, six floating agent marks, pointer
+- A white hero with pale geometric shape waves, six floating agent marks, pointer
   depth, and a shared motion control.
 - A floating glass navigation bar: Product opens a three-column dropdown,
   followed by Roadmap, Devlog, and Docs. Mobile Product uses a Back drill-in.
 - A separate `/devlog/` page with a Work in progress placeholder.
-- A keyboard-accessible Build / Preview / Review selector below the hero, with
-  real app captures and a direct link from the hero.
+- A real desktop capture starting in the hero, with a centered video control
+  and an animated native YouTube dialog.
 - A workflow sequence, dark tools manifest, and local/source/customization details.
 - A three-column timeline separating available features from proposed work.
 - Native expandable FAQ, preview downloads, newsletter, and a Lime footer that
@@ -51,7 +51,7 @@ cards render on the server and remain readable without JavaScript.
 
 The background is an authored Canvas 2D interpretation of React Bits Shape Waves:
 small triangles, circles, and squares evolve in broad bands. Moving the mouse
-leaves a bright ripple that changes nearby shapes, spreads, and fades. It
+leaves a green ripple that changes nearby shapes, spreads, and fades. It
 shares the hero pause control and stops rendering offscreen or in a hidden tab.
 A static SVG field appears without JavaScript or Canvas 2D. No WebGPU dependency is needed.
 See [background implementation](docs/shape-waves.md) for its rendering limits.
@@ -211,7 +211,7 @@ the real public origin, CMS storage/secret, and newsletter backend; connect a
 deployment rebuild hook if desired. Then deploy the Astro `dist/` output when
 ready. Nothing is published automatically from this branch.
 
-The site uses local Geist and JetBrains Mono fonts, a dark opening composition,
+The site uses local Geist and JetBrains Mono fonts, a white opening composition,
 and Lomi's Lime accent. React hydrates only the decorative hero cards; the other
 sections retain their static/native behavior. YouTube is embedded only after
 the visitor activates the video. There are no site trackers, runtime Iconify

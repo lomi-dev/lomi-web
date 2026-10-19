@@ -59,38 +59,38 @@ const { content } = Astro.props;
 </script>
 
 <style>
-  .hero { position: relative; isolation: isolate; overflow: hidden; min-height: 100svh; padding-bottom: 64px; background: #0b0e0b; color: #f6f7f1; }
+  .hero { position: relative; isolation: isolate; overflow: hidden; min-height: 100svh; padding-bottom: 64px; background: linear-gradient(180deg, #ffffff 0%, #ffffff 65%, var(--color-chalk) 100%); color: var(--color-ink); }
   /* Thirty percent of the 8:5 screenshot is 18.75% of its rendered width. */
   .hero-opening { position: relative; display: flex; flex-direction: column; justify-content: center; min-height: calc(100svh - min(221.25px, calc(18.75vw - 18px))); padding: 140px 0 26px; }
-  .hero-atmosphere { position: absolute; z-index: -1; inset: 0 0 auto; height: 950px; overflow: hidden; pointer-events: none; --shape-waves-color: #557336; }
-  .hero-atmosphere :global(lomi-shape-waves) { opacity: .6; }
-  .hero-atmosphere::after { content: ''; position: absolute; z-index: 2; inset: 0; background: radial-gradient(ellipse 40% 41% at 50% 49%, #0b0e0bf5 0%, #0b0e0bba 55%, #0b0e0b00 100%), linear-gradient(0deg, #0b0e0b 0%, #0b0e0b00 22%, #0b0e0b00 83%, #0b0e0b85 100%); }
+  .hero-atmosphere { position: absolute; z-index: -1; inset: 0 0 auto; height: 950px; overflow: hidden; pointer-events: none; --shape-waves-background: #ffffff; --shape-waves-color: #cad6bf; --shape-waves-interaction-color: #6b922c; }
+  .hero-atmosphere :global(lomi-shape-waves) { opacity: .7; }
+  .hero-atmosphere::after { content: ''; position: absolute; z-index: 2; inset: 0; background: radial-gradient(ellipse 44% 46% at 50% 44%, #ffffff 0%, #fffffff2 48%, #ffffff40 100%), linear-gradient(0deg, #ffffff 0%, #ffffff00 26%, #ffffff00 80%, #ffffffa6 100%); }
   .hero-content { position: relative; z-index: 2; width: min(760px, calc(100% - 48px)); text-align: center; pointer-events: none; }
   .hero-content a { pointer-events: auto; }
-  .hero-eyebrow { display: flex; justify-content: center; align-items: center; gap: 15px; margin: 0 0 22px; color: #adb6a5; font-family: var(--font-mono); font-size: 10px; letter-spacing: .06em; line-height: 1.8; text-transform: uppercase; }
-  .hero-eyebrow > span { color: #73934b; font-size: 17px; }
+  .hero-eyebrow { display: flex; justify-content: center; align-items: center; gap: 15px; margin: 0 0 22px; color: #5e6b56; font-family: var(--font-mono); font-size: 10px; letter-spacing: .06em; line-height: 1.8; text-transform: uppercase; }
+  .hero-eyebrow > span { color: #637e36; font-size: 17px; }
   h1 { margin: 0; font-size: clamp(68px, 7vw, 100px); font-weight: 500; letter-spacing: -.067em; line-height: 1.02; text-wrap: balance; overflow-wrap: anywhere; }
-  h1 > span { display: block; color: var(--color-lime); }
-  .hero-description { max-width: 470px; margin: 22px auto 0; color: #aab3a4; font-size: 16px; line-height: 1.7; text-wrap: pretty; }
+  h1 > span { display: block; color: #4b6c16; }
+  .hero-description { max-width: 470px; margin: 22px auto 0; color: #56614e; font-size: 16px; line-height: 1.7; text-wrap: pretty; }
   .hero-actions { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 22px; margin-top: 26px; }
-  .hero-download { display: inline-flex; align-items: center; justify-content: center; gap: 12px; min-height: 52px; padding: 0 22px; border: 1px solid #dcff71; border-radius: 9px; color: #0b0d0c; background: var(--color-lime); font-size: 13px; font-weight: 600; box-shadow: inset 0 1px 0 #ecffa7; transition: background-color 150ms ease, transform 150ms var(--ease-out); }
+  .hero-download { display: inline-flex; align-items: center; justify-content: center; gap: 12px; min-height: 52px; padding: 0 22px; border: 1px solid #b6e43b; border-radius: 9px; color: #0b0d0c; background: var(--color-lime); font-size: 13px; font-weight: 600; box-shadow: inset 0 1px 0 #ecffa7; transition: background-color 150ms ease, transform 150ms var(--ease-out); }
   .hero-download > span { margin-left: 12px; font-size: 18px; font-weight: 400; }
   .hero-download:hover { background: #dbff7d; }
   .hero-download:active { transform: scale(.98); }
-  .hero-explore { display: inline-flex; align-items: center; gap: 16px; min-height: 48px; color: #e7ecdf; font-size: 13px; text-underline-offset: 5px; }
+  .hero-explore { display: inline-flex; align-items: center; gap: 16px; min-height: 48px; color: #293423; font-size: 13px; text-underline-offset: 5px; }
   .hero-explore:hover { text-decoration: underline; }
-  .hero-explore > span { color: #a4b297; font-size: 19px; }
-  .hero-note { margin-top: 16px; color: #87917f; font-family: var(--font-mono); font-size: 9px; line-height: 1.8; }
+  .hero-explore > span { color: #5b6d4b; font-size: 19px; }
+  .hero-note { margin-top: 16px; color: #626e59; font-family: var(--font-mono); font-size: 9px; line-height: 1.8; }
   .hero-bottom { position: relative; width: min(1180px, calc(100% - 96px)); margin: 26px auto 0; text-align: center; }
-  .hero-agent-caption { color: #c6cfbd; font-size: 12px; }
-  .hero-agent-caption > span { color: #7f8c75; }
-  .hero-agent-names { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 6px 20px; list-style: none; margin: 10px 0 0; padding: 0; color: #91a083; font-family: var(--font-mono); font-size: 9px; line-height: 1.8; }
-  .hero-motion { position: absolute; right: 0; bottom: 0; display: inline-flex; align-items: center; gap: 9px; min-height: 44px; padding: 0 6px; border: 0; background: none; color: #a3b196; cursor: pointer; font-family: var(--font-mono); font-size: 9px; }
+  .hero-agent-caption { color: #39462e; font-size: 12px; }
+  .hero-agent-caption > span { color: #637157; }
+  .hero-agent-names { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 6px 20px; list-style: none; margin: 10px 0 0; padding: 0; color: #606e53; font-family: var(--font-mono); font-size: 9px; line-height: 1.8; }
+  .hero-motion { position: absolute; right: 0; bottom: 0; display: inline-flex; align-items: center; gap: 9px; min-height: 44px; padding: 0 6px; border: 0; background: none; color: #536341; cursor: pointer; font-family: var(--font-mono); font-size: 9px; }
   .hero-motion[hidden] { display: none; }
-  .hero-product { position: relative; z-index: 2; max-width: 1180px; --color-text-secondary: #9da995; }
+  .hero-product { position: relative; z-index: 2; max-width: 1180px; --color-text-secondary: #5f6b55; }
   .motion-symbol { display: block; width: 8px; height: 10px; border-inline: 2px solid currentColor; }
   .hero-motion[aria-pressed='true'] .motion-symbol { width: 0; height: 0; border-top: 5px solid transparent; border-bottom: 5px solid transparent; border-left: 7px solid currentColor; border-right: 0; }
-  .hero :focus-visible { outline-color: #c8ff3d; }
+  .hero :focus-visible { outline-color: var(--color-focus); }
   @media (max-width: 1190px) and (min-width: 768px) { .hero-opening { min-height: calc(100svh - (18.75vw - 12px)); } }
   @media (max-width: 1100px) and (min-width: 768px) { .hero-content { max-width: 650px; } h1 { font-size: 84px; } .hero-description { max-width: 400px; font-size: 14px; } .hero-bottom { margin-top: 24px; } }
   @media (max-width: 767px) {
@@ -109,7 +109,7 @@ const { content } = Astro.props;
     .hero-agent-caption { font-size: 10px; }
     .hero-agent-names { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
     .hero-motion { position: relative; font-size: 8px; flex-shrink: 0; }
-    .hero-atmosphere::after { background: linear-gradient(0deg, #0b0e0b 0%, #0b0e0bd9 40%, #0b0e0b55 70%, #0b0e0b22 100%); }
+    .hero-atmosphere::after { background: linear-gradient(0deg, #ffffff 0%, #fffffff2 37%, #ffffff80 72%, #ffffff44 100%); }
   }
   @media (max-width: 359px) { .hero-agent-caption { max-width: 120px; line-height: 1.7; } }
   @media (prefers-reduced-motion: reduce) { .hero-download { transition: background-color 150ms ease; } .hero-download:active { transform: none; } }

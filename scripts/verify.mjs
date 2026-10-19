@@ -216,12 +216,26 @@ async function verifyVideoDialog(targetPage, requests, touch = false) {
     await expect(trigger).toBeFocused();
     expect(await targetPage.evaluate(() => ({ x: scrollX, y: scrollY, root: document.documentElement.style.overflow, body: document.body.style.overflow })), 'Closing video restores page scrolling and position').toEqual(initial);
   };
+  if (!touch) await targetPage.locator('#video-dialog').evaluate((element) => {
+    const observer = new MutationObserver(() => {
+      if (element.open) {
+        element.dataset.verifyEnteringWidth = String(element.getBoundingClientRect().width);
+        observer.disconnect();
+      }
+    });
+    observer.observe(element, { attributes: true, attributeFilter: ['open'] });
+  });
   if (touch) await trigger.tap();
   else await targetPage.keyboard.press('Enter');
   if (!touch) {
-    const enteringWidth = await dialog.evaluate((element) => element.getBoundingClientRect().width);
+    const enteringWidth = await dialog.evaluate((element) => {
+      const width = Number(element.dataset.verifyEnteringWidth);
+      delete element.dataset.verifyEnteringWidth;
+      return width;
+    });
     await settleVideoMotion(dialog);
     const enteredWidth = (await dialog.boundingBox()).width;
+    expect(enteringWidth, 'Video entry has visible geometry').toBeGreaterThan(0);
     expect(enteringWidth, 'Video enters from a smaller centered frame').toBeLessThan(enteredWidth * .99);
   }
   await expectOpen();
@@ -317,9 +331,28 @@ async function backgroundPixels(targetPage) {
   });
 }
 
-async function pointerBrightness(targetPage, center) {
+async function pointerColorContrast(targetPage, center) {
   return targetPage.locator('canvas[data-background-canvas]').evaluate((canvas, point) => {
     const context = canvas.getContext('2d');
+    const styles = getComputedStyle(canvas.closest('lomi-shape-waves'));
+    const swatch = document.createElement('canvas');
+    swatch.width = swatch.height = 1;
+    const swatchContext = swatch.getContext('2d');
+    const color = (property) => {
+      swatchContext.clearRect(0, 0, 1, 1);
+      swatchContext.fillStyle = styles.getPropertyValue(property).trim();
+      swatchContext.fillRect(0, 0, 1, 1);
+      return [...swatchContext.getImageData(0, 0, 1, 1).data].slice(0, 3);
+    };
+    const background = color('--shape-waves-background');
+    const ambient = color('--shape-waves-color');
+    const interaction = color('--shape-waves-interaction-color');
+    const contrast = (rgb) => Math.max(...rgb.map((channel, index) => Math.abs(channel - background[index])));
+    const ambientContrast = contrast(ambient);
+    const interactionContrast = contrast(interaction);
+    const threshold = ambientContrast + (interactionContrast - ambientContrast) * .2;
+    const pixelContrast = (data, index) => contrast(background.map((channel, component) =>
+      channel + (data[index + component] - channel) * data[index + 3] / 255));
     const scaleX = canvas.width / canvas.clientWidth;
     const scaleY = canvas.height / canvas.clientHeight;
     const left = Math.max(0, Math.floor((point.x - 170) * scaleX));
@@ -327,22 +360,22 @@ async function pointerBrightness(targetPage, center) {
     const width = Math.min(canvas.width - left, Math.ceil(340 * scaleX));
     const height = Math.min(canvas.height - top, Math.ceil(340 * scaleY));
     const pixels = context.getImageData(left, top, width, height).data;
-    let peak = 0, nearBright = 0;
+    let peak = 0, nearChanged = 0;
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const index = (y * width + x) * 4;
-        const value = Math.max(pixels[index], pixels[index + 1], pixels[index + 2]);
+        const value = pixelContrast(pixels, index);
         const distance = Math.hypot((left + x) / scaleX - point.x, (top + y) / scaleY - point.y);
         peak = Math.max(peak, value);
-        if (value > 125) {
-          if (distance < 60) nearBright++;
+        if (value > threshold) {
+          if (distance < 60) nearChanged++;
         }
       }
     }
     const control = context.getImageData(0, 0, Math.min(96, canvas.width), Math.min(96, canvas.height)).data;
     let controlPeak = 0;
-    for (let index = 0; index < control.length; index += 4) controlPeak = Math.max(controlPeak, control[index], control[index + 1], control[index + 2]);
-    return { peak, nearBright, controlPeak };
+    for (let index = 0; index < control.length; index += 4) controlPeak = Math.max(controlPeak, pixelContrast(control, index));
+    return { peak, nearChanged, controlPeak, threshold, ambientContrast, interactionContrast };
   }, center);
 }
 
@@ -356,18 +389,20 @@ async function verifyBackgroundPointer() {
   await expect(hero.locator('lomi-shape-waves')).toHaveAttribute('data-state', 'running');
   const box = await hero.boundingBox();
   const center = { x: box.width * .5, y: box.height * .16 };
-  const read = () => pointerBrightness(pointerPage, center);
-  expect((await read()).peak, 'Fresh pointer region contains only ambient background colors').toBeLessThanOrEqual(115);
+  const read = () => pointerColorContrast(pointerPage, center);
+  const palette = await read();
+  expect(palette.interactionContrast, 'Pointer color contrasts more strongly than ambient shapes').toBeGreaterThan(palette.ambientContrast);
+  expect(palette.peak, 'Fresh pointer region contains only ambient background colors').toBeLessThanOrEqual(palette.threshold);
   await pointerPage.mouse.move(box.x + center.x - 24, box.y + center.y);
   await pointerPage.mouse.move(box.x + center.x + 24, box.y + center.y, { steps: 12 });
-  await expect.poll(async () => (await read()).nearBright, { message: 'Pointer movement without a click brightens nearby cells' }).toBeGreaterThan(0);
-  expect((await read()).controlPeak, 'A distant control region remains ambient').toBeLessThanOrEqual(115);
-  await expect.poll(async () => (await read()).peak, { message: 'A stationary pointer stops injection and the ripple fades', timeout: 15000, intervals: [100, 250, 500] }).toBeLessThanOrEqual(115);
+  await expect.poll(async () => (await read()).nearChanged, { message: 'Pointer movement without a click changes nearby cells toward the interaction color' }).toBeGreaterThan(0);
+  expect((await read()).controlPeak, 'A distant control region remains ambient').toBeLessThanOrEqual(palette.threshold);
+  await expect.poll(async () => (await read()).peak, { message: 'A stationary pointer stops injection and the ripple fades', timeout: 15000, intervals: [100, 250, 500] }).toBeLessThanOrEqual(palette.threshold);
   for (const offset of [0, 8, 16]) {
     await hero.dispatchEvent('pointermove', { pointerType: 'touch', pointerId: 2, isPrimary: true, buttons: 1, clientX: box.x + center.x + offset, clientY: box.y + center.y, bubbles: true });
   }
   await pointerPage.waitForTimeout(350);
-  expect((await read()).peak, 'Touch pointer movement does not inject a ripple').toBeLessThanOrEqual(115);
+  expect((await read()).peak, 'Touch pointer movement does not inject a ripple').toBeLessThanOrEqual(palette.threshold);
   expect(pointerErrors).toEqual([]);
   await pointerContext.close();
 }

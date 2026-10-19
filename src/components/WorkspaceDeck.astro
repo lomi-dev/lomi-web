@@ -35,7 +35,7 @@ const { caption, alt } = Astro.props;
 <style>
   .deck-root { display: block; width: 100%; min-width: 0; }
   .deck-figure { min-width: 0; margin: 0; scroll-margin-top: 90px; }
-  .deck-frame { position: relative; display: block; overflow: hidden; border: 1px solid #3b4335; border-radius: 12px; background: #11150f; box-shadow: 0 28px 80px -38px #000a; }
+  .deck-frame { position: relative; display: block; overflow: hidden; border: 1px solid #d5dccd; border-radius: 12px; background: #11150f; box-shadow: 0 28px 80px -38px rgb(30 45 19 / 32%); }
   .deck-frame :global(picture) { display: block; }
   .deck-frame :global(.deck-image) { display: block; width: 100%; height: auto; }
   .deck-overlay { position: absolute; inset: 0; background: #050a07; opacity: 0; transition: opacity 180ms ease; }
@@ -44,7 +44,7 @@ const { caption, alt } = Astro.props;
   .deck-play svg { margin-left: 2px; }
   .deck-frame:focus-visible .deck-overlay { opacity: .22; }
   .deck-frame:focus-visible .deck-play { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-  .deck-frame:focus-visible { outline: 2px solid #d5f8a8; outline-offset: 5px; }
+  .deck-frame:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 5px; }
   .deck-caption { margin-top: 13px; color: var(--color-text-secondary, #87917f); font-size: 12px; line-height: 1.6; }
   @media (hover: hover) {
     .deck-frame:hover .deck-overlay { opacity: .22; }

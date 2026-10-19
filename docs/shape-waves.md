@@ -17,8 +17,11 @@ hero atmosphere. It fills its positioned parent and is decorative, with no
 accessibility-tree content. The background retains `pointer-events: none`;
 passive listeners on the hero observe pointer movement without intercepting
 links, focus, scrolling, or clicks. The inherited CSS custom
-property `--shape-waves-color` sets the shape color (default `#4f633a`). Text
-contrast masks and compositing belong to the hero, outside this component.
+properties set the opaque background (`--shape-waves-background`, default
+`#0b0e0b`), shape color (`--shape-waves-color`, default `#4f633a`), and pointer
+color (`--shape-waves-interaction-color`, default `#ffffff`). The white hero
+uses `#ffffff`, `#cad6bf`, and `#6b922c` respectively. Text contrast masks and
+compositing belong to the hero, outside this component.
 
 Three compound SVG paths provide the server-rendered, no-JavaScript fallback.
 Canvas crossfades in only after a successful first draw; unsupported or failed
@@ -43,9 +46,9 @@ height. A fixed 60Hz four-neighbor simulation uses propagation 0.42, friction
 0.94, and height decay 0.972, with at most four steps per rendered frame.
 Negative heights persist in the simulation; only positive visible charge is
 clamped. Charge cycles each cell's base triangle/circle/square at one-third
-and two-thirds, while a smoothstep from 0.15 to 0.85 blends toward white in
+and two-thirds, while a smoothstep from 0.15 to 0.85 blends toward the pointer color in
 10 tint bins. Those bins and shape steps are included in the dirty-cell key.
-A cached 14px glow sprite supplies a small white halo, confined to its cell;
+A cached 14px glow sprite supplies a small halo in the pointer color, confined to its cell;
 14px clearing tiles remove its complete footprint without touching neighbors.
 The sprite is regenerated only when the capped device pixel ratio changes.
 Moving outside the hero or stopping the pointer ends injection while ripples
@@ -66,6 +69,6 @@ The canvas has `data-background-canvas`. Actual canvas pixel comparisons
 should confirm motion and frozen states, rather than relying on attributes.
 For pointer verification, compare an untouched control at the same ambient
 time with a fast pointer sweep: changes should stay local initially, include
-whiter glyphs and cell-local halos, then spread and disappear. Paused and
+more saturated glyphs and cell-local halos, then spread and disappear. Paused and
 reduced-motion sweeps must leave the actual canvas pixels unchanged. No-JS
 and Canvas-unavailable states retain the plain SVG without interaction.

@@ -11,8 +11,8 @@ Official assets copied from the user-supplied `../brandbook/assets/logos` packag
 
 The document references versioned favicon copies in `public/icons/` (`lomi-v1.3.svg`, `lomi-v1.3.ico`, and `lomi-v1.3-32.png`) so previously cached site icons do not reuse the old URLs. The PNG is the package's original `lomi-favicon-32.png`; root favicon files remain available for browser fallback.
 
-The original SVG geometry is unchanged. Its paths inherit `currentColor`: white
-in the dark header and near-black on the Lime footer. The header wordmark is
+The original SVG geometry is unchanged. Its paths inherit `currentColor`: near-black
+in the white homepage header, white on Devlog, and near-black on the Lime footer. The header wordmark is
 82 px wide on desktop and 79 px on mobile.
 The social preview is a browser capture of the page with this logo.
 
@@ -21,7 +21,7 @@ The social preview is a browser capture of the page with this logo.
 Final workspace source: `src/assets/clouds.png` (1536 × 1024).
 
 The original image and CloudBackdrop component are retained as unused assets.
-The current hero uses a dark composition with agent marks rather than the
+The current hero uses a white composition with agent marks rather than the
 previous photographic panorama. The source image remains unchanged.
 
 Created using the built-in `image_gen` tool. The two user-supplied landing-page images were visual direction references, not copied into the website. Astro exports responsive AVIF and WebP versions with PNG fallbacks at build time.
@@ -62,7 +62,8 @@ scaled from a wider browser view so the headline, controls, and six active marks
 ## Agent marks and motion
 
 The six active agent marks are local Iconify SVGs from the desktop
-application's existing assets, with a white Codex variant fetched from Iconify.
+application's existing assets. The light hero uses the original dark Codex
+mark; the previously fetched white variant remains archived.
 They represent Codex, Claude Code, OpenCode, Cursor CLI, Grok Build,
 and Antigravity CLI. Monochrome marks use CSS masks; colored marks retain their
 original colors. No brand geometry was recreated or generated. The unused

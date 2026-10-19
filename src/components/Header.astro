@@ -25,7 +25,7 @@ const productGroups: { label: string; links: { label: string; description: strin
 ];
 ---
 
-<header class="site-header">
+<header class="site-header" data-theme={isHome ? 'light' : 'dark'}>
   <div class="navigation-backdrop" aria-hidden="true"></div>
   <div class="header-inner shell">
     <a class="wordmark" href={isHome ? '#top' : '/'} aria-label="lomi home"><Fragment set:html={logo} /></a>
@@ -221,4 +221,31 @@ const productGroups: { label: string; links: { label: string; description: strin
     .product-link-title { font-size: 14px; }
     .product-link-description { font-size: 11px; }
   }
+  .site-header[data-theme='light'] { color: var(--color-ink); }
+  .site-header[data-theme='light'] .navigation-backdrop { background: rgb(30 43 21 / 10%); }
+  .site-header[data-theme='light'] .header-inner { border-color: #dce3d5; background: rgb(255 255 255 / 94%); box-shadow: inset 0 1px 0 #fff, 0 8px 30px rgb(32 48 19 / 5%); }
+  .site-header[data-theme='light'] .header-inner:has(.product-menu[open], .mobile-navigation[open]) { border-bottom-color: transparent; }
+  .site-header[data-theme='light'] .navigation-link,
+  .site-header[data-theme='light'] .product-menu > summary { color: #4f5e43; }
+  .site-header[data-theme='light'] .navigation-link:hover,
+  .site-header[data-theme='light'] .navigation-link[aria-current],
+  .site-header[data-theme='light'] .product-menu[open] > summary,
+  .site-header[data-theme='light'] .product-menu > summary:hover { color: #1f2a18; background: #eef3e8; }
+  .site-header[data-theme='light'] .product-panel,
+  .site-header[data-theme='light'] .mobile-panel { border-color: #dce3d5; background: #fff; color: #27341e; box-shadow: 0 25px 35px rgb(32 48 19 / 8%); }
+  .site-header[data-theme='light'] .product-group-label { border-color: #e0e6d9; color: #5c6b4e; }
+  .site-header[data-theme='light'] .product-link:hover { background: #f1f5eb; }
+  .site-header[data-theme='light'] .product-icon { color: #4b6c16; }
+  .site-header[data-theme='light'] .product-link-title { color: #202c18; }
+  .site-header[data-theme='light'] .product-link-description { color: #5c6b4e; }
+  .site-header[data-theme='light'] .header-source { border-color: #d4dccb; color: #35452a; }
+  .site-header[data-theme='light'] .header-source:hover { border-color: #9cac89; background: #f0f4e9; }
+  .site-header[data-theme='light'] .header-action { border-color: #b6e43b; }
+  .site-header[data-theme='light'] :focus-visible { outline-color: var(--color-focus); }
+  .site-header[data-theme='light'] .mobile-navigation > summary { background: #eef3e8; color: #394a2b; }
+  .site-header[data-theme='light'] .mobile-root-link,
+  .site-header[data-theme='light'] .mobile-product > summary { border-bottom-color: #e0e6d9; }
+  .site-header[data-theme='light'] .mobile-root-link[aria-current],
+  .site-header[data-theme='light'] .mobile-product[open] > summary { color: #4b6c16; }
+  .site-header[data-theme='light'] .mobile-utilities .mobile-download { padding-inline: 12px; border-radius: 7px; background: var(--color-lime); color: #202c18; }
 </style>
