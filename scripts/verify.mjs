@@ -158,6 +158,61 @@ async function backgroundPixels(targetPage) {
   });
 }
 
+async function pointerBrightness(targetPage, center) {
+  return targetPage.locator('canvas[data-background-canvas]').evaluate((canvas, point) => {
+    const context = canvas.getContext('2d');
+    const scaleX = canvas.width / canvas.clientWidth;
+    const scaleY = canvas.height / canvas.clientHeight;
+    const left = Math.max(0, Math.floor((point.x - 170) * scaleX));
+    const top = Math.max(0, Math.floor((point.y - 170) * scaleY));
+    const width = Math.min(canvas.width - left, Math.ceil(340 * scaleX));
+    const height = Math.min(canvas.height - top, Math.ceil(340 * scaleY));
+    const pixels = context.getImageData(left, top, width, height).data;
+    let peak = 0, nearBright = 0;
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const index = (y * width + x) * 4;
+        const value = Math.max(pixels[index], pixels[index + 1], pixels[index + 2]);
+        const distance = Math.hypot((left + x) / scaleX - point.x, (top + y) / scaleY - point.y);
+        peak = Math.max(peak, value);
+        if (value > 125) {
+          if (distance < 60) nearBright++;
+        }
+      }
+    }
+    const control = context.getImageData(0, 0, Math.min(96, canvas.width), Math.min(96, canvas.height)).data;
+    let controlPeak = 0;
+    for (let index = 0; index < control.length; index += 4) controlPeak = Math.max(controlPeak, control[index], control[index + 1], control[index + 2]);
+    return { peak, nearBright, controlPeak };
+  }, center);
+}
+
+async function verifyBackgroundPointer() {
+  const pointerContext = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const pointerPage = await pointerContext.newPage();
+  const pointerErrors = [];
+  pointerPage.on('pageerror', (error) => pointerErrors.push(error.message));
+  await pointerPage.goto(url, { waitUntil: 'networkidle' });
+  const hero = pointerPage.locator('.hero');
+  await expect(hero.locator('lomi-shape-waves')).toHaveAttribute('data-state', 'running');
+  const box = await hero.boundingBox();
+  const center = { x: box.width * .5, y: box.height * .16 };
+  const read = () => pointerBrightness(pointerPage, center);
+  expect((await read()).peak, 'Fresh pointer region contains only ambient background colors').toBeLessThanOrEqual(115);
+  await pointerPage.mouse.move(box.x + center.x - 24, box.y + center.y);
+  await pointerPage.mouse.move(box.x + center.x + 24, box.y + center.y, { steps: 12 });
+  await expect.poll(async () => (await read()).nearBright, { message: 'Pointer movement without a click brightens nearby cells' }).toBeGreaterThan(0);
+  expect((await read()).controlPeak, 'A distant control region remains ambient').toBeLessThanOrEqual(115);
+  await expect.poll(async () => (await read()).peak, { message: 'A stationary pointer stops injection and the ripple fades', timeout: 15000, intervals: [100, 250, 500] }).toBeLessThanOrEqual(115);
+  for (const offset of [0, 8, 16]) {
+    await hero.dispatchEvent('pointermove', { pointerType: 'touch', pointerId: 2, isPrimary: true, buttons: 1, clientX: box.x + center.x + offset, clientY: box.y + center.y, bubbles: true });
+  }
+  await pointerPage.waitForTimeout(350);
+  expect((await read()).peak, 'Touch pointer movement does not inject a ripple').toBeLessThanOrEqual(115);
+  expect(pointerErrors).toEqual([]);
+  await pointerContext.close();
+}
+
 async function expectStaticBackground(targetPage, label) {
   const before = await backgroundPixels(targetPage);
   await targetPage.waitForTimeout(350);
@@ -179,9 +234,15 @@ async function expectStaticAgents(targetPage, label) {
 
 async function verifyAgentLabels(targetPage) {
   const cards = targetPage.locator('.hero [data-agent]');
-  await expect(cards).toHaveCount(7);
+  await expect(cards).toHaveCount(6);
+  expect(await cards.evaluateAll((items) => items.map((item) => item.getAttribute('data-agent'))))
+    .toEqual(['codex', 'claude-code', 'opencode', 'cursor', 'grok', 'antigravity']);
+  await expect(targetPage.locator('.hero [data-agent="hermes"]')).toHaveCount(0);
   const names = targetPage.locator('.hero-agent-names li');
-  await expect(names).toHaveCount(7);
+  await expect(names).toHaveCount(6);
+  expect(await names.allTextContents()).toEqual(['Codex', 'Claude Code', 'OpenCode', 'Cursor CLI', 'Grok Build', 'Antigravity CLI']);
+  await expect(targetPage.locator('.hero-agent-names')).not.toContainText(/hermes/i);
+  await expect(targetPage.locator('.agent-constellation')).not.toContainText(/hermes/i);
   for (const name of await names.all()) {
     await expect(name).toBeVisible();
     await expect(name).toHaveText(/\S/);
@@ -427,7 +488,7 @@ try {
   await verifyAgentLabels(page);
   const agentAssets = await hero.locator('.agent-card-icon').evaluateAll((icons) => icons.map((icon) =>
     icon.getAttribute('src') || getComputedStyle(icon).maskImage.match(/url\(["']?(.*?)["']?\)/)?.[1]));
-  expect(new Set(agentAssets).size, 'Seven distinct local agent assets').toBe(7);
+  expect(new Set(agentAssets).size, 'Six distinct local agent assets').toBe(6);
   await Promise.all(agentAssets.map(async (asset) => {
     const address = new URL(asset, url);
     expect(address.origin).toBe(new URL(url).origin);
@@ -442,7 +503,7 @@ try {
     image.src = new URL(asset, location.href).href;
     await image.decode();
     return image.naturalWidth > 0;
-  })), agentAssets), 'Every agent asset decodes in the browser').toEqual(Array(7).fill(true));
+  })), agentAssets), 'Every agent asset decodes in the browser').toEqual(Array(6).fill(true));
   await page.mouse.move(0, 0);
   await expect(hero).toHaveAttribute('data-motion', 'running');
   await expect(motionToggle).toHaveAccessibleName('Pause motion');
@@ -473,10 +534,12 @@ try {
     await page.waitForTimeout(200);
     return await tiltTransform() === before;
   }, { message: 'Paused pointer tilt settles', timeout: 5000 }).toBe(true);
+  const pausedBackgroundPixels = await backgroundPixels(page);
   const pausedTilt = await codexBody.evaluate((element) => Array.from(new DOMMatrixReadOnly(getComputedStyle(element).transform).toFloat64Array()));
   await moveAcrossCodex(.3, .7);
   await moveAcrossCodex(.7, .3);
   await page.waitForTimeout(350);
+  expect(await backgroundPixels(page), 'Pointer movement cannot alter the paused canvas').toEqual(pausedBackgroundPixels);
   const afterPausedPointer = await codexBody.evaluate((element) => Array.from(new DOMMatrixReadOnly(getComputedStyle(element).transform).toFloat64Array()));
   expect(Math.max(...afterPausedPointer.map((value, index) => Math.abs(value - pausedTilt[index]))),
     'Moving over a paused card does not tilt it beyond subpixel spring settling').toBeLessThan(.001);
@@ -502,22 +565,27 @@ try {
   await expectStaticAgents(page, 'Live reduced-motion preference stops card movement');
   await expect(background).toHaveAttribute('data-state', 'reduced');
   await expectStaticBackground(page, 'Live reduced-motion preference freezes background pixels');
+  const reducedBackgroundPixels = await backgroundPixels(page);
+  const reducedHeroBounds = await hero.boundingBox();
+  await page.mouse.move(reducedHeroBounds.x + reducedHeroBounds.width * .5, reducedHeroBounds.y + reducedHeroBounds.height * .16);
+  await page.waitForTimeout(350);
+  expect(await backgroundPixels(page), 'Reduced motion ignores pointer movement').toEqual(reducedBackgroundPixels);
 
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await expect(hero).toHaveAttribute('data-motion', 'running');
   await expect(motionToggle).toBeVisible();
   await motionToggle.click();
-  for (const width of [1440, 390, 320]) {
+  for (const width of [320, 390, 640, 768, 1024, 1440, 1920]) {
     await page.setViewportSize({ width, height: 900 });
     expect(await hero.evaluate((element) => {
       const protectedAreas = [element.querySelector('h1'), element.querySelector('.hero-actions [data-download-open]')]
         .map((item) => item.getBoundingClientRect());
-      return [...element.querySelectorAll('.agent-card-icon')].every((icon) => {
-        const bounds = icon.getBoundingClientRect();
+      return [...element.querySelectorAll('.agent-card')].every((card) => {
+        const bounds = card.getBoundingClientRect();
         return protectedAreas.every((area) => bounds.right <= area.left || bounds.left >= area.right
           || bounds.bottom <= area.top || bounds.top >= area.bottom);
       });
-    }), `Decorative icons clear the heading and primary action at ${width}px`).toBe(true);
+    }), `Entire agent cards clear the heading and primary action at ${width}px`).toBe(true);
   }
   await page.setViewportSize({ width: 1440, height: 900 });
 
@@ -857,8 +925,8 @@ try {
   }
   const staticBackground = staticPage.locator('lomi-shape-waves');
   await expect(staticBackground).toHaveAttribute('data-renderer', 'fallback');
-  await expect(staticBackground.locator('svg[data-background-fallback]')).toBeVisible();
-  await expect(staticBackground.locator('svg[data-background-fallback]')).toHaveCSS('opacity', '1');
+  await expect(staticBackground.locator('svg[data-background-fallback]:visible')).toBeVisible();
+  await expect(staticBackground.locator('svg[data-background-fallback]:visible')).toHaveCSS('opacity', '1');
   await expect(staticBackground.locator('canvas[data-background-canvas]')).toHaveCSS('opacity', '0');
   await verifyAgentLabels(staticPage);
   await expect(staticPage.locator('.hero [data-motion-toggle]')).not.toBeVisible();
@@ -919,6 +987,7 @@ try {
   await staticPage.keyboard.press('Enter');
   await expect(staticPage.locator('#main')).toBeFocused();
   await staticContext.close();
+  await verifyBackgroundPointer();
   await verifyDevlog(true);
   await verifyDevlog(false);
 
@@ -935,14 +1004,14 @@ try {
   await fallbackPage.goto(url, { waitUntil: 'networkidle' });
   const unavailableBackground = fallbackPage.locator('lomi-shape-waves');
   await expect(unavailableBackground).toHaveAttribute('data-renderer', 'fallback');
-  await expect(unavailableBackground.locator('svg[data-background-fallback]')).toBeVisible();
-  await expect(unavailableBackground.locator('svg[data-background-fallback]')).toHaveCSS('opacity', '1');
+  await expect(unavailableBackground.locator('svg[data-background-fallback]:visible')).toBeVisible();
+  await expect(unavailableBackground.locator('svg[data-background-fallback]:visible')).toHaveCSS('opacity', '1');
   await expect(unavailableBackground.locator('canvas[data-background-canvas]')).toHaveCSS('opacity', '0');
   await expect(fallbackPage.getByRole('heading', { level: 1 })).toBeVisible();
   await expect(fallbackPage.locator('.hero [data-download-open]')).toHaveAttribute('href', releaseUrl);
   expect(fallbackErrors, 'Canvas 2D unavailable fallback has no page errors').toEqual([]);
   await fallbackContext.close();
-  console.log('Passed: complete landing sections and anchors, 7 viewport widths including 200% equivalent reflow and landscape, canvas pixel motion/pause/resume/reduced/offscreen/resize and no-JS/unavailable-2D fallback, seven agent assets/readable labels, actual motion/tilt/pause/resume/live reduced-motion/no-JS, workspace views/keyboard/reduced motion/no-JS, exact viewport footer/keyboard access across 8 sizes plus long CMS copy at 320x400 with and without JS, desktop Product/mobile drill-in and Devlog routes with/without JS, mobile navigation and FAQ keyboard behavior, newsletter form, all 7 download packages, release fallback, every download trigger and focus restoration across desktop/mobile resizing, no-JS reading and release links, and mobile/desktop/dialog accessibility.');
+  console.log('Passed: complete landing sections and anchors, 7 viewport widths including 200% equivalent reflow and landscape, canvas pointer trail/fade/touch gating and pixel motion/pause/resume/reduced/offscreen/resize and no-JS/unavailable-2D fallback, six agent assets/readable labels with Hermes absent, actual motion/tilt/pause/resume/live reduced-motion/no-JS, workspace views/keyboard/reduced motion/no-JS, exact viewport footer/keyboard access across 8 sizes plus long CMS copy at 320x400 with and without JS, desktop Product/mobile drill-in and Devlog routes with/without JS, mobile navigation and FAQ keyboard behavior, newsletter form, all 7 download packages, release fallback, every download trigger and focus restoration across desktop/mobile resizing, no-JS reading and release links, and mobile/desktop/dialog accessibility.');
 } finally {
   await browser.close();
 }

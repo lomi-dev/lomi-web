@@ -53,7 +53,7 @@ For positioned agent cards use explicit matching container/body sizes,
 `rotateAmplitude={10}`, `scaleOnHover={1.03}`, and `showTooltip={false}`.
 Custom visible marks and labels can be passed in `overlayContent` with
 `displayOverlayContent`; the overlay fills the card body. The consumer owns the
-seven card positions and any CSS float animation, allowing room for central copy.
+six active card positions and any CSS float animation, allowing room for central copy.
 
 Server rendering produces the actual card content without requiring JavaScript.
 Pointer depth begins after hydration. Intro uses an effect to initialize motion;
@@ -82,6 +82,9 @@ configuration. This file does not add tools to an already-running client.
 Neither configuration adds a runtime dependency to the website.
 
 ## Agent mark provenance
+
+Six marks are active in the hero. Hermes is retained as an unused asset
+with its original license, and is no longer rendered.
 
 The seven base SVGs in `public/agents` were copied byte-for-byte from Lomi's
 existing `src/cli-icons` assets. Their original download date is September 24,

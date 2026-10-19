@@ -143,12 +143,17 @@ kątów, skali i ruchu. Środek pozostaje spokojny i czytelny. T3 stosuje podobn
 zasadę z kilkoma rozpoznawalnymi znakami agentów. Najważniejsza jest przestrzeń
 wokół komunikatu i związek materiału z produktem.
 
-W Lomi siedem rzeczywistych narzędzi otacza nagłówek „Your agents. One home base.”.
+W Lomi sześć rzeczywistych narzędzi otacza nagłówek „Your agents. One home base.”.
 Ich rozmieszczenie pozostaje stałe; osobne fazy i amplitudy delikatnego unoszenia
 utrzymują czytelny środek. Karty wykorzystują React Bits TiltedCard do reakcji na
 kursor. Bez JavaScriptu są widoczne i nieruchome. Przy ograniczonym ruchu oraz
 po użyciu Pause motion wyłączone są unoszenie i przechylenie. Na telefonie
 wszystkie znaki tworzą osobny pas nad treścią, zamiast wchodzić na tekst.
+
+Po usunięciu Hermes Agent pozostało sześć kafelków z logo. Mają wspólną,
+ciemną kolorystykę i prostą formę bez pasków z komendami. Tło nie zawiera
+wycięcia terminala: lokalny ruch kursora wzbudza jasne komórki i rozchodzące
+się, wygasające fale. Kształty zmieniają się na swoich miejscach w siatce.
 
 Nazwy odnoszą się do klientów CLI, które Lomi rozpoznaje w `src/cli-agents.ts`
 aplikacji desktopowej. Nie oznaczają osadzenia desktopowego Cursor czy
@@ -219,8 +224,8 @@ spójność decyzji z działaniem aplikacji i wartość informacji dla odwiedzaj
 
 | Obszar | Decyzja | Znaczenie dla użytkownika |
 | --- | --- | --- |
-| Hero | Siedem unoszących się znaków CLI wokół centralnego tekstu, na ciemnym tle z limonkowym akcentem | Od pierwszego widoku wiadomo, dla kogo jest terminalowe ADE |
-| Tło | Falujące pasma trójkątów, kół i kwadratów inspirowane Shape Waves, przygaszone pod tekstem | Techniczny motyw pozostaje widoczny, a nagłówek i działania są czytelne |
+| Hero | Sześć unoszących się znaków CLI wokół centralnego tekstu, na ciemnym tle z limonkowym akcentem | Od pierwszego widoku wiadomo, dla kogo jest terminalowe ADE |
+| Tło | Pełna siatka trójkątów, kół i kwadratów; jasne fale po ruchu kursora, inspirowane Shape Waves | Tło reaguje na ruch myszy bez zasłaniania treści ani przechwytywania kliknięć |
 | Nawigacja | Zachowana ciemna kapsuła, rozwijany Product, bezpośrednie Roadmap / Devlog / Docs | Czytelny wybór sekcji i osobna przestrzeń na przyszłe wpisy |
 | Demonstracja | Build / Preview / Review z prawdziwymi zrzutami | Wybór pokazuje zmianę rodzaju pracy w tym samym środowisku |
 | Typografia | Geist dla treści, lokalny JetBrains Mono dla metadanych | Wyraźny podział między komunikatem a technicznym opisem |

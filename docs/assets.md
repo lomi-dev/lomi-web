@@ -50,15 +50,16 @@ generated. Review the captures against the final launch release.
 
 `public/social-card.png` is a 1200 × 630 browser capture of the current agent hero
 with its geometric wave field and glass navigation,
-scaled from a wider browser view so the headline, controls, and seven marks fit.
+scaled from a wider browser view so the headline, controls, and six active marks fit.
 
 ## Agent marks and motion
 
-The seven requested agent marks are local Iconify SVGs from the desktop
+The six active agent marks are local Iconify SVGs from the desktop
 application's existing assets, with a white Codex variant fetched from Iconify.
-They represent Codex, Claude Code, OpenCode, Hermes Agent, Cursor CLI, Grok Build,
+They represent Codex, Claude Code, OpenCode, Cursor CLI, Grok Build,
 and Antigravity CLI. Monochrome marks use CSS masks; colored marks retain their
-original colors. No brand geometry was recreated or generated.
+original colors. No brand geometry was recreated or generated. The unused
+Hermes mark and its original license remain archived; it is absent from the hero.
 
 [docs/react-bits.md](react-bits.md) records each exact source and license.
 The Hermes MIT notice is distributed in `public/agents/LICENSE-thesvg-MIT.txt`.
