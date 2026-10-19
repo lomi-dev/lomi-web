@@ -980,7 +980,7 @@ async function verifyDevlog(javaScriptEnabled) {
       const product = devlogPage.locator(mobile ? '#mobile-product' : '#product-menu');
       await activate(product.locator(':scope > summary'));
       expect(await product.locator('.product-link').evaluateAll((links) => links.map((link) => link.getAttribute('href'))))
-        .toEqual(['/#workspace', '/#roadmap', 'https://docs.lomi.dev', 'https://github.com/lomi-dev/lomi', releaseUrl, releaseUrl]);
+        .toEqual(['/#workspace', '/#features', 'https://docs.lomi.dev', 'https://github.com/lomi-dev/lomi', releaseUrl, releaseUrl]);
       await activate(product.locator('a[href="/#workspace"]'));
     } else {
       await expect(devlogPage.locator('.product-fallback')).toHaveAttribute('href', '/#workspace');
@@ -1049,8 +1049,8 @@ try {
   await expect(page.getByRole('contentinfo')).toBeVisible();
   await expect(page.locator('#roadmap').getByRole('heading', { level: 2 })).toBeVisible();
   await expect(page.locator('#roadmap .roadmap-masthead, #roadmap .section-marker')).toHaveCount(0);
-  expect(await page.locator('main > section').evaluateAll((sections) => sections.map((section) => section.classList.contains('hero') ? 'hero' : section.id))).toEqual(['hero', 'roadmap']);
-  await expect(page.locator('#workflow, #features, #principles, #faq, #download, #newsletter, #newsletter-form, .newsletter-noscript, .download-cta')).toHaveCount(0);
+  expect(await page.locator('main > section').evaluateAll((sections) => sections.map((section) => section.classList.contains('hero') ? 'hero' : section.id))).toEqual(['hero', 'features', 'roadmap']);
+  await expect(page.locator('#workflow, #principles, #faq, #download, #newsletter, #newsletter-form, .newsletter-noscript, .download-cta')).toHaveCount(0);
   await expect(page.getByRole('textbox', { name: 'Email address' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Subscribe' })).toHaveCount(0);
   const anchors = await page.evaluate(() => {
@@ -1091,7 +1091,7 @@ try {
   await expect(productMenu.locator('.product-link')).toHaveCount(6);
   await expect(productMenu.locator('.product-group')).toHaveCount(3);
   const productDestinations = await productMenu.locator('.product-link').evaluateAll((links) => links.map((link) => link.getAttribute('href')));
-  expect(productDestinations).toEqual(['#workspace', '#roadmap', 'https://docs.lomi.dev', 'https://github.com/lomi-dev/lomi', releaseUrl, releaseUrl]);
+  expect(productDestinations).toEqual(['#workspace', '#features', 'https://docs.lomi.dev', 'https://github.com/lomi-dev/lomi', releaseUrl, releaseUrl]);
   await expect(productMenu.locator('.product-link').nth(4)).toHaveAttribute('data-download-open');
   await expect(productMenu.locator('.product-link').nth(4)).toHaveAttribute('aria-controls', 'download-dialog');
   await expect(productMenu.locator('.product-link').nth(5)).not.toHaveAttribute('data-download-open');
@@ -1326,7 +1326,8 @@ try {
   const downloadAction = page.getByRole('link', { name: 'Download prerelease' });
   const osIconWrap = page.locator('[data-download-os-icon]');
 
-  await expect(page.locator('dialog')).toHaveCount(2);
+  await expect(page.locator('dialog')).toHaveCount(3);
+  await expect(page.locator('#feature-dialog')).toHaveCount(1);
   await expect(page.locator('#download-dialog')).toHaveCount(1);
   await expect(page.locator('#video-dialog')).toHaveCount(1);
   expect(await downloadTriggers.count()).toBeGreaterThanOrEqual(5);
@@ -1438,8 +1439,8 @@ try {
   await expect(staticPage.getByRole('heading', { level: 1 })).toBeVisible();
   await verifyFixedHeader(staticPage, false);
   await expect(staticPage.locator('#roadmap').getByRole('heading', { level: 2 })).toBeVisible();
-  expect(await staticPage.locator('main > section').evaluateAll((sections) => sections.map((section) => section.classList.contains('hero') ? 'hero' : section.id))).toEqual(['hero', 'roadmap']);
-  await expect(staticPage.locator('#workflow, #features, #principles, #faq, #download, #newsletter, #newsletter-form, .newsletter-noscript, .download-cta')).toHaveCount(0);
+  expect(await staticPage.locator('main > section').evaluateAll((sections) => sections.map((section) => section.classList.contains('hero') ? 'hero' : section.id))).toEqual(['hero', 'features', 'roadmap']);
+  await expect(staticPage.locator('#workflow, #principles, #faq, #download, #newsletter, #newsletter-form, .newsletter-noscript, .download-cta')).toHaveCount(0);
   await expect(staticPage.getByRole('textbox', { name: 'Email address' })).toHaveCount(0);
   await expect(staticPage.getByRole('button', { name: 'Subscribe' })).toHaveCount(0);
   const staticBackground = staticPage.locator('lomi-shape-waves');
@@ -1525,7 +1526,7 @@ try {
   await expect(fallbackPage.locator('.hero [data-download-open]')).toHaveAttribute('href', releaseUrl);
   expect(fallbackErrors, 'Canvas 2D unavailable fallback has no page errors').toEqual([]);
   await fallbackContext.close();
-  console.log('Passed: Hero/Roadmap/Footer and remaining anchors, 7 viewport widths including 200% equivalent reflow and landscape, terminal-glyph canvas pointer trail/fade/touch gating and pixel motion/reduced/resume/offscreen/resize and no-JS/unavailable-2D fallback, no CLI cards or client islands, two-image hero composition and lazy video dialog/keyboard/backdrop/touch/scroll lock/no-JS, exact viewport footer/keyboard access across 8 sizes plus long CMS copy at 320x400 with and without JS, desktop Product/mobile drill-in and Devlog routes with/without JS, mobile navigation, deleted sections/FAQ/newsletter markup absent with/without JS, all 7 native download packages including Product Download, release fallback, every download trigger and focus restoration across desktop/mobile resizing, no-JS reading and release links, and mobile/desktop/dialog accessibility.');
+  console.log('Passed: Hero/Features/Roadmap/Footer and remaining anchors, 7 viewport widths including 200% equivalent reflow and landscape, terminal-glyph canvas pointer trail/fade/touch gating and pixel motion/reduced/resume/offscreen/resize and no-JS/unavailable-2D fallback, no CLI cards or client islands, two-image hero composition and lazy video dialog/keyboard/backdrop/touch/scroll lock/no-JS, exact viewport footer/keyboard access across 8 sizes plus long CMS copy at 320x400 with and without JS, desktop Product/mobile drill-in and Devlog routes with/without JS, mobile navigation, deleted sections/FAQ/newsletter markup absent with/without JS, all 7 native download packages including Product Download, release fallback, every download trigger and focus restoration across desktop/mobile resizing, no-JS reading and release links, and mobile/desktop/dialog accessibility.');
 } finally {
   await browser.close();
 }

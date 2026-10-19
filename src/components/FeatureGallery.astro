@@ -1,0 +1,159 @@
+---
+import { Picture } from 'astro:assets';
+import Icon from './Icon';
+import workspacePlaceholder from '../assets/placeholders/workspace.png';
+import detailPlaceholder from '../assets/placeholders/detail.png';
+import type { Landing } from '../../content/landing-schema';
+
+interface Props { content: Landing['features'] }
+const { content } = Astro.props;
+const placeholder = (index: number) => index % 2 ? detailPlaceholder : workspacePlaceholder;
+const count = content.items.length;
+---
+
+<section id="features" class="feature-gallery" data-feature-gallery data-scroll-surface aria-labelledby="features-title">
+  <div class="gallery-shell">
+    <div class="gallery-heading">
+      <h2 id="features-title">{content.title}<span>{content.accent}</span></h2>
+      <p>{content.description}</p>
+    </div>
+
+    <div class="gallery-grid" data-feature-grid data-layout={count >= 3 ? 'editorial' : 'compact'}>
+      {content.items.map((item, index) => <article class="gallery-tile" data-feature-card>
+        <a class="gallery-preview" href={`#feature-description-${index}`} data-feature-open={index} aria-labelledby={`feature-title-${index}`}>
+          <div class="gallery-media" data-feature-card-media>
+            <Picture src={placeholder(index)} alt="" formats={['avif', 'webp']} widths={[640, 960, 1440, 1920]} sizes={index === 0 ? '(min-width: 1600px) 960px, (min-width: 900px) 62vw, calc(100vw - 40px)' : '(min-width: 1600px) 470px, (min-width: 900px) 31vw, (min-width: 600px) 46vw, calc(100vw - 40px)'} loading="lazy" decoding="async" />
+            <span class="gallery-open" aria-hidden="true"><Icon name="expand" width={19} height={19} /></span>
+          </div>
+          <div class="gallery-caption"><h3 id={`feature-title-${index}`}>{item.title}</h3><span>{item.detail}</span></div>
+        </a>
+        <p class="gallery-fallback-description" id={`feature-description-${index}`} tabindex="-1">{item.description}</p>
+      </article>)}
+    </div>
+  </div>
+
+  <dialog id="feature-dialog" class="feature-dialog" aria-labelledby="feature-dialog-title-0" aria-describedby="feature-dialog-description-0" tabindex="-1">
+    <div class="feature-dialog-chrome"><button class="feature-modal-close" type="button" data-feature-close aria-label="Close feature details"><Icon name="close" width={20} height={20} /></button></div>
+    <div class="feature-modal-panel" data-feature-panel>
+      <div class="feature-slides" data-feature-pages>
+        {content.items.map((item, index) => <article class="feature-slide" data-feature-slide id={`feature-slide-${index}`} hidden={index !== 0}>
+          <div class="feature-modal-media" data-feature-modal-media>
+            <Picture src={placeholder(index)} alt="" formats={['avif', 'webp']} widths={[640, 960, 1440, 1920]} sizes="(min-width: 1600px) 960px, (min-width: 900px) 65vw, 92vw" loading="eager" decoding="async" />
+          </div>
+          <div class="feature-modal-copy" data-feature-copy tabindex="0" role="region" aria-labelledby={`feature-dialog-title-${index}`}>
+            <p class="feature-modal-detail">{item.detail}</p>
+            <h3 id={`feature-dialog-title-${index}`}>{item.title}</h3>
+            <p class="feature-modal-description" id={`feature-dialog-description-${index}`}>{item.description}</p>
+          </div>
+        </article>)}
+      </div>
+      <div class="feature-modal-navigation">
+        <div class="feature-modal-paging"><span data-feature-count>01 / {String(count).padStart(2, '0')}</span><div class="feature-modal-arrows"><button type="button" data-feature-prev aria-label="Previous feature"><Icon name="arrow" width={19} height={19} /></button><button type="button" data-feature-next aria-label="Next feature"><Icon name="arrow" width={19} height={19} /></button></div></div>
+        <div class="feature-modal-dots" aria-label="Choose a feature" role="group">{content.items.map((item, index) => <button type="button" data-feature-dot={index} aria-label={`Show ${item.title}`} aria-current={index === 0 ? 'true' : undefined}><span></span></button>)}</div>
+      </div>
+    </div>
+  </dialog>
+</section>
+
+<script>
+  import { initFeatureGallery } from './feature-gallery';
+  document.querySelectorAll<HTMLElement>('[data-feature-gallery]').forEach(initFeatureGallery);
+</script>
+
+<style>
+  .feature-gallery { --scroll-surface-color: var(--color-chalk); padding: 64px 0 112px; background: var(--color-chalk); color: var(--color-ink); overflow-wrap: anywhere; }
+  .gallery-shell { width: min(1440px, calc(100% - clamp(40px, 10.4vw, 192px))); margin-inline: auto; }
+  .gallery-heading { display: grid; grid-template-columns: 1.4fr 1fr; align-items: end; gap: 64px; margin-bottom: 60px; }
+  .gallery-heading h2 { font-size: clamp(42px, 5.1vw, 72px); font-weight: 500; line-height: 1.04; letter-spacing: -.055em; }
+  .gallery-heading h2 > span { display: block; color: #616e54; }
+  .gallery-heading > p { max-width: 350px; margin-bottom: 5px; color: var(--color-text-secondary); font-size: 15px; line-height: 1.8; }
+  .gallery-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 28px 24px; align-items: stretch; }
+  .gallery-tile { grid-column: span 4; min-width: 0; }
+  .gallery-grid[data-layout='editorial'] > .gallery-tile:first-child { grid-column: span 8; grid-row: span 2; display: flex; flex-direction: column; }
+  .gallery-grid[data-layout='compact'] > .gallery-tile { grid-column: span 6; }
+  .gallery-grid[data-layout='compact'] > .gallery-tile:only-child { grid-column: span 12; }
+  .gallery-preview { display: flex; flex-direction: column; border-radius: 16px 16px 4px 4px; }
+  [data-feature-ready='true'] .gallery-preview { height: 100%; }
+  .gallery-media { position: relative; isolation: isolate; flex-shrink: 0; aspect-ratio: 16 / 10; overflow: hidden; border-radius: 16px; background: #080a08; }
+  .gallery-media::after { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; border: 1px solid rgb(0 0 0 / 12%); border-radius: inherit; }
+  .gallery-media :global(picture) { position: absolute; display: block; inset: 0; }
+  .gallery-media :global(img) { width: 100%; height: 100%; object-fit: contain; }
+  .gallery-grid[data-layout='editorial'] > .gallery-tile:first-child .gallery-preview { flex: 1; }
+  .gallery-grid[data-layout='editorial'] > .gallery-tile:first-child .gallery-media { flex: 1; min-height: 240px; aspect-ratio: auto; }
+  .gallery-open { position: absolute; z-index: 2; bottom: 18px; right: 18px; display: grid; width: 42px; height: 42px; place-items: center; border: 1px solid rgb(255 255 255 / 25%); border-radius: 50%; background: #151a13; color: #f3f6ed; transition: background-color 150ms ease, color 150ms ease; }
+  .gallery-caption { display: flex; flex-direction: column; gap: 7px; align-items: flex-start; padding: 20px 2px 8px; }
+  .gallery-caption h3 { font-size: clamp(18px, 1.6vw, 23px); font-weight: 500; letter-spacing: -.03em; line-height: 1.25; }
+  .gallery-caption > span { color: #60695b; font-size: 13px; line-height: 1.5; }
+  .gallery-fallback-description { color: var(--color-text-secondary); font-size: 14px; line-height: 1.75; padding: 12px 2px 0; }
+  [data-feature-ready='true'] .gallery-fallback-description { display: none; }
+  .gallery-preview:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 6px; }
+  .gallery-preview:focus-visible .gallery-open { color: var(--color-ink); background: var(--color-lime); border-color: var(--color-lime); }
+
+  .feature-dialog { width: min(1360px, calc(100vw - 64px)); max-width: none; max-height: calc(100dvh - 48px); margin: auto; padding: 0; overflow: auto; overscroll-behavior: contain; border: 1px solid #394132; border-radius: 22px; color: #f3f6ed; background: #111610; box-shadow: 0 32px 100px rgb(0 0 0 / 35%); }
+  .feature-dialog:not([open]) { display: none; }
+  .feature-dialog::backdrop { background: rgb(4 8 4 / 64%); backdrop-filter: blur(14px); }
+  .feature-dialog-chrome { position: sticky; z-index: 5; top: 0; height: 0; }
+  .feature-modal-close { position: absolute; top: 18px; right: 18px; display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid #56614d; border-radius: 50%; color: #e1e7d8; background: #111610; cursor: pointer; }
+  .feature-modal-panel { position: relative; display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(300px, 1fr); grid-template-rows: minmax(0, 1fr) auto; height: min(78dvh, calc(100dvh - 50px), 760px); }
+  .feature-slides, .feature-slide { display: contents; }
+  .feature-slide[hidden] { display: none; }
+  .feature-modal-media { position: relative; display: grid; align-items: center; grid-column: 1; grid-row: 1 / span 2; min-width: 0; min-height: 0; overflow: hidden; background: #000; border-right: 1px solid #30372a; }
+  .feature-modal-media :global(picture) { display: block; width: 100%; height: 100%; min-height: 0; }
+  .feature-modal-media :global(img) { display: block; width: 100%; height: 100%; object-fit: contain; }
+  .feature-modal-copy { grid-column: 2; grid-row: 1; padding: 72px 36px 24px; min-width: 0; min-height: 0; overflow: auto; overscroll-behavior: contain; }
+  .feature-modal-detail { margin-bottom: 24px; max-width: calc(100% - 8px); color: #b2bf9f; font-size: 12px; line-height: 1.6; }
+  .feature-modal-copy h3 { font-size: clamp(26px, 2.6vw, 38px); line-height: 1.08; letter-spacing: -.045em; font-weight: 500; }
+  .feature-modal-description { margin-top: 24px; color: #b9c3b0; font-size: 15px; line-height: 1.75; white-space: pre-line; }
+  .feature-modal-navigation { grid-column: 2; grid-row: 2; min-width: 0; margin: 0 36px; padding: 20px 0 26px; border-top: 1px solid #35402e; }
+  .feature-modal-paging { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  [data-feature-count] { color: #c3cdb9; font-size: 12px; font-variant-numeric: tabular-nums; }
+  .feature-modal-arrows { display: flex; gap: 8px; }
+  .feature-modal-arrows button { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid #56614d; border-radius: 50%; color: #e1e7d8; background: transparent; cursor: pointer; }
+  [data-feature-prev] svg { transform: rotate(180deg); }
+  .feature-modal-dots { display: flex; flex-wrap: wrap; align-items: center; margin-top: 10px; gap: 0; }
+  .feature-modal-dots button { display: grid; place-items: center; width: 26px; min-width: 26px; height: 28px; padding: 0; border: 0; background: transparent; cursor: pointer; }
+  .feature-modal-dots span { display: block; width: 5px; height: 5px; border-radius: 99px; background: #87947b; }
+  .feature-modal-dots [aria-current='true'] span { width: 17px; background: var(--color-lime); }
+  .feature-dialog :focus-visible { outline: 2px solid var(--color-lime); outline-offset: 3px; }
+  .feature-modal-close:disabled, .feature-modal-arrows button:disabled { opacity: .4; cursor: default; }
+
+  @media (hover: hover) {
+    .gallery-preview:hover .gallery-open { color: var(--color-ink); background: var(--color-lime); border-color: var(--color-lime); }
+    .feature-modal-close:hover, .feature-modal-arrows button:not(:disabled):hover { color: var(--color-lime); border-color: #a9ba91; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .gallery-media :global(img) { transition: transform 300ms var(--ease-out); }
+    .gallery-preview:active .gallery-open { transform: scale(.96); transition: transform 150ms ease-out; }
+    @media (hover: hover) { .gallery-preview:hover .gallery-media :global(img) { transform: scale(1.015); } }
+  }
+  @media (max-width: 1050px) { .gallery-heading { gap: 40px; } .feature-modal-copy { padding-inline: 26px; } .feature-modal-navigation { margin-inline: 26px; } }
+  @media (max-width: 899px) {
+    .gallery-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .gallery-tile, .gallery-grid[data-layout='compact'] > .gallery-tile { grid-column: span 1; }
+    .gallery-grid[data-layout='editorial'] > .gallery-tile:first-child { grid-column: span 2; grid-row: auto; }
+    .gallery-grid[data-layout='editorial'] > .gallery-tile:first-child .gallery-media { aspect-ratio: 16 / 10; flex: auto; }
+    .gallery-grid[data-layout='compact'] > .gallery-tile:only-child { grid-column: span 2; }
+    .feature-dialog { width: min(660px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); border-radius: 18px; }
+    .feature-modal-panel { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, .85fr) minmax(0, 1fr) auto; height: min(88dvh, calc(100dvh - 34px), 820px); }
+    .feature-modal-media { grid-column: 1; grid-row: 1; border: 0; border-bottom: 1px solid #30372a; }
+    .feature-modal-copy { grid-column: 1; grid-row: 2; padding: 28px 26px 24px; }
+    .feature-modal-detail { margin-bottom: 16px; }
+    .feature-modal-description { margin-top: 18px; font-size: 14px; }
+    .feature-modal-navigation { grid-column: 1; grid-row: 3; margin: 0 26px; padding: 18px 0 22px; }
+    .feature-modal-dots { margin-top: 8px; }
+  }
+  @media (max-width: 599px) {
+    .feature-gallery { padding-block: 40px 64px; }
+    .gallery-heading { grid-template-columns: minmax(0, 1fr); gap: 22px; margin-bottom: 34px; }
+    .gallery-heading h2 { font-size: clamp(40px, 9vw, 58px); }
+    .gallery-heading > p { margin: 0; max-width: 360px; font-size: 14px; }
+    .gallery-grid { grid-template-columns: minmax(0, 1fr); gap: 32px; }
+    .gallery-tile, .gallery-grid[data-layout='compact'] > .gallery-tile, .gallery-grid[data-layout='editorial'] > .gallery-tile:first-child, .gallery-grid[data-layout='compact'] > .gallery-tile:only-child { grid-column: span 1; }
+    .gallery-caption { padding-top: 16px; }
+    .gallery-caption h3 { font-size: 21px; }
+    .gallery-open { right: 14px; bottom: 14px; }
+    .feature-modal-close { top: 12px; right: 12px; }
+    .feature-modal-copy { padding-inline: 22px; }
+    .feature-modal-navigation { margin-inline: 22px; }
+  }
+</style>

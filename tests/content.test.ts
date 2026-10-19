@@ -68,6 +68,7 @@ describe('published landing content', () => {
     ];
     const original = structuredClone(publishedLinks);
     assert.deepEqual(activeLandingLinks(publishedLinks), [
+      { label: 'features', href: '#features' },
       { label: 'Overview', href: '#workspace' },
       { label: 'Roadmap', href: '#roadmap' },
       { label: 'Download', href: 'https://github.com/lomi-dev/lomi/releases' },
@@ -75,6 +76,12 @@ describe('published landing content', () => {
       { label: 'Docs', href: 'https://docs.lomi.dev' },
     ]);
     assert.deepEqual(publishedLinks, original);
+  });
+
+  it('preserves feature links that point back to the landing page', () => {
+    assert.deepEqual(activeLandingLinks([{ label: 'Features', href: '/#features' }]), [
+      { label: 'Features', href: '/#features' },
+    ]);
   });
 
   it('rejects unencrypted remote origins, credentials, and unexpected paths', async () => {

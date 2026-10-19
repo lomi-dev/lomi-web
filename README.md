@@ -24,6 +24,8 @@ The page includes:
 - A separate `/devlog/` page with a Work in progress placeholder.
 - A large hero preview with a centered video control and an animated native
   YouTube dialog.
+- An asymmetric feature gallery with local placeholders and a native media
+  dialog, including feature navigation, keyboard support, and readable fallbacks.
 - A dark horizontal roadmap with a lime axis, alternating milestones, and
   native scroll progress. Small windows and reduced motion use a vertical list.
 - A lime footer that fills exactly one viewport in both dimensions.
@@ -42,7 +44,7 @@ remain available at every width, without a disclosure covering the destination.
 The roadmap is explicitly a draft, with no invented release dates. Product copy
 comes from the desktop application's README. The hero currently uses local
 placeholder images; replace them with approved product captures before launch.
-The retired workflow, features, principles, FAQ, download, and newsletter content
+The retired workflow, principles, FAQ, download, and newsletter content
 remains in Payload for future use but does not render on the landing page.
 Navigation omits links to retired sections and sends old download anchors to
 the release page. See [roadmap behavior and verification](docs/roadmap.md).
@@ -50,6 +52,9 @@ the release page. See [roadmap behavior and verification](docs/roadmap.md).
 The [design analysis](docs/design-analysis.md) documents all six reference sites,
 Appllama, Coda, the four articles about generic AI content, and the decisions
 behind this layout.
+
+See [feature gallery behavior and verification](docs/feature-gallery.md) for
+placeholder media, Payload editing, responsive layout, and dialog controls.
 
 ## Hero background and motion
 
@@ -123,6 +128,8 @@ deployment provider is configured by this task.
 - `content/load-landing.ts`: optional published-content fetch during rendering.
 - `cms/src/globals/Landing.ts`: matching editor fields and access rules.
 - `src/pages/index.astro`: section order and composition.
+- `src/components/FeatureGallery.astro`: feature previews and dialog layout.
+- `src/components/feature-gallery.ts`: dialog navigation, motion, and focus.
 - `src/components/Roadmap.astro`: CMS-driven timeline and responsive layout.
 - `src/components/roadmap-timeline.ts`: native scroll progress and stage navigation.
 - `src/pages/devlog.astro`: the standalone Devlog placeholder.

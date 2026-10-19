@@ -2,6 +2,7 @@
 import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
 import Hero from '../components/Hero.astro';
+import FeatureGallery from '../components/FeatureGallery.astro';
 import Roadmap from '../components/Roadmap.astro';
 import VideoDialog from '../components/VideoDialog.astro';
 import Footer from '../components/Footer.astro';
@@ -11,7 +12,7 @@ import { activeLandingLinks } from '../data/navigation';
 import { loadLanding } from '../../content/load-landing';
 
 const content = await loadLanding(import.meta.env.CMS_URL);
-const { hero, roadmap } = content;
+const { hero, features, roadmap } = content;
 const footerContent = {
   ...content.footer,
   groups: content.footer.groups
@@ -26,7 +27,7 @@ const releaseApi = `https://api.github.com/repos${repoPath}/releases?per_page=10
   <Header content={content.navigation} />
   <main id="main" tabindex="-1">
     <Hero content={hero} />
-
+    <FeatureGallery content={features} />
     <Roadmap content={roadmap} />
   </main>
   <Footer content={footerContent} />
