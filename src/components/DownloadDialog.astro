@@ -263,7 +263,7 @@ const { apiUrl, releaseUrl, label = 'Download the prerelease', note = 'Early acc
   openButtons.forEach((openButton) => openButton.addEventListener('click', (event) => {
     event.preventDefault();
     if (!dialog || dialog.open) return;
-    returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : openButton;
+    returnFocus = openButton;
     typeInteracted = false;
     const defaults = detectedDesktop();
     if (osSelect) osSelect.value = defaults.os;
@@ -296,7 +296,17 @@ const { apiUrl, releaseUrl, label = 'Download the prerelease', note = 'Early acc
     if (event.target === dialog) dialog.close();
   });
   dialog?.addEventListener('close', () => {
-    returnFocus?.focus();
+    const targets = [
+      returnFocus,
+      returnFocus?.closest('details')?.querySelector<HTMLElement>('summary'),
+      document.querySelector<HTMLElement>('.header-actions [data-download-open]'),
+      document.querySelector<HTMLElement>('#mobile-navigation > summary'),
+      document.querySelector<HTMLElement>('.hero [data-download-open]'),
+    ];
+    for (const target of targets) {
+      target?.focus();
+      if (target && document.activeElement === target) break;
+    }
     returnFocus = null;
   });
 </script>

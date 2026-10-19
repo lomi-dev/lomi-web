@@ -74,9 +74,8 @@ rozumienie nagrań i przechowywanie. Zmieniają się skala oraz rodzaj materiał
 Chmury należą do tej samej tożsamości co produktowe ramy i przyciski.
 
 Lomi przejmuje zasadę wyboru scenariusza, lecz osadza ją w swoim pulpicie.
-Własne chmury zajmują teraz całą panoramę hero. Ciemna warstwa pod białym tekstem
-utrzymuje kontrast, a jaśniejsza prawa część zostawia miejsce na fotografię.
-Wybrany przez właściciela kierunek łączy ten kadr z prostą, pływającą nawigacją.
+W aktualnej wersji zrezygnowano z fotograficznej panoramy hero na rzecz sceny
+narzędzi agentowych. Oryginalne chmury zachowano w repozytorium.
 
 ### Wave Terminal
 
@@ -134,6 +133,27 @@ obraz. Podgląd aplikacji zajmuje osobny, szeroki pas bezpośrednio pod hero.
 Sekcje zmieniają gęstość i kontrast. Rozbudowany kolaż Payload zastąpiono jednym
 czytelnym zrzutem naraz, aby użytkownik mógł rozpoznać konkretny stan projektu.
 
+### Appllama i aktualny kierunek hero
+
+[Strona źródłowa](https://appllama.io/)
+
+Obejrzano hero w przeglądarce przy 1440 × 1000 i sprawdzono działające animacje.
+Niewielkie obrazy produktów otaczają centralny tekst, korzystając z różnych
+kątów, skali i ruchu. Środek pozostaje spokojny i czytelny. T3 stosuje podobną
+zasadę z kilkoma rozpoznawalnymi znakami agentów. Najważniejsza jest przestrzeń
+wokół komunikatu i związek materiału z produktem.
+
+W Lomi siedem rzeczywistych narzędzi otacza nagłówek „Your agents. One home base.”.
+Ich rozmieszczenie pozostaje stałe; osobne fazy i amplitudy delikatnego unoszenia
+utrzymują czytelny środek. Karty wykorzystują React Bits TiltedCard do reakcji na
+kursor. Bez JavaScriptu są widoczne i nieruchome. Przy ograniczonym ruchu oraz
+po użyciu Pause motion wyłączone są unoszenie i przechylenie. Na telefonie
+wszystkie znaki tworzą osobny pas nad treścią, zamiast wchodzić na tekst.
+
+Nazwy odnoszą się do klientów CLI, które Lomi rozpoznaje w `src/cli-agents.ts`
+aplikacji desktopowej. Nie oznaczają osadzenia desktopowego Cursor czy
+Antigravity. Opis ograniczeń platformowych pozostaje w FAQ.
+
 ## Wnioski z artykułów o AI slop
 
 [Biegun.Studio](https://biegun.studio/jak-sprawic-by-tresci-z-ai-nie-wygladaly-jak-ai-slop)
@@ -169,7 +189,8 @@ spójność decyzji z działaniem aplikacji i wartość informacji dla odwiedzaj
 
 | Obszar | Decyzja | Znaczenie dla użytkownika |
 | --- | --- | --- |
-| Hero | Panoramiczne chmury, biały tekst i prosty, pływający navbar | Wyraźne otwarcie strony z czytelną drogą do pobrania |
+| Hero | Siedem unoszących się znaków CLI wokół centralnego tekstu, na ciemnym tle z limonkowym akcentem | Od pierwszego widoku wiadomo, dla kogo jest terminalowe ADE |
+| Nawigacja | Prosty pasek będący częścią sceny, pobranie w menu i na desktopie | Krótsza droga do instalacji i czytelne linki |
 | Demonstracja | Build / Preview / Review z prawdziwymi zrzutami | Wybór pokazuje zmianę rodzaju pracy w tym samym środowisku |
 | Typografia | Geist dla treści, lokalny JetBrains Mono dla metadanych | Wyraźny podział między komunikatem a technicznym opisem |
 | Kolor | Firmowe Chalk, Ink i Lime; ciemny rozdział narzędzi | Akcent wskazuje działanie, a kontrast rozdziela części opowieści |
@@ -177,7 +198,7 @@ spójność decyzji z działaniem aplikacji i wartość informacji dla odwiedzaj
 | Roadmapa | Przywrócona oś w trzech kolumnach, pionowa na telefonie | Czytelna różnica między wersją dostępną a propozycjami |
 | Stopka | Pełne tło Lime, duże zaproszenie i grupy linków w jednym widoku | Wyraźne zakończenie strony, dopasowane do bieżącego rozmiaru okna |
 | Tekst | Nazwy czynności, narzędzi i ograniczeń | Wiadomo, co sprawdzić przed instalacją |
-| Ruch | Reakcja na wybór, brak automatycznej karuzeli | Odbiorca kontroluje tempo oglądania |
+| Ruch | Delikatne unoszenie kart i reakcja na kursor, pełna pauza i ograniczony ruch | Odbiorca może zatrzymać scenę, a treść pozostaje czytelna |
 | Dostępność | Przyciski natywne, widoczny fokus, treść bez JS | Podgląd i nawigacja działają z klawiatury, a brak skryptów nie blokuje pobrania |
 | CMS | Zachowany model Payload i opublikowane treści | Redesign nie usuwa edytowalnych sekcji ani wersji roboczych |
 

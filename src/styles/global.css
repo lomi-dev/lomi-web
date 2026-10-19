@@ -20,7 +20,7 @@
   --color-focus: #345600;
   --color-selection: #eaf5cc;
 }
-:root { font-family: var(--font-sans); color: var(--color-ink); background: var(--color-chalk); font-synthesis: none; -webkit-font-smoothing: antialiased; --line: #ccd2c7; }
+:root { font-family: var(--font-sans); color: var(--color-ink); background: var(--color-chalk); font-synthesis: none; -webkit-font-smoothing: antialiased; --line: #ccd2c7; --ease-out: cubic-bezier(0.23, 1, 0.32, 1); }
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; scroll-padding-top: 24px; }
 body { margin: 0; position: relative; isolation: isolate; }
@@ -55,7 +55,11 @@ h3 { font-size: 23px; font-weight: 500; letter-spacing: -.035em; line-height: 1.
 .button-primary:active { background: var(--color-lime-pressed); }
 .status-dot { display: inline-block; flex-shrink: 0; width: 6px; height: 6px; background: var(--color-lime); border-radius: 50%; }
 
-.product-showcase { position: relative; max-width: 1160px; padding-top: 62px; }
+.product-section { position: relative; background: #0b0e0b; padding-bottom: 80px; --color-text-secondary: #9da995; }
+.product-showcase { position: relative; max-width: 1240px; }
+.product-intro { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; padding: 0 0 28px; color: #dce6d1; }
+.product-intro > p { font-size: 22px; letter-spacing: -.04em; }
+.product-intro > span { font-family: var(--font-mono); font-size: 9px; color: #8a987d; }
 .roadmap-section { padding-top: 0; }
 .roadmap-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; margin-top: 58px; }
 .roadmap-item { padding-right: 30px; }
@@ -76,7 +80,10 @@ h3 { font-size: 23px; font-weight: 500; letter-spacing: -.035em; line-height: 1.
 
 @media (max-width: 1050px) { .roadmap-phase { min-height: 50px; align-content: start; } }
 @media (max-width: 767px) {
-  .product-showcase { padding-top: 35px; }
+  .product-section { padding-bottom: 45px; }
+  .product-intro { padding-bottom: 21px; }
+  .product-intro > p { font-size: 19px; }
+  .product-intro > span { font-size: 7px; }
   .roadmap-grid { grid-template-columns: 1fr; margin-top: 36px; gap: 30px; }
   .roadmap-item { padding-right: 0; padding-left: 25px; border-left: 1px solid #cdd4c5; position: relative; }
   .roadmap-track { position: absolute; left: -5px; top: 7px; width: 9px; height: 0; margin: 0; }

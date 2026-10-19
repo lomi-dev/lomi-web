@@ -52,9 +52,8 @@ const views = [
               alt={view.alt}
               formats={['avif', 'webp']}
               widths={[640, 960, 1440, 1920]}
-              sizes="(min-width: 1200px) 900px, 100vw"
-              loading={index === 0 ? 'eager' : 'lazy'}
-              fetchpriority={index === 0 ? 'high' : 'auto'}
+              sizes="(min-width: 1336px) 1240px, (min-width: 1191px) calc(100vw - 96px), (min-width: 768px) calc(100vw - 64px), calc(100vw - 40px)"
+              loading="lazy"
               decoding="async"
               class="deck-image"
             />

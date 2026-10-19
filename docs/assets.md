@@ -11,18 +11,18 @@ Official assets copied from the user-supplied `../brandbook/assets/logos` packag
 
 The document references versioned favicon copies in `public/icons/` (`lomi-v1.3.svg`, `lomi-v1.3.ico`, and `lomi-v1.3-32.png`) so previously cached site icons do not reuse the old URLs. The PNG is the package's original `lomi-favicon-32.png`; root favicon files remain available for browser fallback.
 
-The original SVG geometry is unchanged. Its paths inherit `currentColor`: Ink
-in the header and near-black on the Lime footer. The header wordmark is 96 px wide.
+The original SVG geometry is unchanged. Its paths inherit `currentColor`: white
+in the dark header and near-black on the Lime footer. The header wordmark is
+86 px wide on desktop and 79 px on mobile.
 The social preview is a browser capture of the page with this logo.
 
 ## Cloud background
 
 Final workspace source: `src/assets/clouds.png` (1536 × 1024).
 
-The landing page displays the original image across the full hero, with a static
-grayscale treatment and a dark overlay strongest behind the text. The panorama
-also fills the hero on narrow screens. There is no animation or parallax. The
-source asset remains unchanged.
+The original image and CloudBackdrop component are retained as unused assets.
+The current hero uses a dark composition with agent marks rather than the
+previous photographic panorama. The source image remains unchanged.
 
 Created using the built-in `image_gen` tool. The two user-supplied landing-page images were visual direction references, not copied into the website. Astro exports responsive AVIF and WebP versions with PNG fallbacks at build time.
 
@@ -48,9 +48,21 @@ The older root-level `workbench.png`, `workbench-light.png`, and
 `source-control.png` assets remain unused. No interface was reconstructed or
 generated. Review the captures against the final launch release.
 
-`public/social-card.png` is a 1200 × 630 browser capture of the current panoramic
-hero. The release note and bottom metadata are hidden for this crop, keeping
-partial text out of social previews.
+`public/social-card.png` is a 1200 × 630 browser capture of the current agent hero,
+scaled from a wider browser view so the headline, controls, and seven marks fit.
+
+## Agent marks and motion
+
+The seven requested agent marks are local Iconify SVGs from the desktop
+application's existing assets, with a white Codex variant fetched from Iconify.
+They represent Codex, Claude Code, OpenCode, Hermes Agent, Cursor CLI, Grok Build,
+and Antigravity CLI. Monochrome marks use CSS masks; colored marks retain their
+original colors. No brand geometry was recreated or generated.
+
+[docs/react-bits.md](react-bits.md) records each exact source and license.
+The Hermes MIT notice is distributed in `public/agents/LICENSE-thesvg-MIT.txt`.
+The upstream React Bits TiltedCard source and its MIT + Commons Clause notice
+are versioned together in `src/components/react-bits/`.
 
 ## Typography
 

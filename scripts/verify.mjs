@@ -142,6 +142,31 @@ async function verifyViewportFooter(targetPage, screenshots = false, viewports =
   }
 }
 
+async function agentTransforms(targetPage) {
+  return targetPage.locator('.hero [data-agent] .agent-float').evaluateAll((cards) => cards.map((card) => getComputedStyle(card).transform));
+}
+
+async function expectStaticAgents(targetPage, label) {
+  const before = await agentTransforms(targetPage);
+  await targetPage.waitForTimeout(350);
+  expect(await agentTransforms(targetPage), label).toEqual(before);
+}
+
+async function verifyAgentLabels(targetPage) {
+  const cards = targetPage.locator('.hero [data-agent]');
+  await expect(cards).toHaveCount(7);
+  const names = targetPage.locator('.hero-agent-names li');
+  await expect(names).toHaveCount(7);
+  for (const name of await names.all()) {
+    await expect(name).toBeVisible();
+    await expect(name).toHaveText(/\S/);
+  }
+  expect(await names.allTextContents(), 'Readable labels identify all decorative cards')
+    .toEqual(await cards.locator('.agent-card-name').allTextContents());
+  await expect(targetPage.locator('.agent-constellation')).toHaveAttribute('aria-hidden', 'true');
+  await expect(cards.locator('button, a, [tabindex]')).toHaveCount(0);
+}
+
 async function verifyLongFooterColophon(targetPage) {
   const colophon = targetPage.locator('.site-footer .footer-credits > p');
   const original = await colophon.textContent();
@@ -195,6 +220,97 @@ try {
   expect(anchors.duplicates, 'Unique element IDs').toEqual([]);
   expect(anchors.missingTargets, 'Internal anchor destinations').toEqual([]);
   await expect(page.locator('#download-dialog')).not.toBeVisible();
+
+  const hero = page.locator('.hero');
+  const motionToggle = hero.locator('[data-motion-toggle]');
+  await expect(page.locator('astro-island')).toHaveCount(1);
+  await expect(hero.locator('astro-island')).toHaveCount(1);
+  await expect(hero.locator('astro-island')).not.toHaveAttribute('ssr');
+  await verifyAgentLabels(page);
+  const agentAssets = await hero.locator('.agent-card-icon').evaluateAll((icons) => icons.map((icon) =>
+    icon.getAttribute('src') || getComputedStyle(icon).maskImage.match(/url\(["']?(.*?)["']?\)/)?.[1]));
+  expect(new Set(agentAssets).size, 'Seven distinct local agent assets').toBe(7);
+  await Promise.all(agentAssets.map(async (asset) => {
+    const address = new URL(asset, url);
+    expect(address.origin).toBe(new URL(url).origin);
+    expect(address.pathname).toMatch(/^\/agents\/[^/]+\.svg$/);
+    const response = await page.request.get(address.href);
+    expect(response.status(), address.pathname).toBe(200);
+    expect(response.headers()['content-type']).toContain('image/svg+xml');
+    expect(await response.text(), address.pathname).toMatch(/<svg[\s>]/);
+  }));
+  expect(await page.evaluate(async (assets) => Promise.all(assets.map(async (asset) => {
+    const image = new Image();
+    image.src = new URL(asset, location.href).href;
+    await image.decode();
+    return image.naturalWidth > 0;
+  })), agentAssets), 'Every agent asset decodes in the browser').toEqual(Array(7).fill(true));
+  await page.mouse.move(0, 0);
+  await expect(hero).toHaveAttribute('data-motion', 'running');
+  await expect(motionToggle).toHaveAccessibleName('Pause motion');
+  const runningTransforms = await agentTransforms(page);
+  await expect.poll(() => agentTransforms(page), { message: 'Agent cards actually move while running' }).not.toEqual(runningTransforms);
+  const codexTilt = hero.locator('[data-agent="codex"] .agent-tilt');
+  const codexBody = codexTilt.locator('.tilted-card__body');
+  const tiltTransform = () => codexBody.evaluate((element) => getComputedStyle(element).transform);
+  const moveAcrossCodex = async (x, y) => {
+    const box = await codexTilt.boundingBox();
+    await page.mouse.move(box.x + box.width * x, box.y + box.height * y, { steps: 5 });
+  };
+  const idleTilt = await tiltTransform();
+  await moveAcrossCodex(.7, .3);
+  await expect.poll(tiltTransform, { message: 'Pointer movement tilts the running Codex card' }).not.toBe(idleTilt);
+  await motionToggle.evaluate((element) => element.focus({ preventScroll: true }));
+  await page.keyboard.press('Space');
+  await expect(hero).toHaveAttribute('data-motion', 'paused');
+  await expect(motionToggle).toHaveAttribute('aria-pressed', 'true');
+  await expect(motionToggle).toHaveAccessibleName('Resume motion');
+  await expectStaticAgents(page, 'Manual pause freezes card motion');
+  await expect(codexTilt).toHaveCSS('pointer-events', 'none');
+  await expect.poll(async () => {
+    const before = await tiltTransform();
+    await page.waitForTimeout(200);
+    return await tiltTransform() === before;
+  }, { message: 'Paused pointer tilt settles', timeout: 5000 }).toBe(true);
+  const pausedTilt = await tiltTransform();
+  await moveAcrossCodex(.3, .7);
+  await moveAcrossCodex(.7, .3);
+  await page.waitForTimeout(350);
+  expect(await tiltTransform(), 'Moving over a paused card does not tilt it').toBe(pausedTilt);
+
+  await page.keyboard.press('Enter');
+  await expect(hero).toHaveAttribute('data-motion', 'running');
+  await expect(motionToggle).toHaveAttribute('aria-pressed', 'false');
+  const resumedTransforms = await agentTransforms(page);
+  await expect.poll(() => agentTransforms(page), { message: 'Resuming restarts actual card movement' }).not.toEqual(resumedTransforms);
+  await expect(codexTilt).toHaveCSS('pointer-events', 'auto');
+  await page.mouse.move(0, 0);
+  const resumedTilt = await tiltTransform();
+  await moveAcrossCodex(.3, .7);
+  await expect.poll(tiltTransform, { message: 'Resuming restores pointer tilt' }).not.toBe(resumedTilt);
+  await page.mouse.move(0, 0);
+
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect(hero).toHaveAttribute('data-motion', 'reduced');
+  await expect(motionToggle).not.toBeVisible();
+  await expectStaticAgents(page, 'Live reduced-motion preference stops card movement');
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await expect(hero).toHaveAttribute('data-motion', 'running');
+  await expect(motionToggle).toBeVisible();
+  await motionToggle.click();
+  for (const width of [1440, 390, 320]) {
+    await page.setViewportSize({ width, height: 900 });
+    expect(await hero.evaluate((element) => {
+      const protectedAreas = [element.querySelector('h1'), element.querySelector('.hero-actions [data-download-open]')]
+        .map((item) => item.getBoundingClientRect());
+      return [...element.querySelectorAll('.agent-card-icon')].every((icon) => {
+        const bounds = icon.getBoundingClientRect();
+        return protectedAreas.every((area) => bounds.right <= area.left || bounds.left >= area.right
+          || bounds.bottom <= area.top || bounds.top >= area.bottom);
+      });
+    }), `Decorative icons clear the heading and primary action at ${width}px`).toBe(true);
+  }
+  await page.setViewportSize({ width: 1440, height: 900 });
 
   const deck = page.locator('lomi-workspace-deck');
   const deckControls = deck.getByRole('group', { name: 'Choose a workspace view' });
@@ -387,6 +503,9 @@ try {
   await expect(page.locator('dialog')).toHaveCount(1);
   expect(await downloadTriggers.count()).toBeGreaterThanOrEqual(2);
   for (const trigger of await downloadTriggers.all()) {
+    const inMobileMenu = await trigger.evaluate((element) => Boolean(element.closest('#mobile-navigation')));
+    await page.setViewportSize({ width: inMobileMenu ? 390 : 1440, height: 900 });
+    if (inMobileMenu) await mobileSummary.click();
     await expect(trigger).toBeVisible();
     await expect(trigger).toHaveAttribute('aria-controls', 'download-dialog');
     await trigger.click();
@@ -394,8 +513,25 @@ try {
     await expect(osSelect).toBeFocused();
     await page.keyboard.press('Escape');
     await expect(downloadDialog).not.toBeVisible();
-    await expect(trigger).toBeFocused();
+    await expect(inMobileMenu ? mobileSummary : trigger).toBeFocused();
   }
+  const desktopHeaderDownload = page.locator('.site-header .header-actions [data-download-open]');
+  const mobileHeaderDownload = mobileMenu.locator('[data-download-open]');
+  await page.setViewportSize({ width: 390, height: 900 });
+  await mobileSummary.click();
+  await mobileHeaderDownload.click();
+  await expect(downloadDialog).toBeVisible();
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.keyboard.press('Escape');
+  await expect(downloadDialog).not.toBeVisible();
+  await expect(desktopHeaderDownload, 'Mobile download restores desktop header focus after resizing').toBeFocused();
+  await desktopHeaderDownload.click();
+  await expect(downloadDialog).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 900 });
+  await page.keyboard.press('Escape');
+  await expect(downloadDialog).not.toBeVisible();
+  await expect(mobileSummary, 'Desktop download restores mobile menu focus after resizing').toBeFocused();
+  await page.setViewportSize({ width: 1440, height: 900 });
   await downloadTrigger.click();
   await expect(downloadDialog).toBeVisible();
   await expect(osSelect).toHaveValue('linux');
@@ -461,7 +597,7 @@ try {
   await page.keyboard.press('Escape');
   await expect(downloadTrigger).toBeFocused();
 
-  expect(await page.locator('astro-island').count()).toBe(0);
+  await expect(page.locator('astro-island')).toHaveCount(1);
   expect(errors).toEqual([]);
 
   const staticContext = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
@@ -473,6 +609,10 @@ try {
   for (const section of ['workflow', 'features', 'roadmap', 'faq', 'download', 'newsletter']) {
     await expect(staticPage.locator(`#${section}`).getByRole('heading', { level: 2 })).toBeVisible();
   }
+  await verifyAgentLabels(staticPage);
+  await expect(staticPage.locator('.hero [data-motion-toggle]')).not.toBeVisible();
+  await expectStaticAgents(staticPage, 'No-JavaScript hero remains static');
+  await expect(staticPage.locator('.hero .hero-explore')).toHaveAttribute('href', '#workspace');
   const staticDeck = staticPage.locator('lomi-workspace-deck');
   await expect(staticDeck.locator('.deck-controls')).not.toBeVisible();
   await expect(staticDeck.getByRole('button')).toHaveCount(0);
@@ -515,7 +655,7 @@ try {
   await staticPage.keyboard.press('Enter');
   await expect(staticPage.locator('#main')).toBeFocused();
   await staticContext.close();
-  console.log('Passed: complete landing sections and anchors, 7 viewport widths including 200% equivalent reflow and landscape, workspace views/keyboard/reduced motion/no-JS, exact viewport footer/keyboard access across 8 sizes plus long CMS copy at 320x400 with and without JS, mobile navigation and FAQ keyboard behavior, newsletter form, all 7 download packages, release fallback, every download trigger and focus restoration, no-JS reading and release links, and mobile/desktop/dialog accessibility.');
+  console.log('Passed: complete landing sections and anchors, 7 viewport widths including 200% equivalent reflow and landscape, seven agent assets/readable labels, actual motion/tilt/pause/resume/live reduced-motion/no-JS, workspace views/keyboard/reduced motion/no-JS, exact viewport footer/keyboard access across 8 sizes plus long CMS copy at 320x400 with and without JS, mobile navigation and FAQ keyboard behavior, newsletter form, all 7 download packages, release fallback, every download trigger and focus restoration across desktop/mobile resizing, no-JS reading and release links, and mobile/desktop/dialog accessibility.');
 } finally {
   await browser.close();
 }

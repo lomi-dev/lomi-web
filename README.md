@@ -1,6 +1,6 @@
 # lomi web
 
-Launch landing page outline for the Lomi desktop workspace. Work lives on
+Launch landing page for Lomi, a terminal ADE for coding agents. Work lives on
 `feat/launch-landing`; this task does not deploy the site or change `main`.
 English copy follows the existing website and is a starting point for editing.
 
@@ -17,8 +17,10 @@ required to work on the layout.
 
 The page includes:
 
-- A floating navigation bar over panoramic clouds and contrasting hero text.
-- A keyboard-accessible Build / Preview / Review selector below the hero, with real app captures.
+- A dark hero with seven floating agent marks, pointer depth, and a motion control.
+- A simple navigation bar with desktop and mobile download actions.
+- A keyboard-accessible Build / Preview / Review selector below the hero, with
+  real app captures and a direct link from the hero.
 - A workflow sequence, dark tools manifest, and local/source/customization details.
 - A three-column timeline separating available features from proposed work.
 - Native expandable FAQ, preview downloads, newsletter, and a Lime footer that
@@ -34,7 +36,20 @@ described in the FAQ. The screenshots are existing desktop README captures;
 review them against the launch release before publishing.
 
 The [design analysis](docs/design-analysis.md) documents all six reference sites,
-the four articles about generic AI content, and the decisions behind this layout.
+Appllama, the four articles about generic AI content, and the decisions behind
+this layout.
+
+## Hero motion and React Bits
+
+The hero uses one React island for seven decorative cards, based on the official
+React Bits TiltedCard. CSS handles their floating motion. Pause stops floating
+and pointer depth; live reduced-motion preferences disable both. Content and
+cards render on the server and remain readable without JavaScript.
+
+The React Bits registry is configured in `components.json`. Project-local Codex
+MCP settings live in `.codex/config.toml`; open this repository as the project and
+reload the client to discover the shadcn server. Registry lookup and an MCP
+initialization handshake were verified. See [integration and licenses](docs/react-bits.md).
 
 ## Edit with Payload CMS
 
@@ -133,7 +148,11 @@ Browser verification covers seven viewport widths, short landscape, section
 anchors, unique IDs, keyboard navigation, mobile menu, FAQ, newsletter states,
 all seven installer mappings, release failures, dialog focus, no-JavaScript
 fallbacks, workspace selection, reduced motion, and desktop/mobile/dialog
-accessibility with axe. Footer dimensions, resizing, and keyboard access to every
+accessibility with axe. Hero checks cover all seven local SVGs and labels,
+floating and pointer motion, keyboard pause/resume, live reduced motion,
+icon placement, and server-rendered content without JavaScript. Download focus
+is checked across desktop/mobile resizes while the dialog is open.
+Footer dimensions, resizing, and keyboard access to every
 link are checked at eight window sizes from 320 × 200 to 1920 × 1080, both with
 and without JavaScript. The 640px check covers the available CSS width of a
 1280px window at 200% zoom. Screenshots and
@@ -159,7 +178,8 @@ the real public origin, CMS storage/secret, and newsletter backend; connect a
 deployment rebuild hook if desired. Then deploy the Astro `dist/` output when
 ready. Nothing is published automatically from this branch.
 
-The site uses local Geist and JetBrains Mono fonts, the original cloud image,
-and the Lomi v1.3 Chalk/Ink/Lime palette. It sends no React runtime, trackers,
-third-party embeds, or external font requests. Cloud and screenshot provenance
-is recorded in [docs/assets.md](docs/assets.md).
+The site uses local Geist and JetBrains Mono fonts, a dark opening composition,
+and Lomi's Lime accent. React hydrates only the decorative hero cards; the other
+sections retain their static/native behavior. There are no trackers, third-party
+embeds, runtime Iconify calls, or external font requests. Asset provenance is
+recorded in [docs/assets.md](docs/assets.md).

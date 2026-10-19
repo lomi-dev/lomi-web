@@ -1,0 +1,47 @@
+.agent-constellation { position: absolute; inset: 0; pointer-events: none; }
+.agent-position { position: absolute; width: var(--size); height: var(--size); left: var(--x); top: var(--y); transform: translate(-50%, -50%) rotate(var(--angle)); pointer-events: auto; }
+.agent-float { width: 100%; height: 100%; }
+.agent-position--codex { --x: 15%; --y: 30%; --size: 122px; --angle: -14deg; --drift: -16px; --duration: 8s; --delay: -2s; }
+.agent-position--claude-code { --x: 86%; --y: 31%; --size: 126px; --angle: 14deg; --drift: -14px; --duration: 9s; --delay: -5s; }
+.agent-position--opencode { --x: 9%; --y: 58%; --size: 92px; --angle: 8deg; --drift: -12px; --duration: 7s; --delay: -4s; }
+.agent-position--hermes { --x: 24%; --y: 79%; --size: 90px; --angle: -12deg; --drift: -12px; --duration: 9s; --delay: -1s; }
+.agent-position--cursor { --x: 89%; --y: 60%; --size: 102px; --angle: -11deg; --drift: -15px; --duration: 8s; --delay: -6s; }
+.agent-position--grok { --x: 36%; --y: 18%; --size: 78px; --angle: 12deg; --drift: -10px; --duration: 8s; --delay: -3s; }
+.agent-position--antigravity { --x: 71%; --y: 80%; --size: 86px; --angle: 13deg; --drift: -12px; --duration: 10s; --delay: -7s; }
+.hero[data-motion='running'] .agent-float, .hero[data-motion='paused'] .agent-float { animation: agent-drift var(--duration) ease-in-out var(--delay) infinite; }
+.hero[data-motion='paused'] .agent-float, .hero[data-visible='false'] .agent-float, .hero[data-document-hidden='true'] .agent-float { animation-play-state: paused; }
+.agent-tilt { --tc-rim-color: rgb(255 255 255 / 11%); --tc-rim-light: rgb(255 255 255 / 22%); }
+.agent-card { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; border-radius: 22px; background: linear-gradient(145deg, #282c29, #121613 75%); box-shadow: inset 0 2px 3px rgb(255 255 255 / 7%), 0 18px 30px rgb(0 0 0 / 28%); }
+.agent-card--claude-code { background: linear-gradient(145deg, #3c2d26, #201b17 80%); }
+.agent-card--antigravity { background: linear-gradient(145deg, #272e38, #121719 80%); }
+.agent-card-icon { display: block; width: 45%; height: 45%; object-fit: contain; }
+.agent-card-icon--mask { background: #f5f6f0; mask-size: contain; mask-repeat: no-repeat; mask-position: center; }
+.agent-card-name { color: #c3c9bd; font-size: 9px; font-family: var(--font-mono); line-height: 1.3; letter-spacing: -.03em; white-space: nowrap; }
+.agent-position--grok .agent-card-name, .agent-position--antigravity .agent-card-name, .agent-position--hermes .agent-card-name { font-size: 7px; }
+.agent-position--grok .agent-card, .agent-position--antigravity .agent-card, .agent-position--hermes .agent-card { gap: 8px; }
+@keyframes agent-drift { 0%, 100% { transform: translate3d(0, 0, 0) rotate(-1deg); } 50% { transform: translate3d(0, var(--drift), 0) rotate(2deg); } }
+@media (min-width: 1800px) { .agent-position--codex { --x: 19%; } .agent-position--claude-code { --x: 81%; } .agent-position--opencode { --x: 14%; } .agent-position--cursor { --x: 85%; } }
+@media (max-width: 1100px) and (min-width: 768px) {
+  .agent-position--codex { --x: 12%; --y: 29%; --size: 98px; }
+  .agent-position--claude-code { --x: 88%; --y: 28%; --size: 100px; }
+  .agent-position--opencode { --x: 8%; --y: 61%; --size: 74px; }
+  .agent-position--cursor { --x: 91%; --y: 61%; --size: 78px; }
+  .agent-position--hermes { --x: 23%; --y: 80%; --size: 78px; }
+  .agent-position--antigravity { --x: 76%; --y: 79%; --size: 78px; }
+  .agent-card-name { font-size: 7px; }
+}
+@media (max-width: 767px) {
+  .agent-constellation { height: 310px; top: 74px; }
+  .agent-position--codex { --x: 21%; --y: 39%; --size: 82px; --angle: -15deg; --drift: -9px; }
+  .agent-position--claude-code { --x: 78%; --y: 29%; --size: 88px; --angle: 13deg; --drift: -10px; }
+  .agent-position--opencode { --x: 10%; --y: 80%; --size: 56px; --angle: 8deg; }
+  .agent-position--hermes { --x: 64%; --y: 83%; --size: 60px; --angle: 9deg; }
+  .agent-position--cursor { --x: 88%; --y: 75%; --size: 62px; --angle: -10deg; }
+  .agent-position--grok { --x: 49%; --y: 21%; --size: 55px; --angle: -8deg; }
+  .agent-position--antigravity { --x: 38%; --y: 76%; --size: 66px; --angle: -12deg; }
+  .agent-card { border-radius: 16px; gap: 7px; }
+  .agent-tilt .tilted-card__face { border-radius: 16px; }
+  .agent-card-name { font-size: 6px; }
+  .agent-position--grok .agent-card-name, .agent-position--antigravity .agent-card-name, .agent-position--hermes .agent-card-name { font-size: 5px; }
+}
+@media (prefers-reduced-motion: reduce) { .hero .agent-float { animation: none !important; } }

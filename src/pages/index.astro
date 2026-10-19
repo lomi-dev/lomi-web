@@ -22,7 +22,7 @@ const statusLabels = { available: 'Current preview', next: 'Proposed next', late
   <Header content={content.navigation} />
   <main id="main" tabindex="-1">
     <Hero content={hero} />
-    <div class="product-showcase shell"><WorkspaceDeck caption={hero.previewCaption} alt={hero.previewAlt} /></div>
+    <div id="workspace" class="product-section"><div class="product-showcase shell"><div class="product-intro"><p>Your project. All of it.</p><span>TERMINAL / EDITOR / BROWSER / GIT</span></div><WorkspaceDeck caption={hero.previewCaption} alt={hero.previewAlt} /></div></div>
 
     <section id="workflow" class="section shell workflow-section" aria-labelledby="workflow-title">
       <div class="section-marker"><span>01</span><p>{workflow.eyebrow}</p></div>
