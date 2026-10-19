@@ -1,0 +1,46 @@
+---
+import { staticShapePaths } from './shape-waves';
+
+const paths = staticShapePaths();
+---
+
+<lomi-shape-waves aria-hidden="true" data-renderer="fallback" data-state="fallback">
+  <svg class="shape-waves-fallback" data-background-fallback viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" focusable="false" aria-hidden="true">
+    {paths.map((path, index) => <path d={path} fill="currentColor" opacity={0.62 + index * 0.16} />)}
+  </svg>
+  <canvas data-background-canvas aria-hidden="true"></canvas>
+</lomi-shape-waves>
+
+<script>
+  import { registerShapeWaves } from './shape-waves';
+  registerShapeWaves();
+</script>
+
+<style>
+  lomi-shape-waves {
+    position: absolute;
+    display: block;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    background: #0b0e0b;
+    color: var(--shape-waves-color, #4f633a);
+    contain: strict;
+  }
+  .shape-waves-fallback,
+  canvas {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    transition: opacity 300ms ease;
+  }
+  canvas { opacity: 0; }
+  lomi-shape-waves[data-renderer='canvas'] canvas { opacity: 1; }
+  lomi-shape-waves[data-renderer='canvas'] .shape-waves-fallback { opacity: 0; }
+  @media (prefers-reduced-motion: reduce) {
+    .shape-waves-fallback,
+    canvas { transition: none; }
+  }
+</style>

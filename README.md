@@ -17,8 +17,9 @@ required to work on the layout.
 
 The page includes:
 
-- A dark hero with seven floating agent marks, pointer depth, and a motion control.
-- A simple navigation bar with desktop and mobile download actions.
+- A dark hero with geometric shape waves, seven floating agent marks, pointer
+  depth, and a shared motion control.
+- A floating glass navigation bar with desktop and mobile download actions.
 - A keyboard-accessible Build / Preview / Review selector below the hero, with
   real app captures and a direct link from the hero.
 - A workflow sequence, dark tools manifest, and local/source/customization details.
@@ -45,6 +46,12 @@ The hero uses one React island for seven decorative cards, based on the official
 React Bits TiltedCard. CSS handles their floating motion. Pause stops floating
 and pointer depth; live reduced-motion preferences disable both. Content and
 cards render on the server and remain readable without JavaScript.
+
+The background is an authored Canvas 2D interpretation of React Bits Shape Waves:
+small triangles, circles, and squares evolve in broad bands. It shares the hero
+pause control and stops rendering offscreen or in a hidden tab. A static SVG
+field appears without JavaScript or Canvas 2D. No WebGPU dependency is needed.
+See [background implementation](docs/shape-waves.md) for its rendering limits.
 
 The React Bits registry is configured in `components.json`. Project-local Codex
 MCP settings live in `.codex/config.toml`; open this repository as the project and
@@ -150,7 +157,8 @@ all seven installer mappings, release failures, dialog focus, no-JavaScript
 fallbacks, workspace selection, reduced motion, and desktop/mobile/dialog
 accessibility with axe. Hero checks cover all seven local SVGs and labels,
 floating and pointer motion, keyboard pause/resume, live reduced motion,
-icon placement, and server-rendered content without JavaScript. Download focus
+icon placement, actual background pixel changes and frozen states, canvas
+resizing, and static fallback without JavaScript or Canvas 2D. Download focus
 is checked across desktop/mobile resizes while the dialog is open.
 Footer dimensions, resizing, and keyboard access to every
 link are checked at eight window sizes from 320 × 200 to 1920 × 1080, both with

@@ -142,11 +142,36 @@ async function verifyViewportFooter(targetPage, screenshots = false, viewports =
   }
 }
 
+async function backgroundPixels(targetPage) {
+  return targetPage.locator('canvas[data-background-canvas]').evaluate((canvas) => {
+    const sample = document.createElement('canvas');
+    sample.width = 64;
+    sample.height = 48;
+    const context = sample.getContext('2d', { willReadFrequently: true });
+    context.drawImage(canvas, 0, 0, sample.width, sample.height);
+    const { data } = context.getImageData(0, 0, sample.width, sample.height);
+    let hash = 2166136261;
+    const colors = new Set();
+    for (let index = 0; index < data.length; index++) hash = Math.imul(hash ^ data[index], 16777619);
+    for (let index = 0; index < data.length; index += 4) colors.add(`${data[index]},${data[index + 1]},${data[index + 2]},${data[index + 3]}`);
+    return { hash: hash >>> 0, colors: colors.size };
+  });
+}
+
+async function expectStaticBackground(targetPage, label) {
+  const before = await backgroundPixels(targetPage);
+  await targetPage.waitForTimeout(350);
+  expect(await backgroundPixels(targetPage), label).toEqual(before);
+}
+
 async function agentTransforms(targetPage) {
   return targetPage.locator('.hero [data-agent] .agent-float').evaluateAll((cards) => cards.map((card) => getComputedStyle(card).transform));
 }
 
 async function expectStaticAgents(targetPage, label) {
+  await targetPage.locator('.hero [data-agent] .agent-float').evaluateAll(async (cards) => {
+    await Promise.all(cards.flatMap((card) => card.getAnimations().map((animation) => animation.ready)));
+  });
   const before = await agentTransforms(targetPage);
   await targetPage.waitForTimeout(350);
   expect(await agentTransforms(targetPage), label).toEqual(before);
@@ -223,6 +248,16 @@ try {
 
   const hero = page.locator('.hero');
   const motionToggle = hero.locator('[data-motion-toggle]');
+  const background = hero.locator('lomi-shape-waves');
+  const backgroundCanvas = background.locator('canvas[data-background-canvas]');
+  await expect(background).toHaveAttribute('data-renderer', 'canvas');
+  await expect(background).toHaveAttribute('data-state', 'running');
+  await expect(backgroundCanvas).toBeVisible();
+  await expect(backgroundCanvas).toHaveCSS('opacity', '1');
+  expect((await backgroundPixels(page)).colors, 'Background draws visible shapes, not a blank canvas').toBeGreaterThan(1);
+  const runningPixels = await backgroundPixels(page);
+  await expect.poll(() => backgroundPixels(page), { message: 'Running background pixels actually change' }).not.toEqual(runningPixels);
+
   await expect(page.locator('astro-island')).toHaveCount(1);
   await expect(hero.locator('astro-island')).toHaveCount(1);
   await expect(hero.locator('astro-island')).not.toHaveAttribute('ssr');
@@ -266,6 +301,9 @@ try {
   await expect(motionToggle).toHaveAttribute('aria-pressed', 'true');
   await expect(motionToggle).toHaveAccessibleName('Resume motion');
   await expectStaticAgents(page, 'Manual pause freezes card motion');
+  await expect(background).toHaveAttribute('data-state', 'paused');
+  await expectStaticBackground(page, 'Manual pause freezes the rendered background');
+
   await expect(codexTilt).toHaveCSS('pointer-events', 'none');
   await expect.poll(async () => {
     const before = await tiltTransform();
@@ -281,6 +319,9 @@ try {
   await page.keyboard.press('Enter');
   await expect(hero).toHaveAttribute('data-motion', 'running');
   await expect(motionToggle).toHaveAttribute('aria-pressed', 'false');
+  await expect(background).toHaveAttribute('data-state', 'running');
+  const resumedPixels = await backgroundPixels(page);
+  await expect.poll(() => backgroundPixels(page), { message: 'Resuming restarts background pixel changes' }).not.toEqual(resumedPixels);
   const resumedTransforms = await agentTransforms(page);
   await expect.poll(() => agentTransforms(page), { message: 'Resuming restarts actual card movement' }).not.toEqual(resumedTransforms);
   await expect(codexTilt).toHaveCSS('pointer-events', 'auto');
@@ -294,6 +335,9 @@ try {
   await expect(hero).toHaveAttribute('data-motion', 'reduced');
   await expect(motionToggle).not.toBeVisible();
   await expectStaticAgents(page, 'Live reduced-motion preference stops card movement');
+  await expect(background).toHaveAttribute('data-state', 'reduced');
+  await expectStaticBackground(page, 'Live reduced-motion preference freezes background pixels');
+
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await expect(hero).toHaveAttribute('data-motion', 'running');
   await expect(motionToggle).toBeVisible();
@@ -311,6 +355,15 @@ try {
     }), `Decorative icons clear the heading and primary action at ${width}px`).toBe(true);
   }
   await page.setViewportSize({ width: 1440, height: 900 });
+
+  await motionToggle.click();
+  await expect(background).toHaveAttribute('data-state', 'running');
+  await page.locator('#workflow').evaluate((element) => element.scrollIntoView({ block: 'start', behavior: 'instant' }));
+  await expect(background).toHaveAttribute('data-state', 'offscreen');
+  await expectStaticBackground(page, 'Offscreen background stops rendering new frames');
+  await hero.evaluate((element) => element.scrollIntoView({ block: 'start', behavior: 'instant' }));
+  await expect(background).toHaveAttribute('data-state', 'running');
+  await motionToggle.click();
 
   const deck = page.locator('lomi-workspace-deck');
   const deckControls = deck.getByRole('group', { name: 'Choose a workspace view' });
@@ -376,6 +429,14 @@ try {
   for (const width of [320, 390, 640, 768, 1024, 1440, 1920]) {
     await page.setViewportSize({ width, height: 900 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth), `Layout at ${width}px`).toBe(width);
+    await expect.poll(() => backgroundCanvas.evaluate((canvas) => {
+      const bounds = canvas.getBoundingClientRect();
+      return canvas.width > 0 && canvas.height > 0 && bounds.width > 0 && bounds.height > 0
+        && Math.abs(canvas.width / canvas.height - bounds.width / bounds.height) < .01
+        && Math.abs(bounds.width - canvas.closest('.hero').clientWidth) <= 1
+        && Math.abs(bounds.height - canvas.closest('.hero').clientHeight) <= 1;
+    }), { message: `Background canvas resizes to the hero at ${width}px` }).toBe(true);
+
     await expect(deckControls).toBeVisible();
     for (const button of await deckButtons.all()) {
       const box = await button.boundingBox();
@@ -609,6 +670,11 @@ try {
   for (const section of ['workflow', 'features', 'roadmap', 'faq', 'download', 'newsletter']) {
     await expect(staticPage.locator(`#${section}`).getByRole('heading', { level: 2 })).toBeVisible();
   }
+  const staticBackground = staticPage.locator('lomi-shape-waves');
+  await expect(staticBackground).toHaveAttribute('data-renderer', 'fallback');
+  await expect(staticBackground.locator('svg[data-background-fallback]')).toBeVisible();
+  await expect(staticBackground.locator('svg[data-background-fallback]')).toHaveCSS('opacity', '1');
+  await expect(staticBackground.locator('canvas[data-background-canvas]')).toHaveCSS('opacity', '0');
   await verifyAgentLabels(staticPage);
   await expect(staticPage.locator('.hero [data-motion-toggle]')).not.toBeVisible();
   await expectStaticAgents(staticPage, 'No-JavaScript hero remains static');
@@ -655,7 +721,27 @@ try {
   await staticPage.keyboard.press('Enter');
   await expect(staticPage.locator('#main')).toBeFocused();
   await staticContext.close();
-  console.log('Passed: complete landing sections and anchors, 7 viewport widths including 200% equivalent reflow and landscape, seven agent assets/readable labels, actual motion/tilt/pause/resume/live reduced-motion/no-JS, workspace views/keyboard/reduced motion/no-JS, exact viewport footer/keyboard access across 8 sizes plus long CMS copy at 320x400 with and without JS, mobile navigation and FAQ keyboard behavior, newsletter form, all 7 download packages, release fallback, every download trigger and focus restoration across desktop/mobile resizing, no-JS reading and release links, and mobile/desktop/dialog accessibility.');
+  const fallbackContext = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  await fallbackContext.addInitScript(() => {
+    const getContext = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (type, ...args) {
+      return type === '2d' ? null : Reflect.apply(getContext, this, [type, ...args]);
+    };
+  });
+  const fallbackPage = await fallbackContext.newPage();
+  const fallbackErrors = [];
+  fallbackPage.on('pageerror', (error) => fallbackErrors.push(error.message));
+  await fallbackPage.goto(url, { waitUntil: 'networkidle' });
+  const unavailableBackground = fallbackPage.locator('lomi-shape-waves');
+  await expect(unavailableBackground).toHaveAttribute('data-renderer', 'fallback');
+  await expect(unavailableBackground.locator('svg[data-background-fallback]')).toBeVisible();
+  await expect(unavailableBackground.locator('svg[data-background-fallback]')).toHaveCSS('opacity', '1');
+  await expect(unavailableBackground.locator('canvas[data-background-canvas]')).toHaveCSS('opacity', '0');
+  await expect(fallbackPage.getByRole('heading', { level: 1 })).toBeVisible();
+  await expect(fallbackPage.locator('.hero [data-download-open]')).toHaveAttribute('href', releaseUrl);
+  expect(fallbackErrors, 'Canvas 2D unavailable fallback has no page errors').toEqual([]);
+  await fallbackContext.close();
+  console.log('Passed: complete landing sections and anchors, 7 viewport widths including 200% equivalent reflow and landscape, canvas pixel motion/pause/resume/reduced/offscreen/resize and no-JS/unavailable-2D fallback, seven agent assets/readable labels, actual motion/tilt/pause/resume/live reduced-motion/no-JS, workspace views/keyboard/reduced motion/no-JS, exact viewport footer/keyboard access across 8 sizes plus long CMS copy at 320x400 with and without JS, mobile navigation and FAQ keyboard behavior, newsletter form, all 7 download packages, release fallback, every download trigger and focus restoration across desktop/mobile resizing, no-JS reading and release links, and mobile/desktop/dialog accessibility.');
 } finally {
   await browser.close();
 }

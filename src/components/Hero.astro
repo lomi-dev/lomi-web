@@ -1,5 +1,6 @@
 ---
 import AgentConstellation from './AgentConstellation';
+import ShapeWavesBackground from './ShapeWavesBackground.astro';
 import Icon from './Icon';
 import { site } from '../data/site';
 import { agents } from '../data/agents';
@@ -10,7 +11,7 @@ const { content } = Astro.props;
 ---
 
 <section class="hero" aria-labelledby="hero-title">
-  <div class="hero-atmosphere" aria-hidden="true"><div class="hero-horizon"></div><span class="hero-orbit-line orbit-one"></span><span class="hero-orbit-line orbit-two"></span></div>
+  <div class="hero-atmosphere" aria-hidden="true"><ShapeWavesBackground /></div>
   <AgentConstellation client:load />
   <div class="hero-content shell">
     <p class="hero-eyebrow"><span aria-hidden="true">[</span>{content.eyebrow}<span aria-hidden="true">]</span></p>
@@ -53,10 +54,9 @@ const { content } = Astro.props;
 
 <style>
   .hero { position: relative; isolation: isolate; overflow: hidden; min-height: 920px; min-height: max(920px, 100svh); padding: 280px 0 205px; background: #0b0e0b; color: #f6f7f1; }
-  .hero-atmosphere { position: absolute; z-index: -1; inset: 0; overflow: hidden; pointer-events: none; background: radial-gradient(ellipse at 50% 8%, #28302145, transparent 54%); }
-  .hero-horizon { position: absolute; width: 150%; height: 75%; left: -25%; top: 78%; border: 1px solid #c8ff3d28; border-radius: 50%; background: radial-gradient(ellipse at 50% 0%, #b0e64a0d, transparent 58%); box-shadow: 0 -20px 110px #a4e44f08; }
-  .hero-orbit-line { position: absolute; width: 1080px; height: 710px; border: 1px solid #d8f0c708; border-radius: 50%; left: 50%; top: 110px; transform: translateX(-50%) rotate(-18deg); }
-  .orbit-two { width: 1460px; height: 650px; top: 130px; transform: translateX(-50%) rotate(17deg); border-color: #d8f0c706; }
+  .hero-atmosphere { position: absolute; z-index: -1; inset: 0; overflow: hidden; pointer-events: none; --shape-waves-color: #557336; }
+  .hero-atmosphere :global(lomi-shape-waves) { opacity: .6; }
+  .hero-atmosphere::after { content: ''; position: absolute; z-index: 2; inset: 0; background: radial-gradient(ellipse 40% 41% at 50% 49%, #0b0e0bf5 0%, #0b0e0bba 55%, #0b0e0b00 100%), linear-gradient(0deg, #0b0e0b 0%, #0b0e0b00 22%, #0b0e0b00 83%, #0b0e0b85 100%); }
   .hero-content { position: relative; z-index: 2; width: min(760px, calc(100% - 48px)); text-align: center; pointer-events: none; }
   .hero-content a { pointer-events: auto; }
   .hero-eyebrow { display: flex; justify-content: center; align-items: center; gap: 15px; margin: 0 0 29px; color: #adb6a5; font-family: var(--font-mono); font-size: 10px; letter-spacing: .06em; line-height: 1.8; text-transform: uppercase; }
@@ -97,9 +97,7 @@ const { content } = Astro.props;
     .hero-agent-caption { font-size: 11px; }
     .hero-agent-names { font-size: 8px; gap: 5px 15px; margin-top: 13px; }
     .hero-motion { position: relative; margin-top: 13px; font-size: 8px; }
-    .hero-horizon { top: 88%; height: 40%; width: 250%; left: -75%; }
-    .hero-orbit-line { width: 590px; height: 265px; top: 105px; }
-    .orbit-two { width: 540px; height: 260px; top: 110px; }
+    .hero-atmosphere::after { background: linear-gradient(0deg, #0b0e0b 0%, #0b0e0bd9 40%, #0b0e0b55 70%, #0b0e0b22 100%); }
   }
   @media (prefers-reduced-motion: reduce) { .hero-download { transition: background-color 150ms ease; } .hero-download:active { transform: none; } }
 </style>

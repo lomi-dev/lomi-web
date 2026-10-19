@@ -13,7 +13,7 @@ The document references versioned favicon copies in `public/icons/` (`lomi-v1.3.
 
 The original SVG geometry is unchanged. Its paths inherit `currentColor`: white
 in the dark header and near-black on the Lime footer. The header wordmark is
-86 px wide on desktop and 79 px on mobile.
+82 px wide on desktop and 79 px on mobile.
 The social preview is a browser capture of the page with this logo.
 
 ## Cloud background
@@ -48,7 +48,8 @@ The older root-level `workbench.png`, `workbench-light.png`, and
 `source-control.png` assets remain unused. No interface was reconstructed or
 generated. Review the captures against the final launch release.
 
-`public/social-card.png` is a 1200 × 630 browser capture of the current agent hero,
+`public/social-card.png` is a 1200 × 630 browser capture of the current agent hero
+with its geometric wave field and glass navigation,
 scaled from a wider browser view so the headline, controls, and seven marks fit.
 
 ## Agent marks and motion
@@ -63,6 +64,11 @@ original colors. No brand geometry was recreated or generated.
 The Hermes MIT notice is distributed in `public/agents/LICENSE-thesvg-MIT.txt`.
 The upstream React Bits TiltedCard source and its MIT + Commons Clause notice
 are versioned together in `src/components/react-bits/`.
+
+The geometric background is drawn with code, with a three-path static SVG
+fallback generated during the Astro build. It is inspired by React Bits
+Shape Waves; no upstream shader or generated image is used. Its implementation
+and reference are recorded in [docs/shape-waves.md](shape-waves.md).
 
 ## Typography
 

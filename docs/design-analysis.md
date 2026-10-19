@@ -190,7 +190,8 @@ spójność decyzji z działaniem aplikacji i wartość informacji dla odwiedzaj
 | Obszar | Decyzja | Znaczenie dla użytkownika |
 | --- | --- | --- |
 | Hero | Siedem unoszących się znaków CLI wokół centralnego tekstu, na ciemnym tle z limonkowym akcentem | Od pierwszego widoku wiadomo, dla kogo jest terminalowe ADE |
-| Nawigacja | Prosty pasek będący częścią sceny, pobranie w menu i na desktopie | Krótsza droga do instalacji i czytelne linki |
+| Tło | Falujące pasma trójkątów, kół i kwadratów inspirowane Shape Waves, przygaszone pod tekstem | Techniczny motyw pozostaje widoczny, a nagłówek i działania są czytelne |
+| Nawigacja | Pływająca, półprzezroczysta kapsuła z limonkowym pobraniem | Nawigacja pasuje do zaokrąglonych kart narzędzi i wskazuje główne działanie |
 | Demonstracja | Build / Preview / Review z prawdziwymi zrzutami | Wybór pokazuje zmianę rodzaju pracy w tym samym środowisku |
 | Typografia | Geist dla treści, lokalny JetBrains Mono dla metadanych | Wyraźny podział między komunikatem a technicznym opisem |
 | Kolor | Firmowe Chalk, Ink i Lime; ciemny rozdział narzędzi | Akcent wskazuje działanie, a kontrast rozdziela części opowieści |
@@ -198,7 +199,7 @@ spójność decyzji z działaniem aplikacji i wartość informacji dla odwiedzaj
 | Roadmapa | Przywrócona oś w trzech kolumnach, pionowa na telefonie | Czytelna różnica między wersją dostępną a propozycjami |
 | Stopka | Pełne tło Lime, duże zaproszenie i grupy linków w jednym widoku | Wyraźne zakończenie strony, dopasowane do bieżącego rozmiaru okna |
 | Tekst | Nazwy czynności, narzędzi i ograniczeń | Wiadomo, co sprawdzić przed instalacją |
-| Ruch | Delikatne unoszenie kart i reakcja na kursor, pełna pauza i ograniczony ruch | Odbiorca może zatrzymać scenę, a treść pozostaje czytelna |
+| Ruch | Unoszenie kart, reakcja na kursor i falujące tło ze wspólną pauzą | Odbiorca może zatrzymać całą scenę, a treść pozostaje czytelna |
 | Dostępność | Przyciski natywne, widoczny fokus, treść bez JS | Podgląd i nawigacja działają z klawiatury, a brak skryptów nie blokuje pobrania |
 | CMS | Zachowany model Payload i opublikowane treści | Redesign nie usuwa edytowalnych sekcji ani wersji roboczych |
 
