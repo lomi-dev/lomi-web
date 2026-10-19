@@ -11,13 +11,18 @@ Official assets copied from the user-supplied `../brandbook/assets/logos` packag
 
 The document references versioned favicon copies in `public/icons/` (`lomi-v1.3.svg`, `lomi-v1.3.ico`, and `lomi-v1.3-32.png`) so previously cached site icons do not reuse the old URLs. The PNG is the package's original `lomi-favicon-32.png`; root favicon files remain available for browser fallback.
 
-The original SVG geometry is unchanged. The transparent wordmark uses the brand's Ink color (`#0B0D0C`) for both the letters and the capsule above the i. It is displayed at 112 px on desktop and the specified minimum of 96 px on mobile. Padding preserves the required clear space. The social preview is a browser capture of the page with this logo.
+The original SVG geometry is unchanged. Its paths inherit `currentColor`: Ink
+in the header and Chalk on the dark footer. The header wordmark is 96 px wide.
+The social preview is a browser capture of the page with this logo.
 
 ## Cloud background
 
 Final workspace source: `src/assets/clouds.png` (1536 × 1024).
 
-The landing page displays the original photograph behind its hero with a static CSS grayscale filter, Soft Chalk (`#F7F8F3`) overlay, and a fade into the page canvas. The source image remains unchanged.
+The landing page displays the original image in a cropped hero window with a
+chamfered corner, static grayscale treatment, and a light Chalk wash. On narrow
+screens it becomes a small translucent image behind the heading. There is no
+animation or parallax. The source asset remains unchanged.
 
 Created using the built-in `image_gen` tool. The two user-supplied landing-page images were visual direction references, not copied into the website. Astro exports responsive AVIF and WebP versions with PNG fallbacks at build time.
 
@@ -27,19 +32,29 @@ Exact generation prompt:
 
 ## Application screenshots
 
-The landing outline uses `src/assets/workbench-light.png`, copied unchanged from
-`../lomi/docs/images/workbench-light.png` (2880 × 1800). This is the real native
-application capture used by the desktop README: project explorer, TypeScript
-editor, and a terminal showing passing tests. Astro generates responsive AVIF
-and WebP variants. Its descriptive alt text is editable in the CMS.
+The workspace selector uses three unchanged, real native captures from the
+desktop README, copied from `../lomi/docs/images/` into `src/assets/product/`:
 
-The older `workbench.png` and `source-control.png` captures remain unused. No
-interface was reconstructed or generated. Review or recapture the preview for
-the final launch release; the existing capture represents the layout outline.
+- `workbench.png`: project explorer, TypeScript editor, and native terminal.
+- `browser.png`: development server beside its embedded browser preview.
+- `source-control.png`: repository history, changed files, and a code diff.
+
+All are 2880 × 1800. Astro generates responsive AVIF and WebP variants. The first
+view's caption and alt text use the CMS fields; the other two have functional
+descriptions in the component. The selector is explicitly labeled as product
+screenshots. It does not claim to execute code or run the application.
+
+The older root-level `workbench.png`, `workbench-light.png`, and
+`source-control.png` assets remain unused. No interface was reconstructed or
+generated. Review the captures against the final launch release.
 
 `public/social-card.png` is a 1200 × 630 browser capture of the landing hero,
 replacing the previous work-in-progress message in social previews.
 
 ## Typography
 
-Geist Variable and Instrument Serif are served locally from their Fontsource packages. Their respective license files remain available in `node_modules/@fontsource-variable/geist/LICENSE` and `node_modules/@fontsource/instrument-serif/LICENSE`.
+Geist Variable is served locally from its Fontsource package, with its license
+at `node_modules/@fontsource-variable/geist/LICENSE`. JetBrains Mono Regular was
+copied from the desktop application's `public/fonts/jetbrains-mono/` directory.
+The font and its SIL Open Font License are included together at
+`public/fonts/jetbrains-mono/`. Instrument Serif is no longer used or installed.

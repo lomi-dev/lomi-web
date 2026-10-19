@@ -9,9 +9,10 @@ const { content } = Astro.props;
 
 <footer class="site-footer" aria-label="lomi footer">
   <div class="shell">
+    <div class="footer-label"><span>lomi / desktop workspace</span><span>Source available. Apache 2.0.</span></div>
     <div class="footer-top">
       <div class="footer-invitation">
-        <h2>{content.tagline}</h2>
+        <p class="footer-statement">{content.tagline}</p>
         <a class="text-link" href={site.github}><Icon name="github" width={18} height={18} />{content.githubLabel}<Icon name="diagonal" width={15} height={15} /></a>
       </div>
       <nav class="footer-navigation" aria-label="Footer navigation">

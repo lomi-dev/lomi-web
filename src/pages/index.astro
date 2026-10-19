@@ -1,101 +1,87 @@
 ---
-import { Picture } from 'astro:assets';
 import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
 import Icon from '../components/Icon';
 import CloudBackdrop from '../components/CloudBackdrop.astro';
+import WorkspaceDeck from '../components/WorkspaceDeck.astro';
 import Features from '../components/Features';
 import Footer from '../components/Footer.astro';
 import NewsletterSignup from '../components/NewsletterSignup.astro';
 import DownloadDialog from '../components/DownloadDialog.astro';
 import { site } from '../data/site';
 import { loadLanding } from '../../content/load-landing';
-import workbench from '../assets/workbench-light.png';
 
 const content = await loadLanding(import.meta.env.CMS_URL);
 const { hero, workflow, features, principles, roadmap, faq, download, newsletter } = content;
 const repoPath = new URL(site.releases).pathname.replace(/\/releases\/?$/, '');
 const releaseApi = `https://api.github.com/repos${repoPath}/releases?per_page=10`;
-const statusLabels = { available: 'In the workspace', next: 'Proposed focus', later: 'Exploring' };
+const statusLabels = { available: 'Current preview', next: 'Proposed next', later: 'Exploring' };
 ---
 
 <Layout title={content.seo.title} description={content.seo.description}>
-  <div class="hero-sky"><CloudBackdrop /></div>
   <Header content={content.navigation} />
   <main id="main" tabindex="-1">
     <section class="hero shell" aria-labelledby="hero-title">
-      <p class="eyebrow hero-eyebrow"><span class="status-dot" aria-hidden="true"></span>{hero.eyebrow}</p>
-      <h1 id="hero-title">{hero.title}<br /><em>{hero.accent}</em></h1>
-      <p class="hero-description">{hero.description}</p>
-      <div class="hero-actions">
-        <a class="button button-primary" href={site.releases} data-download-open aria-haspopup="dialog" aria-controls="download-dialog">{hero.primaryLabel}<Icon name="download" width={17} height={17} /></a>
-        <a class="button button-quiet" href="#workflow">{hero.secondaryLabel}<span aria-hidden="true">↓</span></a>
+      <div class="hero-kicker"><p class="eyebrow">{hero.eyebrow}</p><a href={`${site.github}/blob/main/LICENSE`}>Apache 2.0 <Icon name="diagonal" width={12} height={12} /></a></div>
+      <div class="hero-heading">
+        <h1 id="hero-title">{hero.title}<span>{hero.accent}</span></h1>
+        <div class="hero-window" aria-hidden="true"><CloudBackdrop /><span class="window-corner corner-top"></span><span class="window-corner corner-bottom"></span></div>
       </div>
-      <p class="hero-note">{hero.note}</p>
-      <figure class="workspace-preview">
-        <div class="preview-frame">
-          <Picture src={workbench} alt={hero.previewAlt} formats={['avif', 'webp']} widths={[720, 1120, 1600, 2240]} sizes="(max-width: 1200px) 92vw, 1120px" quality={80} loading="eager" />
+      <div class="hero-body">
+        <div class="hero-copy">
+          <p class="hero-description">{hero.description}</p>
+          <div class="hero-actions"><a class="button button-primary" href={site.releases} data-download-open aria-haspopup="dialog" aria-controls="download-dialog">{hero.primaryLabel}<Icon name="download" width={17} height={17} /></a><a class="text-link hero-explore" href="#workflow">{hero.secondaryLabel}<span aria-hidden="true">↓</span></a></div>
+          <p class="hero-note">{hero.note}</p>
+          <a class="hero-repository" href={site.github}><Icon name="github" width={15} height={15} /><span>lomi-dev/lomi</span><Icon name="diagonal" width={13} height={13} /></a>
         </div>
-        <figcaption><span class="preview-caption-dot" aria-hidden="true"></span>{hero.previewCaption}<span class="preview-platforms" aria-hidden="true"><Icon name="apple" width={14} height={14} /><Icon name="windows" width={14} height={14} /><Icon name="linux" width={14} height={14} /></span></figcaption>
-      </figure>
+        <div class="hero-product"><WorkspaceDeck caption={hero.previewCaption} alt={hero.previewAlt} /></div>
+      </div>
+      <div class="hero-baseline"><span>One project folder</span><span class="baseline-path" aria-hidden="true"></span><span>Terminals / Files / Browser / Git</span></div>
     </section>
 
     <section id="workflow" class="section shell workflow-section" aria-labelledby="workflow-title">
-      <div class="section-heading section-heading-split">
-        <div><p class="eyebrow">{workflow.eyebrow}</p><h2 id="workflow-title">{workflow.title}</h2></div>
-        <p class="section-description">{workflow.description}</p>
-      </div>
-      <ol class="workflow-grid">
-        {workflow.items.map((item, index) => <li>
-          <span class="step-number">{String(index + 1).padStart(2, '0')}<Icon name="arrow" width={18} height={18} /></span>
-          <h3>{item.title}</h3><p>{item.description}</p>
-        </li>)}
-      </ol>
-    </section>
-
-    <section id="features" class="section features-section" aria-labelledby="features-title">
-      <div class="shell">
-        <div class="section-heading centered">
-          <p class="eyebrow">{features.eyebrow}</p>
-          <h2 id="features-title">{features.title}<br /><em>{features.accent}</em></h2>
-          <p class="section-description">{features.description}</p>
-        </div>
-        <Features items={features.items} />
+      <div class="section-marker"><span>01</span><p>{workflow.eyebrow}</p></div>
+      <div class="workflow-layout">
+        <div class="section-heading"><h2 id="workflow-title">{workflow.title}</h2><p class="section-description">{workflow.description}</p><a class="text-link" href={site.docs}>Workspace documentation<Icon name="diagonal" width={16} height={16} /></a></div>
+        <ol class="workflow-list">{workflow.items.map((item, index) => <li><span class="workflow-index" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span><div><h3>{item.title}</h3><p>{item.description}</p></div><Icon name="arrow" width={20} height={20} /></li>)}</ol>
       </div>
     </section>
 
-    <section class="section principles-section" aria-labelledby="principles-title">
-      <div class="shell principles-layout">
-        <div class="section-heading"><p class="eyebrow">{principles.eyebrow}</p><h2 id="principles-title">{principles.title}</h2><p class="section-description">{principles.description}</p><a class="text-link" href={site.github}><Icon name="github" width={18} height={18} />GitHub<Icon name="diagonal" width={15} height={15} /></a></div>
-        <div class="principles-list">{principles.items.map((item, index) => <article><span class="principle-index" aria-hidden="true">0{index + 1}</span><div><h3>{item.title}</h3><p>{item.description}</p></div></article>)}</div>
-      </div>
+    <section id="features" class="section features-section" aria-labelledby="features-title"><div class="shell">
+      <div class="section-marker"><span>02</span><p>{features.eyebrow}</p></div>
+      <div class="section-heading section-heading-split"><h2 id="features-title">{features.title}<br /><span>{features.accent}</span></h2><p class="section-description">{features.description}</p></div>
+      <div class="manifest-key" aria-hidden="true"><span>Tool</span><span>In the workspace</span></div>
+      <Features items={features.items} />
+      <div class="manifest-bottom"><span>Built with Tauri & Rust</span><a href={site.docs}>Read the platform requirements<Icon name="diagonal" width={14} height={14} /></a></div>
+    </div></section>
+
+    <section class="section shell principles-section" aria-labelledby="principles-title">
+      <div class="section-marker"><span>03</span><p>{principles.eyebrow}</p></div>
+      <div class="principles-layout"><div class="section-heading"><h2 id="principles-title">{principles.title}</h2><p class="section-description">{principles.description}</p>
+        <div class="source-block"><div class="source-heading"><Icon name="github" width={16} height={16} /><span>lomi-dev/lomi</span><span class="source-license">Apache 2.0</span></div><code><span class="source-prompt" aria-hidden="true">$ </span>git clone <span class="clone-url">https://github.com/lomi-dev/lomi.git</span></code><a href={site.github}>Inspect the source<Icon name="diagonal" width={16} height={16} /></a></div>
+      </div><div class="principles-list">{principles.items.map((item, index) => <article><span aria-hidden="true">0{index + 1}</span><div><h3>{item.title}</h3><p>{item.description}</p></div></article>)}</div></div>
     </section>
 
     <section id="roadmap" class="section shell roadmap-section" aria-labelledby="roadmap-title">
-      <div class="section-heading section-heading-split"><div><p class="eyebrow">{roadmap.eyebrow}</p><h2 id="roadmap-title">{roadmap.title}</h2></div><p class="section-description">{roadmap.description}</p></div>
-      <div class="roadmap-grid">{roadmap.items.map((item) => <article class="roadmap-item" data-status={item.status}>
-        <div class="roadmap-track" aria-hidden="true"><span></span></div>
-        <div class="roadmap-phase"><p>{item.phase}</p><span class="roadmap-status">{statusLabels[item.status]}</span></div>
-        <h3>{item.title}</h3><p class="roadmap-description">{item.description}</p>
-        <ul>{item.points.map((point) => <li><Icon name={item.status === 'available' ? 'check' : 'plus'} width={15} height={15} />{point.label}</li>)}</ul>
-      </article>)}</div>
-      <a class="text-link roadmap-link" href={`${site.github}/issues`}>{roadmap.linkLabel}<Icon name="diagonal" width={16} height={16} /></a>
+      <div class="section-marker"><span>04</span><p>{roadmap.eyebrow}</p></div>
+      <div class="section-heading section-heading-split"><h2 id="roadmap-title">{roadmap.title}</h2><p class="section-description">{roadmap.description}</p></div>
+      <div class="roadmap-ledger">{roadmap.items.map((item, index) => <article class="roadmap-item" data-status={item.status}>
+        <div class="roadmap-state"><span class="ledger-index" aria-hidden="true">0{index + 1}</span><span class="roadmap-status"><span aria-hidden="true"></span>{statusLabels[item.status]}</span></div>
+        <div class="roadmap-subject"><p class="roadmap-phase">{item.phase}</p><h3>{item.title}</h3><p class="roadmap-description">{item.description}</p></div>
+        <ul>{item.points.map((point) => <li><span aria-hidden="true">{item.status === 'available' ? '✓' : '—'}</span>{point.label}</li>)}</ul>
+      </article>)}</div><a class="text-link roadmap-link" href={`${site.github}/issues`}>{roadmap.linkLabel}<Icon name="diagonal" width={16} height={16} /></a>
     </section>
 
-    <section id="faq" class="section faq-section" aria-labelledby="faq-title">
-      <div class="shell faq-layout">
-        <div class="section-heading"><p class="eyebrow">{faq.eyebrow}</p><h2 id="faq-title">{faq.title}</h2><a class="text-link" href={site.docs}>Read the documentation<Icon name="diagonal" width={16} height={16} /></a></div>
-        <div class="faq-list">{faq.items.map((item) => <details><summary>{item.question}<Icon name="plus" width={19} height={19} /></summary><p>{item.answer}</p></details>)}</div>
-      </div>
-    </section>
+    <section id="faq" class="section faq-section" aria-labelledby="faq-title"><div class="shell">
+      <div class="section-marker"><span>05</span><p>{faq.eyebrow}</p></div>
+      <div class="faq-layout"><div class="section-heading"><h2 id="faq-title">{faq.title}</h2><a class="text-link" href={site.docs}>Read the documentation<Icon name="diagonal" width={16} height={16} /></a></div><div class="faq-list">{faq.items.map((item) => <details><summary>{item.question}<Icon name="plus" width={19} height={19} /></summary><p>{item.answer}</p></details>)}</div></div>
+    </div></section>
 
     <section id="download" class="section shell download-section" aria-labelledby="download-heading">
-      <p class="eyebrow">{download.eyebrow}</p><h2 id="download-heading">{download.title}<br /><em>{download.accent}</em></h2><p class="section-description">{download.description}</p>
-      <DownloadDialog apiUrl={releaseApi} releaseUrl={site.releases} label={download.primaryLabel} note={download.note} />
-      <a class="text-link" href={site.github}><Icon name="github" width={17} height={17} />{download.secondaryLabel}<Icon name="diagonal" width={15} height={15} /></a>
+      <div class="section-marker"><span>06</span><p>{download.eyebrow}</p></div>
+      <div class="download-layout"><div class="section-heading"><h2 id="download-heading">{download.title}<br /><span>{download.accent}</span></h2><p class="section-description">{download.description}</p></div><div class="download-controls"><div class="download-platforms"><span><Icon name="apple" width={16} height={16} />macOS</span><span><Icon name="windows" width={16} height={16} />Windows</span><span><Icon name="linux" width={16} height={16} />Linux</span></div><DownloadDialog apiUrl={releaseApi} releaseUrl={site.releases} label={download.primaryLabel} note={download.note} /><a class="text-link" href={site.github}>{download.secondaryLabel}<Icon name="diagonal" width={15} height={15} /></a></div></div>
     </section>
 
     <section id="newsletter" class="newsletter-section" aria-labelledby="newsletter-title"><div class="shell newsletter-layout"><div><p class="eyebrow">{newsletter.eyebrow}</p><h2 id="newsletter-title">{newsletter.title}</h2><p class="section-description">{newsletter.description}</p></div><NewsletterSignup /></div></section>
-  </main>
-  <Footer content={content.footer} />
+  </main><Footer content={content.footer} />
 </Layout>

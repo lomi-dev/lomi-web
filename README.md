@@ -17,16 +17,19 @@ required to work on the layout.
 
 The page includes:
 
-- Responsive navigation and the original cloudy hero.
-- A real application screenshot and a three-step workflow introduction.
-- Six feature areas and local/open-source/customization principles.
-- A roadmap with current foundations, proposed launch priorities, and ideas.
+- Responsive navigation and an asymmetric hero with a cropped cloud window.
+- A keyboard-accessible Build / Preview / Review selector with real app captures.
+- A workflow sequence, dark tools manifest, and local/source/customization details.
+- A roadmap ledger separating available features from proposed work.
 - Native expandable FAQ, preview downloads, newsletter, and a full footer.
 
 The roadmap is explicitly a draft, with no invented release dates. Product copy
 comes from the desktop application's README. Feature/platform restrictions are
-described in the FAQ. The screenshot is the existing desktop README capture;
-replace it with a launch-approved capture before publishing.
+described in the FAQ. The screenshots are existing desktop README captures;
+review them against the launch release before publishing.
+
+The [design analysis](docs/design-analysis.md) documents all six reference sites,
+the four articles about generic AI content, and the decisions behind this layout.
 
 ## Edit with Payload CMS
 
@@ -81,12 +84,13 @@ deployment provider is configured by this task.
 - `src/pages/index.astro`: section order and composition.
 - `src/styles/global.css`: responsive layout and brand tokens.
 - `src/components/`: navigation, footer, features, original clouds, forms, icons.
+- `src/components/WorkspaceDeck.astro`: real product screenshots and local view selection.
 - `src/data/site.ts`: fixed product/repository destinations.
 - `src/layouts/Layout.astro`: metadata and local fonts.
 
 Navigation, headings, descriptions, features, roadmap entries, FAQ, download CTA,
 newsletter introduction, footer links, and SEO copy can be edited in the CMS.
-The screenshot and cloud image remain versioned local assets in this outline.
+The screenshots and cloud image remain versioned local assets in this outline.
 Form states, dialog instructions, and other functional labels live in components.
 
 ## Download and newsletter behavior
@@ -120,10 +124,12 @@ bun run preview --port 4322
 PLAYWRIGHT_CHANNEL=chrome bun run verify
 ```
 
-Browser verification covers six viewport widths, short landscape, section
+Browser verification covers seven viewport widths, short landscape, section
 anchors, unique IDs, keyboard navigation, mobile menu, FAQ, newsletter states,
 all seven installer mappings, release failures, dialog focus, no-JavaScript
-fallbacks, and desktop/mobile/dialog accessibility with axe. Screenshots and
+fallbacks, workspace selection, reduced motion, and desktop/mobile/dialog
+accessibility with axe. The 640px check covers the available CSS width of a
+1280px window at 200% zoom. Screenshots and
 audit output are written to ignored `artifacts/`.
 
 To exercise configured signup without sending email, build with
@@ -146,7 +152,7 @@ the real public origin, CMS storage/secret, and newsletter backend; connect a
 deployment rebuild hook if desired. Then deploy the Astro `dist/` output when
 ready. Nothing is published automatically from this branch.
 
-The site uses local Geist and Instrument Serif fonts, the original cloud image,
+The site uses local Geist and JetBrains Mono fonts, the original cloud image,
 and the Lomi v1.3 Chalk/Ink/Lime palette. It sends no React runtime, trackers,
 third-party embeds, or external font requests. Cloud and screenshot provenance
 is recorded in [docs/assets.md](docs/assets.md).

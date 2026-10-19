@@ -1,109 +1,275 @@
 {
   "seo": {
-    "title": "lomi — A little more room to build",
-    "description": "Your terminals, code, browser previews, Git, and AI tools. Together in one open-source desktop workspace for macOS, Windows, and Linux."
+    "title": "lomi — Open-source desktop workspace",
+    "description": "Arrange native terminals, a file editor, browser previews and Git in one desktop workspace. Run your coding agents alongside your project on macOS, Windows and Linux."
   },
   "navigation": {
     "links": [
-      { "label": "Workspace", "href": "#workflow" },
-      { "label": "Features", "href": "#features" },
-      { "label": "Roadmap", "href": "#roadmap" },
-      { "label": "FAQ", "href": "#faq" }
+      {
+        "label": "Workspace",
+        "href": "#workflow"
+      },
+      {
+        "label": "Features",
+        "href": "#features"
+      },
+      {
+        "label": "Roadmap",
+        "href": "#roadmap"
+      },
+      {
+        "label": "FAQ",
+        "href": "#faq"
+      }
     ],
-    "actionLabel": "Get lomi"
+    "actionLabel": "Download lomi"
   },
   "hero": {
-    "eyebrow": "An open-source desktop workspace",
-    "title": "A little more room",
-    "accent": "to build.",
-    "description": "Your terminals, code, browser, and AI tools. Together in one calm workspace, with room to do things your way.",
-    "primaryLabel": "Get lomi",
+    "eyebrow": "Open-source desktop workspace",
+    "title": "Keep the whole",
+    "accent": "project in view.",
+    "description": "Arrange native terminals beside your editor. Preview your app in a browser panel and review Git changes in the same window. Give each project its own layout.",
+    "primaryLabel": "Download lomi",
     "secondaryLabel": "Explore the workspace",
-    "note": "Free & open source · macOS, Windows & Linux",
-    "previewCaption": "Real terminals. Real projects. Your workspace.",
-    "previewAlt": "Lomi in light mode with a project explorer, a TypeScript file in the editor, and a native terminal showing passing tests."
+    "note": "Free · macOS, Windows & Linux · Preview release",
+    "previewCaption": "The lomi workspace: project files, an editor and a running terminal.",
+    "previewAlt": "Lomi with a project explorer, a TypeScript file in the editor, and a native terminal showing passing tests."
   },
   "workflow": {
-    "eyebrow": "Less switching. More building.",
-    "title": "Make yourself at home.",
-    "description": "Start with a folder. Bring your favorite tools. Make a little space for your next big idea.",
+    "eyebrow": "Inside the workspace",
+    "title": "Follow the work across panels.",
+    "description": "Keep your dev server running while you edit, check the result and review what changed.",
     "items": [
-      { "title": "Open your project", "description": "Give each project its own workspace. Keep the files, processes, and context that belong together, together." },
-      { "title": "Find your arrangement", "description": "Split a terminal beside your editor. Open a browser next to your dev server. Your layout follows your work." },
-      { "title": "Build at your own pace", "description": "Run your CLI agents, review changes, and pick up where you left off. Your terminals keep going as you switch tasks." }
+      {
+        "title": "Build",
+        "description": "Open a project folder and split a native terminal beside your files. Processes keep running when you switch tabs or workspaces."
+      },
+      {
+        "title": "Preview",
+        "description": "Open your local app in a browser panel next to its dev server. Check the result without leaving the project."
+      },
+      {
+        "title": "Review",
+        "description": "Inspect the diff, stage files and write your commit. Browse the repository’s history from the same workspace."
+      }
     ]
   },
   "features": {
-    "eyebrow": "A place for all the moving parts",
-    "title": "Everything in context.",
-    "accent": "Nothing in your way.",
-    "description": "Familiar tools, a shared workspace. From the first command to the final commit.",
+    "eyebrow": "Workspace tools",
+    "title": "From the shell",
+    "accent": "to the commit.",
+    "description": "Use individual panels for each part of the task. Arrange them in tabs and splits.",
     "items": [
-      { "icon": "terminal", "title": "Your terminal, at home", "description": "Real native shells, flexible splits, and long-running processes. Bring Bash, Zsh, Fish, PowerShell, or WSL.", "detail": "Native terminals" },
-      { "icon": "panels", "title": "Room to think", "description": "Separate projects into workspaces. Arrange tabs and panels around the task in front of you.", "detail": "Flexible workspaces" },
-      { "icon": "code", "title": "Stay close to your code", "description": "Edit files, search your project, and preview Markdown, images, and SVGs without leaving your flow.", "detail": "Code & files" },
-      { "icon": "expand", "title": "See it come together", "description": "Keep a browser preview right next to the terminal running your app. A shorter path from change to feedback.", "detail": "Built-in browser" },
-      { "icon": "git", "title": "Make every change count", "description": "Stage files, inspect diffs, browse history, and commit your work. All in the same place.", "detail": "Git source control" },
-      { "icon": "spark", "title": "Build with your tools", "description": "Run the CLI agents you already use, or connect your own provider keys to a separate AI chat. CLI integrations vary by platform.", "detail": "CLI agents & AI chat" }
+      {
+        "icon": "terminal",
+        "title": "Native terminals",
+        "description": "Run Bash, Zsh, Fish, PowerShell, Command Prompt or WSL. Terminal output continues across tabs and workspaces.",
+        "detail": "Real shells"
+      },
+      {
+        "icon": "panels",
+        "title": "Project workspaces",
+        "description": "Separate tasks into named workspaces. Arrange panels in tabs and splits, with a layout for each project.",
+        "detail": "Tabs & splits"
+      },
+      {
+        "icon": "code",
+        "title": "File editor",
+        "description": "Edit with syntax highlighting and search across your project. Preview Markdown, images and SVGs beside the source.",
+        "detail": "Edit & inspect"
+      },
+      {
+        "icon": "expand",
+        "title": "Browser previews",
+        "description": "Load a local app in an embedded browser panel. Keep the preview alongside the files and terminal driving it.",
+        "detail": "Local app previews"
+      },
+      {
+        "icon": "git",
+        "title": "Git",
+        "description": "Inspect diffs, stage files and commit. Sync your repository and browse its history without opening another application.",
+        "detail": "Changes & history"
+      },
+      {
+        "icon": "spark",
+        "title": "Your AI tools",
+        "description": "Run your CLI agent in a terminal, or use separate AI chat with your own provider keys. CLI integrations are available on macOS and Linux.",
+        "detail": "Agents & chat"
+      }
     ]
   },
   "principles": {
-    "eyebrow": "Yours, from the start",
-    "title": "Good tools leave you in control.",
-    "description": "Lomi is built around your projects and the way you like to work.",
+    "eyebrow": "On your machine",
+    "title": "Your workspace stays local.",
+    "description": "Lomi stores workspace state and chat history locally. API keys use your system credential store.",
     "items": [
-      { "title": "Local by nature", "description": "Your projects and workspace history stay on your device. You choose what you send to connected AI services." },
-      { "title": "Open by design", "description": "Free to download. Apache 2.0 licensed. Explore the source, report an issue, or help shape what comes next." },
-      { "title": "Made to feel like you", "description": "Light and dark modes, VS Code theme imports, configurable shortcuts, and trusted local plugins." }
+      {
+        "title": "Local storage",
+        "description": "Your projects stay on your computer. Connected AI providers and CLI agents receive the content you send to them under their own policies."
+      },
+      {
+        "title": "Apache 2.0",
+        "description": "Download lomi for free, inspect the source and modify it. Issues and contributions are handled on GitHub."
+      },
+      {
+        "title": "Themes & shortcuts",
+        "description": "Choose light or dark mode, import VS Code themes and configure keyboard shortcuts. Extend the workspace with trusted local plugins."
+      }
     ]
   },
   "roadmap": {
-    "eyebrow": "A work in progress, in the best way",
-    "title": "Built in the open. Growing together.",
-    "description": "An initial direction for what comes next. These priorities are a draft, not release promises; they will evolve with feedback.",
+    "eyebrow": "Development roadmap",
+    "title": "Available now. Proposed next.",
+    "description": "The current workspace is available as a preview. The next priorities are proposals and may change with testing and feedback.",
     "items": [
-      { "phase": "The foundation", "status": "available", "title": "A home for your workflow", "description": "The core desktop workspace to start building with.", "points": [{ "label": "Native terminals & flexible panels" }, { "label": "Editor, browser & Git" }, { "label": "Your own AI tools & providers" }] },
-      { "phase": "Proposed next", "status": "next", "title": "Ready for the everyday", "description": "A proposed focus for the launch and its first weeks.", "points": [{ "label": "Onboarding & installation polish" }, { "label": "Platform testing & reliability" }, { "label": "Clearer guides & examples" }] },
-      { "phase": "On the horizon", "status": "later", "title": "More possibilities", "description": "Ideas to explore with the people using Lomi.", "points": [{ "label": "A richer plugin ecosystem" }, { "label": "More ways to customize your space" }, { "label": "Community-led improvements" }] }
+      {
+        "phase": "Available now",
+        "status": "available",
+        "title": "The desktop workspace",
+        "description": "The core tools are available in the current preview.",
+        "points": [
+          {
+            "label": "Native terminals & split layouts"
+          },
+          {
+            "label": "File editor, browser previews & Git"
+          },
+          {
+            "label": "CLI agents & provider-key AI chat"
+          }
+        ]
+      },
+      {
+        "phase": "Proposed next",
+        "status": "next",
+        "title": "Installation & reliability",
+        "description": "Proposed work for launch and the first weeks of use.",
+        "points": [
+          {
+            "label": "Onboarding & installation polish"
+          },
+          {
+            "label": "Platform testing & reliability"
+          },
+          {
+            "label": "Guides & examples"
+          }
+        ]
+      },
+      {
+        "phase": "Proposed later",
+        "status": "later",
+        "title": "Plugins & customization",
+        "description": "Further ideas to evaluate with people using lomi.",
+        "points": [
+          {
+            "label": "A broader plugin ecosystem"
+          },
+          {
+            "label": "More workspace customization"
+          },
+          {
+            "label": "Improvements proposed by the community"
+          }
+        ]
+      }
     ],
-    "linkLabel": "Help shape what’s next"
+    "linkLabel": "Discuss the roadmap"
   },
   "faq": {
-    "eyebrow": "A few things you might be wondering",
-    "title": "Good questions.",
+    "eyebrow": "Before you install",
+    "title": "A few practical details.",
     "items": [
-      { "question": "What is lomi?", "answer": "Lomi is an open-source desktop workspace for terminal-driven development. It brings native terminals, a code editor, browser previews, Git, and AI tools into one window, with flexible layouts for each project." },
-      { "question": "Can I bring my own coding agent?", "answer": "Yes. You can run CLI tools such as Claude Code, Codex, and Gemini CLI in native terminals. Lomi also offers a separate AI chat with your own provider keys. CLI integrations are available on macOS and Linux; MCP workspace control currently requires macOS on Apple Silicon and your approval. Check the documentation for platform details." },
-      { "question": "Is lomi free and open source?", "answer": "Yes. Lomi is free to download and available under the Apache 2.0 license. Any third-party AI services or agent subscriptions you connect have their own pricing." },
-      { "question": "Which platforms can I use?", "answer": "Lomi has desktop packages for macOS, Windows, and Linux. Features and requirements can vary by platform and release. The download picker shows available packages; the installation guide has the details." },
-      { "question": "Where does my work live?", "answer": "Your projects, workspace state, and chat history live locally on your computer. Content sent to an AI provider or CLI agent is handled by that service under its own policies. You choose which services to connect." },
-      { "question": "How can I help shape lomi?", "answer": "Try a preview build, share feedback, report a bug, or contribute on GitHub. The roadmap is a starting point for that conversation, and priorities can change as the project grows." }
+      {
+        "question": "What is lomi?",
+        "answer": "Lomi is an open-source desktop workspace for terminal-driven development. Open a project folder and arrange native terminals, a file editor, browser previews and Git views in one window. Each workspace has its own layout."
+      },
+      {
+        "question": "Can I use my own coding agent?",
+        "answer": "Yes. Run tools such as Claude Code, Codex and Gemini CLI in a native terminal. CLI integrations are available on macOS and Linux. MCP workspace control currently requires macOS on Apple Silicon and your approval. Separate AI chat uses your own provider keys. See the documentation for platform details."
+      },
+      {
+        "question": "Is lomi free?",
+        "answer": "Yes. Lomi is free to download under the Apache 2.0 license. Third-party AI services and agent subscriptions have their own pricing."
+      },
+      {
+        "question": "Which platforms are supported?",
+        "answer": "Desktop packages are available for macOS, Windows and Linux. Features and requirements vary by platform and release. Use the download picker to find a package and the installation guide to check its requirements."
+      },
+      {
+        "question": "Where are my projects and history stored?",
+        "answer": "Projects, workspace state and chat history are stored locally on your computer. API keys use the system credential store. Content sent to a connected AI provider or CLI agent is handled under that service’s policies."
+      },
+      {
+        "question": "How do I report a problem or contribute?",
+        "answer": "Open an issue on GitHub with the steps to reproduce a problem, or propose an improvement there. You can also inspect the source and submit a pull request. The roadmap lists proposed priorities, which may change."
+      }
     ]
   },
   "download": {
-    "eyebrow": "Your next idea deserves a little space",
-    "title": "Come on in.",
-    "accent": "Make something.",
-    "description": "Get the current preview and make yourself at home. There’s a lot we can build from here.",
-    "primaryLabel": "Download the prerelease",
+    "eyebrow": "Download the preview",
+    "title": "Start with",
+    "accent": "your project folder.",
+    "description": "Choose a package for your platform. The installation guide covers requirements and platform-specific setup.",
+    "primaryLabel": "Download lomi",
     "secondaryLabel": "View source on GitHub",
-    "note": "Early access for macOS, Windows, and Linux"
+    "note": "Preview release · macOS, Windows & Linux"
   },
   "newsletter": {
-    "eyebrow": "Letters from lomi",
-    "title": "Stay in the loop.",
-    "description": "A small note when there’s something worth sharing. New releases, ideas, and what we’re building next."
+    "eyebrow": "Project updates",
+    "title": "Follow the next release.",
+    "description": "Release updates and notes on what is changing in lomi."
   },
   "footer": {
-    "tagline": "The rest is yours to build.",
-    "githubLabel": "Let’s build it together",
+    "tagline": "Open-source desktop workspace.",
+    "githubLabel": "View lomi on GitHub",
     "groups": [
-      { "title": "The workspace", "links": [{ "label": "Features", "href": "#features" }, { "label": "Roadmap", "href": "#roadmap" }, { "label": "Download", "href": "#download" }, { "label": "Questions & answers", "href": "#faq" }] },
-      { "title": "Out in the open", "links": [{ "label": "Documentation", "href": "https://docs.lomi.dev" }, { "label": "Release notes", "href": "https://github.com/lomi-dev/lomi/releases" }, { "label": "Share an idea", "href": "https://github.com/lomi-dev/lomi/issues" }, { "label": "Source code", "href": "https://github.com/lomi-dev/lomi" }] }
+      {
+        "title": "Workspace",
+        "links": [
+          {
+            "label": "Features",
+            "href": "#features"
+          },
+          {
+            "label": "Roadmap",
+            "href": "#roadmap"
+          },
+          {
+            "label": "Download",
+            "href": "#download"
+          },
+          {
+            "label": "FAQ",
+            "href": "#faq"
+          }
+        ]
+      },
+      {
+        "title": "Project",
+        "links": [
+          {
+            "label": "Documentation",
+            "href": "https://docs.lomi.dev"
+          },
+          {
+            "label": "Release notes",
+            "href": "https://github.com/lomi-dev/lomi/releases"
+          },
+          {
+            "label": "Issues & ideas",
+            "href": "https://github.com/lomi-dev/lomi/issues"
+          },
+          {
+            "label": "Source code",
+            "href": "https://github.com/lomi-dev/lomi"
+          }
+        ]
+      }
     ],
-    "signoff": "A little more room to build.",
-    "backToTopLabel": "Back to the clouds",
+    "signoff": "Keep the project in view.",
+    "backToTopLabel": "Back to top",
     "licenseLabel": "Free & open source / Apache 2.0",
-    "colophon": "Made with care. Built in the open."
+    "colophon": "Source, releases and development on GitHub."
   }
 }

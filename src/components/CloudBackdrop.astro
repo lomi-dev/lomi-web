@@ -8,10 +8,10 @@ import sky from '../assets/clouds.png';
     src={sky}
     alt=""
     formats={['avif', 'webp']}
-    widths={[640, 1024, 1536]}
-    sizes="100vw"
+    widths={[256, 400, 640, 800]}
+    sizes="(max-width: 767px) 170px, (min-width: 1400px) 400px, 30vw"
     quality={72}
     loading="eager"
-    fetchpriority="high"
+    fetchpriority="auto"
   />
 </div>

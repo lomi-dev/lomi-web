@@ -76,6 +76,16 @@ try {
   await expect(page.locator('#download a[href="https://github.com/lomi-dev/lomi"]')).toBeVisible();
   await expect(page.getByRole('region', { name: 'Newsletter signup' })).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Primary navigation', exact: true })).toBeVisible();
+  const desktopNavigation = page.getByRole('navigation', { name: 'Primary navigation', exact: true });
+  const desktopLinks = await desktopNavigation.locator('a').evaluateAll((links) => links.map((link) => {
+    const label = link.cloneNode(true);
+    label.querySelectorAll('[aria-hidden="true"]').forEach((decoration) => decoration.remove());
+    return { href: link.getAttribute('href'), label: link.getAttribute('aria-label') || label.textContent.trim() };
+  }));
+  expect(desktopLinks.length, 'Desktop navigation links').toBeGreaterThan(0);
+  for (const [index, link] of desktopLinks.entries()) {
+    await expect(desktopNavigation.locator('a').nth(index)).toHaveAccessibleName(link.label);
+  }
   await expect(page.getByRole('contentinfo')).toBeVisible();
   for (const section of ['workflow', 'features', 'roadmap', 'faq', 'download', 'newsletter']) {
     await expect(page.locator(`#${section}`)).toBeVisible();
@@ -94,9 +104,82 @@ try {
   expect(anchors.missingTargets, 'Internal anchor destinations').toEqual([]);
   await expect(page.locator('#download-dialog')).not.toBeVisible();
 
-  for (const width of [320, 390, 768, 1024, 1440, 1920]) {
+  const deck = page.locator('lomi-workspace-deck');
+  const deckControls = deck.getByRole('group', { name: 'Choose a workspace view' });
+  const deckButtons = deckControls.getByRole('button');
+  const deckPanels = deck.locator('[data-deck-panel]');
+  const deckCaption = deck.locator('figcaption');
+  await expect(deckControls).toBeVisible();
+  await expect(deckButtons).toHaveCount(3);
+  await expect(deckPanels).toHaveCount(3);
+  await expect(deckCaption).toHaveAttribute('aria-live', 'polite');
+  const viewImages = new Set();
+  const viewCaptions = new Set();
+  async function expectDeckView(index) {
+    await expect(deckButtons.nth(index)).toHaveAttribute('aria-pressed', 'true');
+    await expect(deckControls.locator('[aria-pressed="true"]')).toHaveCount(1);
+    await expect(deck.locator('[data-deck-panel]:visible')).toHaveCount(1);
+    for (const [panelIndex, panel] of (await deckPanels.all()).entries()) {
+      if (panelIndex !== index) await expect(panel).not.toBeVisible();
+    }
+    const panel = deckPanels.nth(index);
+    await expect(panel).toBeVisible();
+    const image = panel.getByRole('img');
+    await expect(image).toBeVisible();
+    await expect(image).toHaveAttribute('alt', /\S/);
+    await expect.poll(() => image.evaluate((element) => element.naturalWidth)).toBeGreaterThan(0);
+    await expect(deckCaption).toHaveText(await panel.getAttribute('data-caption'));
+    await expect(deckCaption).toHaveText(/\S/);
+    return { image: await image.getAttribute('src'), caption: await deckCaption.textContent() };
+  }
+  await expectDeckView(0);
+  for (const [index, label] of ['Build', 'Preview', 'Review'].entries()) {
+    await expect(deckButtons.nth(index)).toHaveAccessibleName(label);
+    await deckButtons.nth(index).click();
+    const view = await expectDeckView(index);
+    viewImages.add(view.image);
+    viewCaptions.add(view.caption);
+  }
+  expect(viewImages.size, 'Distinct product screenshots').toBe(3);
+  expect(viewCaptions.size, 'View-specific captions').toBe(3);
+  await deckButtons.first().focus();
+  await page.keyboard.press('Enter');
+  await expectDeckView(0);
+  await page.keyboard.press('Tab');
+  await expect(deckButtons.nth(1)).toBeFocused();
+  await page.keyboard.press('Space');
+  await expectDeckView(1);
+  await page.keyboard.press('Tab');
+  await expect(deckButtons.nth(2)).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expectDeckView(2);
+  await page.keyboard.press('Shift+Tab');
+  await expect(deckButtons.nth(1)).toBeFocused();
+  await expectDeckView(2);
+
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  expect(await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches)).toBe(true);
+  await deckButtons.first().click();
+  await expectDeckView(0);
+  expect(await deck.evaluate((element) => element.getAnimations({ subtree: true })
+    .filter((animation) => animation.playState === 'running').length), 'No deck animation with reduced motion').toBe(0);
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+
+  for (const width of [320, 390, 640, 768, 1024, 1440, 1920]) {
     await page.setViewportSize({ width, height: 900 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth), `Layout at ${width}px`).toBe(width);
+    await expect(deckControls).toBeVisible();
+    for (const button of await deckButtons.all()) {
+      const box = await button.boundingBox();
+      expect(box.x, `Workspace control fits at ${width}px`).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width, `Workspace control fits at ${width}px`).toBeLessThanOrEqual(width);
+    }
+    if (width === 640) {
+      // 640 CSS pixels provides the reflow width of a 1280px window at 200% zoom.
+      const heading = page.getByRole('heading', { level: 1 });
+      await expect(heading).toBeVisible();
+      expect(await heading.evaluate((element) => element.scrollWidth <= element.clientWidth), 'Heading reflows at 200% equivalent width').toBe(true);
+    }
   }
   await page.setViewportSize({ width: 844, height: 390 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(844);
@@ -113,8 +196,6 @@ try {
     label: link.textContent.trim(),
   })));
   expect(navigationLinks.length, 'Mobile navigation links').toBeGreaterThan(0);
-  const desktopLinks = await page.getByRole('navigation', { name: 'Primary navigation', exact: true })
-    .locator('a').evaluateAll((links) => links.map((link) => ({ href: link.getAttribute('href'), label: link.textContent.trim() })));
   expect(navigationLinks.slice(0, desktopLinks.length), 'Consistent desktop and mobile navigation').toEqual(desktopLinks);
   for (const [index, link] of navigationLinks.entries()) {
     expect(link.label, 'Nonempty navigation label').toMatch(/\S/);
@@ -125,6 +206,7 @@ try {
     const navigationLink = mobileMenu.getByRole('link').nth(index);
     await expect(navigationLink).toHaveAttribute('href', link.href);
     await expect(navigationLink).toBeVisible();
+    await expect(navigationLink).toHaveAccessibleName(link.label);
     await navigationLink.click();
     await expect(page).toHaveURL(new URL(link.href, url).href);
     await expect(mobileMenu).not.toHaveAttribute('open');
@@ -297,6 +379,15 @@ try {
   for (const section of ['workflow', 'features', 'roadmap', 'faq', 'download', 'newsletter']) {
     await expect(staticPage.locator(`#${section}`).getByRole('heading', { level: 2 })).toBeVisible();
   }
+  const staticDeck = staticPage.locator('lomi-workspace-deck');
+  await expect(staticDeck.locator('.deck-controls')).not.toBeVisible();
+  await expect(staticDeck.getByRole('button')).toHaveCount(0);
+  await expect(staticDeck.locator('[data-deck-panel]:visible')).toHaveCount(1);
+  const staticImage = staticDeck.locator('[data-deck-panel]').first().getByRole('img');
+  await expect(staticImage).toBeVisible();
+  await expect(staticImage).toHaveAttribute('alt', /\S/);
+  await expect.poll(() => staticImage.evaluate((element) => element.naturalWidth)).toBeGreaterThan(0);
+  await expect(staticDeck.locator('figcaption')).toHaveText(/\S/);
   const staticHeroDownload = staticPage.locator('.hero [data-download-open]');
   await expect(staticHeroDownload).toBeVisible();
   await expect(staticHeroDownload).toHaveAttribute('href', releaseUrl);
@@ -327,7 +418,7 @@ try {
   await staticPage.keyboard.press('Enter');
   await expect(staticPage.locator('#main')).toBeFocused();
   await staticContext.close();
-  console.log('Passed: complete landing sections and anchors, 6 viewport widths and landscape, mobile navigation and FAQ keyboard behavior, newsletter form, all 7 download packages, release fallback, every download trigger and focus restoration, no-JS reading and release links, and mobile/desktop/dialog accessibility.');
+  console.log('Passed: complete landing sections and anchors, 7 viewport widths including 200% equivalent reflow and landscape, workspace views/keyboard/reduced motion/no-JS, mobile navigation and FAQ keyboard behavior, newsletter form, all 7 download packages, release fallback, every download trigger and focus restoration, no-JS reading and release links, and mobile/desktop/dialog accessibility.');
 } finally {
   await browser.close();
 }
