@@ -3,6 +3,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { mkdir, writeFile } from 'node:fs/promises';
 
 const url = process.env.VERIFY_URL || 'http://127.0.0.1:4322';
+const videoUrl = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
 const browserType = process.env.VERIFY_BROWSER === 'firefox' ? firefox : chromium;
 const browser = await browserType.launch({
   ...(browserType === chromium && process.env.PLAYWRIGHT_CHANNEL ? { channel: process.env.PLAYWRIGHT_CHANNEL } : {}),
@@ -21,6 +22,7 @@ await context.addInitScript(() => {
 });
 const page = await context.newPage();
 const errors = [];
+const videoRequests = await mockVideoRequests(page);
 await page.route('https://next-api.useplunk.com/**', () => { throw new Error('Browser must not call Plunk'); });
 page.on('pageerror', (error) => errors.push(error.message));
 await mkdir('artifacts', { recursive: true });
@@ -142,6 +144,164 @@ async function verifyViewportFooter(targetPage, screenshots = false, viewports =
   }
 }
 
+async function mockVideoRequests(targetPage) {
+  const requests = [];
+  await targetPage.route(/^https:\/\/(?:[^/]+\.)?(?:youtube\.com|youtube-nocookie\.com|youtu\.be|ytimg\.com|googlevideo\.com)\//, async (route) => {
+    requests.push(route.request().url());
+    await route.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><html lang="en"><head><title>Mock video</title></head><body><main><h1>Mock video</h1><button type="button">Play mock video</button></main></body></html>' });
+  });
+  return requests;
+}
+
+async function expectPlayInVisibleImage(targetPage) {
+  await expect.poll(() => targetPage.locator('[data-video-play]').evaluate((play) => {
+    const trigger = play.closest('[data-video-open]').getBoundingClientRect();
+    const bounds = play.getBoundingClientRect();
+    const top = Math.max(0, trigger.top), bottom = Math.min(innerHeight, trigger.bottom);
+    let opacity = 1;
+    for (let element = play; element; element = element.parentElement) opacity *= Number(getComputedStyle(element).opacity);
+    return bottom > top && opacity > .9 && bounds.top >= top - 1 && bounds.bottom <= bottom + 1
+      && Math.abs((bounds.top + bounds.bottom) / 2 - (top + bottom) / 2) < 8
+      && Math.abs((bounds.left + bounds.right) / 2 - (trigger.left + trigger.right) / 2) < 8;
+  }), { message: 'Play remains visible and centered in the visible image portion' }).toBe(true);
+}
+
+async function settleVideoMotion(dialog) {
+  await dialog.evaluate(async (element) => {
+    await Promise.all(element.getAnimations({ subtree: true })
+      .filter((animation) => animation.effect.getComputedTiming().iterations !== Infinity)
+      .map((animation) => animation.finished.catch(() => {})));
+  });
+}
+
+async function verifyVideoDialog(targetPage, requests, touch = false) {
+  const trigger = targetPage.locator('[data-video-open]');
+  const dialog = targetPage.getByRole('dialog', { name: 'Watch Lomi', exact: true });
+  const close = dialog.getByRole('button', { name: 'Close video' });
+  await expect(trigger).toHaveCount(1);
+  await expect(trigger).toHaveAttribute('href', videoUrl);
+  await expect(trigger).toHaveAttribute('aria-controls', 'video-dialog');
+  await expect(targetPage.locator('#video-dialog iframe')).toHaveCount(0);
+  expect(requests, 'YouTube receives no requests before activation').toEqual([]);
+  await trigger.evaluate((element) => element.scrollIntoView({ block: 'center', behavior: 'instant' }));
+  if (touch) await expectPlayInVisibleImage(targetPage);
+  else {
+    await trigger.focus();
+    await expect(trigger).toBeFocused();
+    await trigger.evaluate((element) => {
+      element.scrollIntoView({ block: 'center', behavior: 'instant' });
+      element.focus({ preventScroll: true });
+    });
+    await expectPlayInVisibleImage(targetPage);
+  }
+  const initial = await targetPage.evaluate(() => ({ x: scrollX, y: scrollY, root: document.documentElement.style.overflow, body: document.body.style.overflow }));
+  const expectOpen = async () => {
+    await expect(dialog).toBeVisible();
+    await settleVideoMotion(dialog);
+    await expect(close).toBeFocused();
+    const iframe = dialog.locator('iframe');
+    await expect(iframe).toHaveCount(1);
+    const source = new URL(await iframe.getAttribute('src'));
+    expect(source.origin).toBe('https://www.youtube.com');
+    expect(source.pathname).toBe('/embed/dQw4w9WgXcQ');
+    expect(source.searchParams.get('autoplay')).toBe('1');
+    await expect(iframe).toHaveAttribute('title', 'Lomi video');
+    await expect(targetPage.frameLocator('#video-dialog iframe').getByRole('heading', { name: 'Mock video' })).toBeVisible();
+    expect(requests.length).toBeGreaterThan(0);
+    expect(await targetPage.evaluate(() => getComputedStyle(document.documentElement).overflowY)).toBe('hidden');
+    expect(await targetPage.evaluate(() => getComputedStyle(document.body).overflowY)).toBe('hidden');
+  };
+  const expectClosed = async () => {
+    await expect(targetPage.locator('#video-dialog iframe')).toHaveCount(0);
+    await expect(dialog).not.toBeVisible();
+    await expect(trigger).toBeFocused();
+    expect(await targetPage.evaluate(() => ({ x: scrollX, y: scrollY, root: document.documentElement.style.overflow, body: document.body.style.overflow })), 'Closing video restores page scrolling and position').toEqual(initial);
+  };
+  if (touch) await trigger.tap();
+  else await targetPage.keyboard.press('Enter');
+  if (!touch) {
+    const enteringWidth = await dialog.evaluate((element) => element.getBoundingClientRect().width);
+    await settleVideoMotion(dialog);
+    const enteredWidth = (await dialog.boundingBox()).width;
+    expect(enteringWidth, 'Video enters from a smaller centered frame').toBeLessThan(enteredWidth * .99);
+  }
+  await expectOpen();
+  if (!touch) {
+    await targetPage.mouse.move(2, 2);
+    await targetPage.mouse.wheel(0, 500);
+    await targetPage.waitForTimeout(100);
+    expect(await targetPage.evaluate(() => scrollY), 'The page stays locked behind the video').toBe(initial.y);
+    await close.focus();
+    await trigger.evaluate((element) => element.focus({ preventScroll: true }));
+    await expect(close, 'The modal makes background controls inert').toBeFocused();
+    await targetPage.keyboard.press('Tab');
+    await expect(dialog.locator('iframe'), 'Tab reaches the video player from Close').toBeFocused();
+    await targetPage.keyboard.press('Shift+Tab');
+    await expect(close).toBeFocused();
+    const accessibility = await new AxeBuilder({ page: targetPage }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
+    expect(accessibility.violations, 'Video dialog accessibility').toEqual([]);
+  }
+  await targetPage.keyboard.press('Escape');
+  await expectClosed();
+  if (!touch) {
+    await trigger.click();
+    await expectOpen();
+    await close.click();
+    await expectClosed();
+    await trigger.click();
+    await expectOpen();
+    const bounds = await dialog.boundingBox();
+    expect(bounds.x, 'Video modal leaves a clickable backdrop').toBeGreaterThan(2);
+    await targetPage.mouse.click(bounds.x / 2, bounds.y + bounds.height / 2);
+    await expectClosed();
+    await targetPage.emulateMedia({ reducedMotion: 'reduce' });
+    await targetPage.keyboard.press('Enter');
+    expect(await dialog.evaluate((element) => element.getAnimations().flatMap((animation) => animation.effect.getKeyframes())
+      .every((frame) => !frame.transform || frame.transform === 'none')), 'Reduced-motion video entrance avoids scaling').toBe(true);
+    await expectOpen();
+    await targetPage.keyboard.press('Escape');
+    await expectClosed();
+    await targetPage.emulateMedia({ reducedMotion: 'no-preference' });
+    const pendingScroll = await trigger.evaluate((element) => {
+      const before = scrollY;
+      window.scrollTo({ top: before + 500, behavior: 'smooth' });
+      element.click();
+      return before;
+    });
+    await expectOpen();
+    await targetPage.waitForTimeout(350);
+    expect(await targetPage.evaluate(() => scrollY), 'Opening video cancels pending smooth page scrolling').toBe(pendingScroll);
+    await targetPage.keyboard.press('Escape');
+    await expect(dialog).not.toBeVisible();
+    await expect(targetPage.locator('#video-dialog iframe')).toHaveCount(0);
+    await expect(trigger).toBeFocused();
+    expect(await targetPage.evaluate(() => scrollY), 'Closing after pending scrolling restores the activation position').toBe(pendingScroll);
+  } else {
+    await trigger.tap();
+    await expectOpen();
+    await targetPage.setViewportSize({ width: 844, height: 390 });
+    await targetPage.keyboard.press('Escape');
+    await expect(dialog).not.toBeVisible();
+    await expect(targetPage.locator('#video-dialog iframe')).toHaveCount(0);
+    await expect(trigger).toBeFocused();
+    await expect(trigger, 'Portrait-to-landscape dismissal keeps the video opener visible').toBeInViewport();
+    await trigger.tap();
+    await expect(dialog).toBeVisible();
+    await targetPage.setViewportSize({ width: 320, height: 200 });
+    await settleVideoMotion(dialog);
+    await expect(close, 'The video close control stays reachable in a short viewport').toBeInViewport();
+    const playerBounds = await dialog.locator('iframe').boundingBox();
+    expect(playerBounds.width, 'Short-view video player width').toBeGreaterThanOrEqual(200);
+    expect(playerBounds.height, 'Short-view video player height').toBeGreaterThanOrEqual(200);
+    await close.tap();
+    await expect(dialog).not.toBeVisible();
+    await expect(targetPage.locator('#video-dialog iframe')).toHaveCount(0);
+    await expect(trigger).toBeFocused();
+    await expect(trigger).toBeInViewport();
+    expect(await targetPage.evaluate(() => ({ root: document.documentElement.style.overflow, body: document.body.style.overflow }))).toEqual({ root: initial.root, body: initial.body });
+  }
+}
+
 async function backgroundPixels(targetPage) {
   return targetPage.locator('canvas[data-background-canvas]').evaluate((canvas) => {
     const sample = document.createElement('canvas');
@@ -238,13 +398,14 @@ async function verifyAgentLabels(targetPage) {
   expect(await cards.evaluateAll((items) => items.map((item) => item.getAttribute('data-agent'))))
     .toEqual(['codex', 'claude-code', 'opencode', 'cursor', 'grok', 'antigravity']);
   await expect(targetPage.locator('.hero [data-agent="hermes"]')).toHaveCount(0);
-  const names = targetPage.locator('.hero-agent-names li');
+  const agentList = targetPage.getByRole('list', { name: 'Supported CLI agents' });
+  await expect(agentList).toHaveCount(1);
+  const names = agentList.getByRole('listitem');
   await expect(names).toHaveCount(6);
   expect(await names.allTextContents()).toEqual(['Codex', 'Claude Code', 'OpenCode', 'Cursor CLI', 'Grok Build', 'Antigravity CLI']);
   await expect(targetPage.locator('.hero-agent-names')).not.toContainText(/hermes/i);
   await expect(targetPage.locator('.agent-constellation')).not.toContainText(/hermes/i);
   for (const name of await names.all()) {
-    await expect(name).toBeVisible();
     await expect(name).toHaveText(/\S/);
   }
   expect(await names.allTextContents(), 'Readable labels identify all decorative cards')
@@ -394,6 +555,20 @@ try {
   expect(anchors.duplicates, 'Unique element IDs').toEqual([]);
   expect(anchors.missingTargets, 'Internal anchor destinations').toEqual([]);
   await expect(page.locator('#download-dialog')).not.toBeVisible();
+  for (const viewport of [{ width: 1440, height: 900 }, { width: 1920, height: 1080 }]) {
+    await page.setViewportSize(viewport);
+    await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
+    const image = await page.locator('.hero #workspace img').boundingBox();
+    const visibleHeight = Math.max(0, Math.min(viewport.height, image.y + image.height) - Math.max(0, image.y));
+    expect(image.y, 'The screenshot follows the hero copy').toBeGreaterThan(0);
+    expect(image.y + image.height, 'The full screenshot continues below the initial fold').toBeGreaterThan(viewport.height);
+    expect(visibleHeight / image.height, 'A meaningful part of the screenshot appears initially').toBeGreaterThan(.1);
+    expect(visibleHeight / image.height, 'The initial viewport reveals part of the full screenshot').toBeLessThan(.65);
+    await page.mouse.move(image.x + image.width / 2, Math.max(0, image.y) + visibleHeight / 2);
+    await expectPlayInVisibleImage(page);
+  }
+  await page.setViewportSize({ width: 1440, height: 900 });
+
 
   const productMenu = page.locator('#product-menu');
   const productSummary = productMenu.locator(':scope > summary');
@@ -598,66 +773,15 @@ try {
   await expect(background).toHaveAttribute('data-state', 'running');
   await motionToggle.click();
 
-  const deck = page.locator('lomi-workspace-deck');
-  const deckControls = deck.getByRole('group', { name: 'Choose a workspace view' });
-  const deckButtons = deckControls.getByRole('button');
-  const deckPanels = deck.locator('[data-deck-panel]');
-  const deckCaption = deck.locator('figcaption');
-  await expect(deckControls).toBeVisible();
-  await expect(deckButtons).toHaveCount(3);
-  await expect(deckPanels).toHaveCount(3);
-  await expect(deckCaption).toHaveAttribute('aria-live', 'polite');
-  const viewImages = new Set();
-  const viewCaptions = new Set();
-  async function expectDeckView(index) {
-    await expect(deckButtons.nth(index)).toHaveAttribute('aria-pressed', 'true');
-    await expect(deckControls.locator('[aria-pressed="true"]')).toHaveCount(1);
-    await expect(deck.locator('[data-deck-panel]:visible')).toHaveCount(1);
-    for (const [panelIndex, panel] of (await deckPanels.all()).entries()) {
-      if (panelIndex !== index) await expect(panel).not.toBeVisible();
-    }
-    const panel = deckPanels.nth(index);
-    await expect(panel).toBeVisible();
-    const image = panel.getByRole('img');
-    await expect(image).toBeVisible();
-    await expect(image).toHaveAttribute('alt', /\S/);
-    await expect.poll(() => image.evaluate((element) => element.naturalWidth)).toBeGreaterThan(0);
-    await expect(deckCaption).toHaveText(await panel.getAttribute('data-caption'));
-    await expect(deckCaption).toHaveText(/\S/);
-    return { image: await image.getAttribute('src'), caption: await deckCaption.textContent() };
-  }
-  await expectDeckView(0);
-  for (const [index, label] of ['Build', 'Preview', 'Review'].entries()) {
-    await expect(deckButtons.nth(index)).toHaveAccessibleName(label);
-    await deckButtons.nth(index).click();
-    const view = await expectDeckView(index);
-    viewImages.add(view.image);
-    viewCaptions.add(view.caption);
-  }
-  expect(viewImages.size, 'Distinct product screenshots').toBe(3);
-  expect(viewCaptions.size, 'View-specific captions').toBe(3);
-  await deckButtons.first().focus();
-  await page.keyboard.press('Enter');
-  await expectDeckView(0);
-  await page.keyboard.press('Tab');
-  await expect(deckButtons.nth(1)).toBeFocused();
-  await page.keyboard.press('Space');
-  await expectDeckView(1);
-  await page.keyboard.press('Tab');
-  await expect(deckButtons.nth(2)).toBeFocused();
-  await page.keyboard.press('Enter');
-  await expectDeckView(2);
-  await page.keyboard.press('Shift+Tab');
-  await expect(deckButtons.nth(1)).toBeFocused();
-  await expectDeckView(2);
-
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  expect(await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches)).toBe(true);
-  await deckButtons.first().click();
-  await expectDeckView(0);
-  expect(await deck.evaluate((element) => element.getAnimations({ subtree: true })
-    .filter((animation) => animation.playState === 'running').length), 'No deck animation with reduced motion').toBe(0);
-  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  const workspace = page.locator('.hero #workspace');
+  const workspaceImage = workspace.getByRole('img');
+  await expect(workspaceImage).toHaveCount(1);
+  await expect(workspaceImage).toBeVisible();
+  await expect(workspaceImage).toHaveAttribute('alt', /\S/);
+  await expect.poll(() => workspaceImage.evaluate((image) => image.naturalWidth)).toBeGreaterThan(0);
+  await expect(workspace.locator('figcaption')).toHaveText(/\S/);
+  await expect(workspace.locator('[data-deck-view], .deck-controls, .deck-chrome')).toHaveCount(0);
+  await verifyVideoDialog(page, videoRequests);
 
   for (const width of [320, 390, 640, 768, 1024, 1440, 1920]) {
     await page.setViewportSize({ width, height: 900 });
@@ -666,16 +790,13 @@ try {
       const bounds = canvas.getBoundingClientRect();
       return canvas.width > 0 && canvas.height > 0 && bounds.width > 0 && bounds.height > 0
         && Math.abs(canvas.width / canvas.height - bounds.width / bounds.height) < .01
-        && Math.abs(bounds.width - canvas.closest('.hero').clientWidth) <= 1
-        && Math.abs(bounds.height - canvas.closest('.hero').clientHeight) <= 1;
-    }), { message: `Background canvas resizes to the hero at ${width}px` }).toBe(true);
+        && Math.abs(bounds.width - canvas.closest('lomi-shape-waves').clientWidth) <= 1
+        && Math.abs(bounds.height - canvas.closest('lomi-shape-waves').clientHeight) <= 1;
+    }), { message: `Background canvas resizes to its hero background area at ${width}px` }).toBe(true);
 
-    await expect(deckControls).toBeVisible();
-    for (const button of await deckButtons.all()) {
-      const box = await button.boundingBox();
-      expect(box.x, `Workspace control fits at ${width}px`).toBeGreaterThanOrEqual(0);
-      expect(box.x + box.width, `Workspace control fits at ${width}px`).toBeLessThanOrEqual(width);
-    }
+    const imageBounds = await workspaceImage.boundingBox();
+    expect(imageBounds.x, `Product screenshot fits at ${width}px`).toBeGreaterThanOrEqual(0);
+    expect(imageBounds.x + imageBounds.width, `Product screenshot fits at ${width}px`).toBeLessThanOrEqual(width);
     if (width === 640) {
       // 640 CSS pixels provides the reflow width of a 1280px window at 200% zoom.
       const heading = page.getByRole('heading', { level: 1 });
@@ -814,7 +935,9 @@ try {
   const downloadAction = page.getByRole('link', { name: 'Download prerelease' });
   const osIconWrap = page.locator('[data-download-os-icon]');
 
-  await expect(page.locator('dialog')).toHaveCount(1);
+  await expect(page.locator('dialog')).toHaveCount(2);
+  await expect(page.locator('#download-dialog')).toHaveCount(1);
+  await expect(page.locator('#video-dialog')).toHaveCount(1);
   expect(await downloadTriggers.count()).toBeGreaterThanOrEqual(2);
   for (const trigger of await downloadTriggers.all()) {
     const inMobileMenu = await trigger.evaluate((element) => Boolean(element.closest('#mobile-navigation')));
@@ -932,15 +1055,19 @@ try {
   await expect(staticPage.locator('.hero [data-motion-toggle]')).not.toBeVisible();
   await expectStaticAgents(staticPage, 'No-JavaScript hero remains static');
   await expect(staticPage.locator('.hero .hero-explore')).toHaveAttribute('href', '#workspace');
-  const staticDeck = staticPage.locator('lomi-workspace-deck');
-  await expect(staticDeck.locator('.deck-controls')).not.toBeVisible();
-  await expect(staticDeck.getByRole('button')).toHaveCount(0);
-  await expect(staticDeck.locator('[data-deck-panel]:visible')).toHaveCount(1);
-  const staticImage = staticDeck.locator('[data-deck-panel]').first().getByRole('img');
+  const staticWorkspace = staticPage.locator('.hero #workspace');
+  const staticImage = staticWorkspace.getByRole('img');
+  await expect(staticImage).toHaveCount(1);
   await expect(staticImage).toBeVisible();
   await expect(staticImage).toHaveAttribute('alt', /\S/);
   await expect.poll(() => staticImage.evaluate((element) => element.naturalWidth)).toBeGreaterThan(0);
-  await expect(staticDeck.locator('figcaption')).toHaveText(/\S/);
+  await expect(staticWorkspace.locator('figcaption')).toHaveText(/\S/);
+  await expect(staticPage.locator('#video-dialog iframe')).toHaveCount(0);
+  await staticPage.route(videoUrl, (route) => route.fulfill({ status: 200, contentType: 'text/html', body: '<h1>YouTube video destination</h1>' }));
+  await expect(staticPage.locator('[data-video-open]')).toHaveAttribute('href', videoUrl);
+  await staticPage.locator('[data-video-open]').click();
+  await expect(staticPage).toHaveURL(videoUrl);
+  await staticPage.goto(url);
   const staticHeroDownload = staticPage.locator('.hero [data-download-open]');
   await expect(staticHeroDownload).toBeVisible();
   await expect(staticHeroDownload).toHaveAttribute('href', releaseUrl);
@@ -987,6 +1114,12 @@ try {
   await staticPage.keyboard.press('Enter');
   await expect(staticPage.locator('#main')).toBeFocused();
   await staticContext.close();
+  const touchContext = await browser.newContext({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 844 } });
+  const touchPage = await touchContext.newPage();
+  const touchVideoRequests = await mockVideoRequests(touchPage);
+  await touchPage.goto(url, { waitUntil: 'networkidle' });
+  await verifyVideoDialog(touchPage, touchVideoRequests, true);
+  await touchContext.close();
   await verifyBackgroundPointer();
   await verifyDevlog(true);
   await verifyDevlog(false);
@@ -1011,7 +1144,7 @@ try {
   await expect(fallbackPage.locator('.hero [data-download-open]')).toHaveAttribute('href', releaseUrl);
   expect(fallbackErrors, 'Canvas 2D unavailable fallback has no page errors').toEqual([]);
   await fallbackContext.close();
-  console.log('Passed: complete landing sections and anchors, 7 viewport widths including 200% equivalent reflow and landscape, canvas pointer trail/fade/touch gating and pixel motion/pause/resume/reduced/offscreen/resize and no-JS/unavailable-2D fallback, six agent assets/readable labels with Hermes absent, actual motion/tilt/pause/resume/live reduced-motion/no-JS, workspace views/keyboard/reduced motion/no-JS, exact viewport footer/keyboard access across 8 sizes plus long CMS copy at 320x400 with and without JS, desktop Product/mobile drill-in and Devlog routes with/without JS, mobile navigation and FAQ keyboard behavior, newsletter form, all 7 download packages, release fallback, every download trigger and focus restoration across desktop/mobile resizing, no-JS reading and release links, and mobile/desktop/dialog accessibility.');
+  console.log('Passed: complete landing sections and anchors, 7 viewport widths including 200% equivalent reflow and landscape, canvas pointer trail/fade/touch gating and pixel motion/pause/resume/reduced/offscreen/resize and no-JS/unavailable-2D fallback, six agent assets/readable labels with Hermes absent, actual motion/tilt/pause/resume/live reduced-motion/no-JS, plain hero screenshot and lazy video dialog/keyboard/backdrop/touch/scroll lock/no-JS, exact viewport footer/keyboard access across 8 sizes plus long CMS copy at 320x400 with and without JS, desktop Product/mobile drill-in and Devlog routes with/without JS, mobile navigation and FAQ keyboard behavior, newsletter form, all 7 download packages, release fallback, every download trigger and focus restoration across desktop/mobile resizing, no-JS reading and release links, and mobile/desktop/dialog accessibility.');
 } finally {
   await browser.close();
 }

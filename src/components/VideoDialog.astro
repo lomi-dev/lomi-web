@@ -1,0 +1,171 @@
+<dialog class="video-dialog" id="video-dialog" aria-labelledby="video-title">
+  <div class="video-panel">
+    <div class="video-toolbar">
+      <h2 id="video-title">Watch Lomi</h2>
+      <button class="video-close" type="button" data-video-close aria-label="Close video" autofocus>
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="m4 4 10 10M14 4 4 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" /></svg>
+      </button>
+    </div>
+    <div class="video-player" data-video-player></div>
+    <a class="video-fallback" href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" target="_blank" rel="noopener noreferrer">Watch on YouTube <span aria-hidden="true">↗</span></a>
+  </div>
+</dialog>
+
+<script>
+  const dialog = document.querySelector<HTMLDialogElement>('#video-dialog');
+  const player = dialog?.querySelector<HTMLElement>('[data-video-player]');
+  let returnFocus: HTMLElement | null = null;
+  let scrollPosition = { x: 0, y: 0 };
+  let previousRootOverflow = '';
+  let previousBodyOverflow = '';
+  let backdropPointer = false;
+  let motion: Animation | null = null;
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+
+  // Sample the reference's unit-mass spring (stiffness 300, damping 30).
+  // Normalize its response to land exactly at the requested duration's endpoint.
+  const spring = (time: number) => 1 - Math.exp(-15 * time) * (
+    Math.cos(Math.sqrt(75) * time) + 15 / Math.sqrt(75) * Math.sin(Math.sqrt(75) * time)
+  );
+
+  function animateDialog(closing: boolean) {
+    if (!dialog) return;
+    const reduced = reducedMotion.matches;
+    const duration = reduced ? 100 : closing ? 220 : 300;
+    // Read the in-flight presentation before canceling it, so a rapid Escape
+    // reverses from the visible scale and opacity without jumping.
+    const current = getComputedStyle(dialog);
+    const fromScale = closing && current.transform !== 'none' ? new DOMMatrixReadOnly(current.transform).a : closing ? 1 : 0.5;
+    const fromOpacity = closing ? Number(current.opacity) : 0;
+    motion?.cancel();
+    const toScale = closing ? 0.5 : 1;
+    const toOpacity = closing ? 0 : 1;
+    dialog.dataset.state = closing ? 'closing' : 'opening';
+    if (typeof dialog.animate !== 'function') {
+      if (closing) dialog.close();
+      else dialog.dataset.state = 'open';
+      return;
+    }
+    const frames: Keyframe[] = Array.from({ length: 31 }, (_, index) => {
+      const offset = index / 30;
+      const progress = reduced ? offset : spring(offset * duration / 1000) / spring(duration / 1000);
+      return {
+        offset,
+        transform: reduced ? 'none' : `scale(${fromScale + (toScale - fromScale) * progress})`,
+        opacity: fromOpacity + (toOpacity - fromOpacity) * progress,
+      };
+    });
+    const active = dialog.animate(frames, { duration, easing: 'linear', fill: 'both' });
+    motion = active;
+    void active.finished.then(() => {
+      if (motion !== active) return;
+      if (closing) dialog.close();
+      else {
+        motion = null;
+        active.cancel();
+        dialog.dataset.state = 'open';
+      }
+    }).catch(() => { /* A close or reversal canceled this finite animation. */ });
+  }
+
+  function requestClose() {
+    if (!dialog?.open || dialog.dataset.state === 'closing') return;
+    // Stop playback as soon as closing is requested, while the native dialog
+    // remains modal until its exit animation has finished.
+    player?.replaceChildren();
+    animateDialog(true);
+  }
+
+  document.querySelectorAll<HTMLAnchorElement>('[data-video-open]').forEach((trigger) => {
+    trigger.addEventListener('click', (event) => {
+      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      if (!dialog || !player || typeof dialog.showModal !== 'function') return;
+      if (dialog.open) {
+        event.preventDefault();
+        return;
+      }
+      returnFocus = trigger;
+      scrollPosition = { x: scrollX, y: scrollY };
+      // Stop an in-flight anchor or keyboard focus scroll before locking.
+      window.scrollTo({ left: scrollPosition.x, top: scrollPosition.y, behavior: 'instant' });
+      previousRootOverflow = document.documentElement.style.overflow;
+      previousBodyOverflow = document.body.style.overflow;
+      dialog.showModal();
+      event.preventDefault();
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.overflow = 'hidden';
+      animateDialog(false);
+      const iframe = document.createElement('iframe');
+      iframe.title = 'Lomi video';
+      iframe.src = 'https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1&playsinline=1';
+      iframe.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
+      iframe.allowFullscreen = true;
+      iframe.referrerPolicy = 'strict-origin-when-cross-origin';
+      player.replaceChildren(iframe);
+    });
+  });
+
+  dialog?.querySelector('[data-video-close]')?.addEventListener('click', requestClose);
+  dialog?.addEventListener('cancel', (event) => {
+    event.preventDefault();
+    requestClose();
+  });
+  const outsideDialog = (event: MouseEvent) => {
+    if (!dialog || event.target !== dialog) return false;
+    const bounds = dialog.getBoundingClientRect();
+    return event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom;
+  };
+  dialog?.addEventListener('pointerdown', (event) => { backdropPointer = outsideDialog(event); });
+  dialog?.addEventListener('click', (event) => {
+    if (backdropPointer && outsideDialog(event)) requestClose();
+    backdropPointer = false;
+  });
+  dialog?.addEventListener('close', () => {
+    motion?.cancel();
+    motion = null;
+    delete dialog.dataset.state;
+    player?.replaceChildren();
+    document.documentElement.style.overflow = previousRootOverflow;
+    document.body.style.overflow = previousBodyOverflow;
+    window.scrollTo({ left: scrollPosition.x, top: scrollPosition.y, behavior: 'instant' });
+    returnFocus?.focus({ preventScroll: true });
+    if (returnFocus?.isConnected) {
+      const bounds = returnFocus.getBoundingClientRect();
+      if (bounds.bottom <= 0 || bounds.top >= innerHeight || bounds.right <= 0 || bounds.left >= innerWidth) {
+        returnFocus.scrollIntoView({ behavior: 'instant', block: 'nearest', inline: 'nearest' });
+      }
+    }
+    returnFocus = null;
+    backdropPointer = false;
+  });
+</script>
+
+<style>
+  .video-dialog { width: min(1080px, calc(100vw - 32px)); max-width: none; max-height: calc(100dvh - 32px); margin: auto; padding: 0; overflow: auto; border: 1px solid #414b38; border-radius: 12px; background: #10150f; color: #f0f4e9; box-shadow: 0 30px 100px #0008; }
+  .video-dialog::backdrop { background: rgb(0 0 0 / 50%); backdrop-filter: blur(12px); opacity: 1; transition: opacity 300ms ease; }
+  .video-dialog[data-state='closing']::backdrop { opacity: 0; transition-duration: 220ms; }
+  @starting-style {
+    .video-dialog[open]::backdrop { opacity: 0; }
+  }
+  .video-panel { padding: 8px; }
+  .video-toolbar { position: sticky; z-index: 1; top: 0; display: flex; min-height: 44px; align-items: center; justify-content: space-between; gap: 12px; padding-left: 10px; background: #10150f; }
+  .video-toolbar h2 { margin: 0; color: #c6cfbc; font-size: 13px; font-weight: 500; }
+  .video-close { display: grid; flex: 0 0 44px; width: 44px; height: 44px; place-items: center; padding: 0; border: 0; border-radius: 50%; background: transparent; color: #dce5d2; cursor: pointer; }
+  .video-close:focus-visible, .video-fallback:focus-visible { outline: 2px solid #d5f8a8; outline-offset: 2px; }
+  .video-player { width: 100%; min-width: 200px; min-height: 200px; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 6px; background: #050705; }
+  .video-player :global(iframe) { display: block; width: 100%; height: 100%; border: 0; }
+  .video-fallback { display: flex; min-height: 44px; align-items: center; justify-content: center; gap: 7px; color: #b7c2aa; font-size: 12px; text-underline-offset: 3px; }
+  @media (hover: hover) {
+    .video-close:hover { background: #263020; }
+    .video-fallback:hover { color: #f0f4e9; text-decoration: underline; }
+  }
+  @media (max-height: 600px) {
+    .video-dialog { width: min(1080px, calc((100dvh - 140px) * 16 / 9), calc(100vw - 24px)); }
+  }
+  @media (max-height: 350px) {
+    .video-dialog { width: min(640px, calc(100vw - 24px)); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .video-dialog::backdrop, .video-dialog[data-state='closing']::backdrop { transition-duration: 100ms; }
+  }
+</style>

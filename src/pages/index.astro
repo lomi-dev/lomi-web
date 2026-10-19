@@ -3,7 +3,7 @@ import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
 import Icon from '../components/Icon';
 import Hero from '../components/Hero.astro';
-import WorkspaceDeck from '../components/WorkspaceDeck.astro';
+import VideoDialog from '../components/VideoDialog.astro';
 import Features from '../components/Features';
 import Footer from '../components/Footer.astro';
 import NewsletterSignup from '../components/NewsletterSignup.astro';
@@ -22,7 +22,6 @@ const statusLabels = { available: 'Current preview', next: 'Proposed next', late
   <Header content={content.navigation} />
   <main id="main" tabindex="-1">
     <Hero content={hero} />
-    <div id="workspace" class="product-section"><div class="product-showcase shell"><div class="product-intro"><p>Your project. All of it.</p><span>TERMINAL / EDITOR / BROWSER / GIT</span></div><WorkspaceDeck caption={hero.previewCaption} alt={hero.previewAlt} /></div></div>
 
     <section id="workflow" class="section shell workflow-section" aria-labelledby="workflow-title">
       <div class="section-marker"><span>01</span><p>{workflow.eyebrow}</p></div>
@@ -69,5 +68,5 @@ const statusLabels = { available: 'Current preview', next: 'Proposed next', late
     </section>
 
     <section id="newsletter" class="newsletter-section" aria-labelledby="newsletter-title"><div class="shell newsletter-layout"><div><p class="eyebrow">{newsletter.eyebrow}</p><h2 id="newsletter-title">{newsletter.title}</h2><p class="section-description">{newsletter.description}</p></div><NewsletterSignup /></div></section>
-  </main><Footer content={content.footer} />
+  </main><Footer content={content.footer} /><VideoDialog />
 </Layout>

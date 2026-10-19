@@ -117,7 +117,8 @@ deployment provider is configured by this task.
 - `src/components/Header.astro`: Product groups, responsive disclosure, and routing.
 - `src/styles/global.css`: responsive layout and brand tokens.
 - `src/components/`: navigation, footer, features, original clouds, forms, icons.
-- `src/components/WorkspaceDeck.astro`: real product screenshots and local view selection.
+- `src/components/WorkspaceDeck.astro`: the hero's real product screenshot and video trigger.
+- `src/components/VideoDialog.astro`: the YouTube dialog and playback lifecycle.
 - `src/data/site.ts`: fixed product/repository destinations.
 - `src/layouts/Layout.astro`: metadata and local fonts.
 
@@ -129,7 +130,20 @@ other functional labels live in components. Navigation links and the download
 label remain editable in Payload. Links allow HTTPS, section anchors, and the
 local `/devlog/` route. On Devlog, section links return to the homepage.
 
-## Download and newsletter behavior
+## Video, download, and newsletter behavior
+
+The hero shows the top of the desktop workspace on the first screen. Scrolling
+reveals the complete capture. Hovering or focusing it shows a play control in
+the center of the visible image; touch devices show the control immediately.
+The native video dialog loads YouTube only after activation and removes the
+player as soon as closing starts. Its center-scale entrance and exit follow
+Magic UI's `from-center` example, with a dimmed, blurred backdrop. Reduced
+motion uses a short fade. The close button, backdrop clicks, and Escape from
+the dialog controls dismiss it and restore focus to the screenshot.
+Without JavaScript, the screenshot links to
+the same video on YouTube. Replace the placeholder video ID in both components
+before launch. Use `http://localhost:4322` for local video playback: YouTube
+rejects the numeric `127.0.0.1` referrer in the tested browser.
 
 Both hero and final CTA open the same native download dialog. It reads public
 GitHub releases only when opened, offers available installers for macOS,
@@ -164,7 +178,7 @@ Browser verification covers seven viewport widths, short landscape, section
 anchors, unique IDs, keyboard navigation, Product dropdown and mobile drill-in,
 Devlog navigation with and without JavaScript, FAQ, newsletter states,
 all seven installer mappings, release failures, dialog focus, no-JavaScript
-fallbacks, workspace selection, reduced motion, and desktop/mobile/dialog
+fallbacks, the video dialog lifecycle, reduced motion, and desktop/mobile/dialog
 accessibility with axe. Hero checks cover all six active local SVGs and labels,
 floating and pointer motion, keyboard pause/resume, live reduced motion,
 icon placement, actual background pixel changes and frozen states, canvas
@@ -198,6 +212,7 @@ ready. Nothing is published automatically from this branch.
 
 The site uses local Geist and JetBrains Mono fonts, a dark opening composition,
 and Lomi's Lime accent. React hydrates only the decorative hero cards; the other
-sections retain their static/native behavior. There are no trackers, third-party
-embeds, runtime Iconify calls, or external font requests. Asset provenance is
+sections retain their static/native behavior. YouTube is embedded only after
+the visitor activates the video. There are no site trackers, runtime Iconify
+calls, or external font requests. Asset provenance is
 recorded in [docs/assets.md](docs/assets.md).

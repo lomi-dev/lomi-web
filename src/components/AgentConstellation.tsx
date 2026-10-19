@@ -37,7 +37,7 @@ export default function AgentConstellation() {
               showTooltip={false}
               glare={canTilt ? 0.45 : 0}
               shadow={0}
-              radius={22}
+              radius={17}
               className="agent-tilt"
               style={{ pointerEvents: canTilt ? 'auto' : 'none' }}
             >

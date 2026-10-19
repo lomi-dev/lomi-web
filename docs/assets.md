@@ -32,17 +32,24 @@ Exact generation prompt:
 
 ## Application screenshots
 
-The workspace selector uses three unchanged, real native captures from the
-desktop README, copied from `../lomi/docs/images/` into `src/assets/product/`:
+The hero uses an unchanged, real native capture from the desktop README,
+copied from `../lomi/docs/images/` into `src/assets/product/`:
 
 - `workbench.png`: project explorer, TypeScript editor, and native terminal.
-- `browser.png`: development server beside its embedded browser preview.
-- `source-control.png`: repository history, changed files, and a code diff.
 
-All are 2880 × 1800. Astro generates responsive AVIF and WebP variants. The first
-view's caption and alt text use the CMS fields; the other two have functional
-descriptions in the component. The selector is explicitly labeled as product
-screenshots. It does not claim to execute code or run the application.
+The capture is 2880 × 1800. Astro generates responsive AVIF and WebP variants.
+The caption and alt text use the CMS fields. The capture is shown directly,
+without an additional window header or view selector. It does not execute code
+or run the application. The play control opens the user-selected YouTube video
+`dQw4w9WgXcQ`; its iframe is created on activation and removed on close.
+The native dialog's motion is inspired by [Magic UI's Hero Video Dialog](https://magicui.design/docs/components/hero-video-dialog),
+using the `from-center` scale and its stiffness-300, damping-30 spring response.
+It is implemented with the Web Animations API and the browser's native dialog;
+no additional React island or animation dependency is loaded.
+The dimmed backdrop remains available when a browser does not render backdrop
+blur.
+The other native captures, `browser.png` and `source-control.png`, remain local
+assets for future sections.
 
 The older root-level `workbench.png`, `workbench-light.png`, and
 `source-control.png` assets remain unused. No interface was reconstructed or

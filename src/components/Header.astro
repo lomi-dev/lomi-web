@@ -70,10 +70,19 @@ const productGroups: { label: string; links: { label: string; description: strin
   const desktop = matchMedia('(min-width: 768px)');
   let openTimer: ReturnType<typeof setTimeout> | undefined;
   let closeTimer: ReturnType<typeof setTimeout> | undefined;
+  let lastHeaderFocus: HTMLElement | null = null;
   const clearTimers = () => { clearTimeout(openTimer); clearTimeout(closeTimer); };
   const closeProduct = () => { clearTimers(); if (product) product.open = false; };
   const closeMobile = () => { if (mobile) mobile.open = false; if (mobileProduct) mobileProduct.open = false; };
   const closeAll = () => { closeProduct(); closeMobile(); };
+
+  // A browser may blur a control as CSS hides it, before the media-query
+  // callback runs. Keep its identity so the equivalent menu retains focus.
+  document.addEventListener('focusin', (event) => {
+    if (!(event.target instanceof HTMLElement)) return;
+    if (event.target === document.body || event.target === document.documentElement) return;
+    lastHeaderFocus = header?.contains(event.target) ? event.target : null;
+  });
 
   productSummary?.addEventListener('pointerenter', () => {
     if (!finePointer.matches || !desktop.matches) return;
@@ -99,6 +108,7 @@ const productGroups: { label: string; links: { label: string; description: strin
   });
   document.addEventListener('pointerdown', (event) => {
     if (!(event.target instanceof Node)) return;
+    if (!header?.contains(event.target)) lastHeaderFocus = null;
     const clickedControl = event.target instanceof Element && event.target.closest('a[href], button, input, select, textarea, summary, [contenteditable="true"], [tabindex]:not([tabindex="-1"])');
     if (product?.open && !product.contains(event.target)) {
       const focusWasInside = product.contains(document.activeElement);
@@ -137,7 +147,8 @@ const productGroups: { label: string; links: { label: string; description: strin
   }));
   if (header) header.dataset.navigationReady = '';
   desktop.addEventListener('change', () => {
-    const focused = document.activeElement;
+    const active = document.activeElement;
+    const focused = active === document.body || active === document.documentElement ? lastHeaderFocus : active;
     const focusWasInHiddenNavigation = desktop.matches ? mobile?.contains(focused) : header?.querySelector('.desktop-navigation')?.contains(focused) || header?.querySelector('.header-actions')?.contains(focused);
     closeAll();
     if (focusWasInHiddenNavigation) (desktop.matches ? productSummary : mobileSummary)?.focus();
