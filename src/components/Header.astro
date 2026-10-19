@@ -2,24 +2,26 @@
 import Icon from './Icon';
 import logo from '../assets/lomi-wordmark.svg?raw';
 import { site } from '../data/site';
+import { activeLandingLinks } from '../data/navigation';
 import type { Landing } from '../../content/landing-schema';
 interface Props { content: Landing['navigation'] }
 const { content } = Astro.props;
+const navigationLinks = activeLandingLinks(content.links);
 const isHome = Astro.url.pathname === '/';
 const homeHref = (href: string) => href.startsWith('#') && !isHome ? `/${href}` : href;
 const downloadAttributes = isHome ? { 'data-download-open': true, 'aria-haspopup': 'dialog' as const, 'aria-controls': 'download-dialog' } : {};
-const productGroups: { label: string; links: { label: string; href: string }[] }[] = [
+const productGroups: { label: string; links: { label: string; href: string; download?: boolean }[] }[] = [
   { label: 'Workspace', links: [
     { label: 'Overview', href: '#workspace' },
-    { label: 'Features', href: '#features' },
+    { label: 'Roadmap', href: '#roadmap' },
   ] },
-  { label: 'How it works', links: [
-    { label: 'Workflow', href: '#workflow' },
-    { label: 'Open source', href: '#principles' },
+  { label: 'Project', links: [
+    { label: 'Documentation', href: site.docs },
+    { label: 'Source code', href: site.github },
   ] },
   { label: 'Get started', links: [
-    { label: 'FAQ', href: '#faq' },
-    { label: 'Download lomi', href: '#download' },
+    { label: 'Download lomi', href: site.releases, download: true },
+    { label: 'Release notes', href: site.releases },
   ] },
 ];
 ---
@@ -34,15 +36,15 @@ const productGroups: { label: string; links: { label: string; href: string }[] }
         <summary>Product<svg class="menu-chevron" width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m4 6 4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" /></svg></summary>
         <div class="product-panel">
           <div class="product-panel-inner">
-            {productGroups.map((group) => <div class="product-group"><p class="product-group-label">{group.label}</p>{group.links.map((link) => <a class="product-link" href={homeHref(link.href)}><span class="product-link-title">{link.label}</span></a>)}</div>)}
+            {productGroups.map((group) => <div class="product-group"><p class="product-group-label">{group.label}</p>{group.links.map((link) => <a class="product-link" href={homeHref(link.href)} {...(link.download ? downloadAttributes : {})}><span class="product-link-title">{link.label}</span></a>)}</div>)}
           </div>
         </div>
       </details>
-      {content.links.map((link) => <a class="navigation-link" href={homeHref(link.href)} aria-current={link.href.replace(/\/$/, '') === Astro.url.pathname.replace(/\/$/, '') ? 'page' : undefined}>{link.label}</a>)}
+      {navigationLinks.map((link) => <a class="navigation-link" href={homeHref(link.href)} aria-current={link.href.replace(/\/$/, '') === Astro.url.pathname.replace(/\/$/, '') ? 'page' : undefined}>{link.label}</a>)}
     </nav>
     <div class="header-actions">
       <a class="header-source" href={site.github} aria-label="lomi source on GitHub"><Icon name="github" width={17} height={17} /><span>GitHub</span></a>
-      <a class="header-action" href={isHome ? site.releases : '/#download'} {...downloadAttributes}>{content.actionLabel}<Icon name="download" width={16} height={16} /></a>
+      <a class="header-action" href={site.releases} {...downloadAttributes}>{content.actionLabel}<Icon name="download" width={16} height={16} /></a>
     </div>
     <details class="mobile-navigation" id="mobile-navigation">
       <summary><span>Menu</span><span class="menu-symbol" aria-hidden="true"></span></summary>
@@ -50,11 +52,11 @@ const productGroups: { label: string; links: { label: string; href: string }[] }
         <details class="mobile-product" id="mobile-product">
           <summary><span class="mobile-product-enter">Product<Icon name="arrow" width={17} height={17} /></span><span class="mobile-product-back"><Icon name="arrow" width={16} height={16} />Back</span></summary>
           <div class="mobile-product-panel">
-            {productGroups.map((group) => <div class="product-group"><p class="product-group-label">{group.label}</p>{group.links.map((link) => <a class="product-link" href={homeHref(link.href)}><span class="product-link-title">{link.label}</span></a>)}</div>)}
+            {productGroups.map((group) => <div class="product-group"><p class="product-group-label">{group.label}</p>{group.links.map((link) => <a class="product-link" href={homeHref(link.href)} {...(link.download ? downloadAttributes : {})}><span class="product-link-title">{link.label}</span></a>)}</div>)}
           </div>
         </details>
-        {content.links.map((link) => <a class="mobile-root-link" href={homeHref(link.href)} aria-current={link.href.replace(/\/$/, '') === Astro.url.pathname.replace(/\/$/, '') ? 'page' : undefined}>{link.label}<Icon name="arrow" width={16} height={16} /></a>)}
-        <div class="mobile-utilities"><a href={site.github}>GitHub<Icon name="diagonal" width={15} height={15} /></a><a class="mobile-download" href={isHome ? site.releases : '/#download'} {...downloadAttributes}>{content.actionLabel}<Icon name="download" width={15} height={15} /></a></div>
+        {navigationLinks.map((link) => <a class="mobile-root-link" href={homeHref(link.href)} aria-current={link.href.replace(/\/$/, '') === Astro.url.pathname.replace(/\/$/, '') ? 'page' : undefined}>{link.label}<Icon name="arrow" width={16} height={16} /></a>)}
+        <div class="mobile-utilities"><a href={site.github}>GitHub<Icon name="diagonal" width={15} height={15} /></a><a class="mobile-download" href={site.releases} {...downloadAttributes}>{content.actionLabel}<Icon name="download" width={15} height={15} /></a></div>
       </nav>
     </details>
   </div>

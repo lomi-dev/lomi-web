@@ -17,17 +17,17 @@ required to work on the layout.
 
 The page includes:
 
-- A white hero with centered copy, pill actions, and overlapping real
-  desktop captures over an interactive field of terminal characters.
+- A white hero with centered copy, pill actions, and overlapping
+  image placeholders over an interactive field of terminal characters.
 - A fixed navigation bar at the viewport's top edge: Product opens a three-column dropdown,
   followed by Roadmap, Devlog, and Docs. Mobile Product uses a Back drill-in.
 - A separate `/devlog/` page with a Work in progress placeholder.
-- A real desktop capture starting in the hero, with a centered video control
-  and an animated native YouTube dialog.
-- A workflow sequence, dark tools manifest, and local/source/customization details.
+- A large hero preview with a centered video control and an animated native
+  YouTube dialog.
 - A three-column timeline separating available features from proposed work.
-- Native expandable FAQ, preview downloads, newsletter, and a Lime footer that
-  fills exactly one viewport in both dimensions.
+- A lime footer that fills exactly one viewport in both dimensions.
+- A download picker available from the hero and navigation, without a separate
+  download section.
 
 The footer follows the current viewport height with `100dvh` (`100vh` fallback).
 Its content scrolls inside the footer when a narrow or short window cannot fit
@@ -39,9 +39,12 @@ scrolling or opening a menu. Without JavaScript, compact direct navigation links
 remain available at every width, without a disclosure covering the destination.
 
 The roadmap is explicitly a draft, with no invented release dates. Product copy
-comes from the desktop application's README. Feature/platform restrictions are
-described in the FAQ. The screenshots are existing desktop README captures;
-review them against the launch release before publishing.
+comes from the desktop application's README. The hero currently uses local
+placeholder images; replace them with approved product captures before launch.
+The retired workflow, features, principles, FAQ, download, and newsletter content
+remains in Payload for future use but does not render on the landing page.
+Navigation omits links to retired sections and sends old download anchors to
+the release page.
 
 The [design analysis](docs/design-analysis.md) documents all six reference sites,
 Appllama, Coda, the four articles about generic AI content, and the decisions
@@ -136,7 +139,7 @@ other functional labels live in components. Navigation links and the download
 label remain editable in Payload. Links allow HTTPS, section anchors, and the
 local `/devlog/` route. On Devlog, section links return to the homepage.
 
-## Video, download, and newsletter behavior
+## Video and download behavior
 
 The hero shows a large workbench capture below its copy, with an overlapping
 source-control detail. On mobile the primary image uses a closer crop. Scrolling
@@ -165,15 +168,16 @@ the same video on YouTube. Replace the placeholder video ID in both components
 before launch. Use `http://localhost:4322` for local video playback: YouTube
 rejects the numeric `127.0.0.1` referrer in the tested browser.
 
-Both hero and final CTA open the same native download dialog. It reads public
+The hero and navigation open the same native download dialog. It reads public
 GitHub releases only when opened, offers available installers for macOS,
 Windows, and Linux, and falls back to the release page on API/package failures.
 Release links also work with JavaScript disabled. No package availability or
 version is hardcoded into the landing copy.
 
-Newsletter signup remains unavailable unless `PUBLIC_NEWSLETTER_ENDPOINT` is
-configured. Follow [the auth service's setup](../auth-app/NEWSLETTER.md), including
-its operator qualification and key rotation. The endpoint must be HTTPS and end
+The newsletter is not rendered. Its retained component requires
+`PUBLIC_NEWSLETTER_ENDPOINT` if enabled again. Follow
+[the auth service's setup](../auth-app/NEWSLETTER.md), including its operator
+qualification and key rotation. The endpoint must be HTTPS and end
 in exactly `/v1/newsletter/subscribe`, without credentials, a query, or fragment.
 The existing backend subscribes immediately; there is no confirmation step.
 The browser sends only an email, without credentials or provider keys. Remove
@@ -196,7 +200,7 @@ PLAYWRIGHT_CHANNEL=chrome bun run verify
 
 Browser verification covers seven viewport widths, short landscape, section
 anchors, unique IDs, keyboard navigation, Product dropdown and mobile drill-in,
-Devlog navigation with and without JavaScript, FAQ, newsletter states,
+Devlog navigation with and without JavaScript, absence of retired sections,
 all seven installer mappings, release failures, dialog focus, no-JavaScript
 fallbacks, the video dialog lifecycle, reduced motion, and desktop/mobile/dialog
 accessibility with axe. Hero checks cover the absence of CLI cards and React

@@ -4,12 +4,13 @@ interface Props {
   releaseUrl: string;
   label?: string;
   note?: string;
+  showTrigger?: boolean;
 }
 
-const { apiUrl, releaseUrl, label = 'Download the prerelease', note = 'Early access for macOS, Windows, and Linux' } = Astro.props;
+const { apiUrl, releaseUrl, label = 'Download the prerelease', note = 'Early access for macOS, Windows, and Linux', showTrigger = true } = Astro.props;
 ---
 
-<div class="download-cta" data-download-cta hidden>
+{showTrigger && <div class="download-cta" data-download-cta hidden>
   <button
     class="download-trigger"
     type="button"
@@ -20,10 +21,10 @@ const { apiUrl, releaseUrl, label = 'Download the prerelease', note = 'Early acc
     {label}
   </button>
   <p>{note}</p>
-</div>
-<noscript>
+</div>}
+{showTrigger && <noscript>
   <a class="download-trigger download-noscript" href={releaseUrl}>Browse releases on GitHub</a>
-</noscript>
+</noscript>}
 
 <dialog
   class="download-dialog"

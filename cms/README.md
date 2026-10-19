@@ -23,10 +23,15 @@ when hosting it.
 
 The **Launch landing page** global contains all fields from
 `../content/landing.json`. Navigation and footer destinations accept HTTPS URLs,
-simple section anchors such as `#features`, or the local `/devlog/` route.
+simple section anchors such as `#roadmap`, or the local `/devlog/` route.
 Feature icons and roadmap statuses have fixed choices matching the site. Save drafts while editing, then publish
 when ready. The CMS retains up to 20 versions. Authenticated administrators can
 read drafts and history; public requests see only published content.
+
+The current page renders Hero, Roadmap, and Footer. Retired section fields remain
+in the CMS for future use; editing them does not add those sections to the page.
+Links to retired sections are omitted when rendering, and old `#download` links
+point to the releases page.
 
 The public REST endpoint is:
 

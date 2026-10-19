@@ -24,7 +24,6 @@ await context.addInitScript(() => {
 const page = await context.newPage();
 const errors = [];
 const videoRequests = await mockVideoRequests(page);
-await page.route('https://next-api.useplunk.com/**', () => { throw new Error('Browser must not call Plunk'); });
 page.on('pageerror', (error) => errors.push(error.message));
 await mkdir('artifacts', { recursive: true });
 
@@ -216,7 +215,20 @@ async function verifyVideoDialog(targetPage, requests, touch = false) {
   await trigger.evaluate((element) => element.scrollIntoView({ block: 'center', behavior: 'instant' }));
   if (!touch) {
     await trigger.focus();
+    await targetPage.keyboard.press('Tab');
+    await targetPage.keyboard.press('Shift+Tab');
     await expect(trigger).toBeFocused();
+    // Native keyboard focus can start smooth scrolling; finish it before recentering.
+    await targetPage.evaluate(() => new Promise((resolve) => {
+      let previous = scrollY, stableFrames = 0;
+      const check = () => {
+        stableFrames = scrollY === previous ? stableFrames + 1 : 0;
+        previous = scrollY;
+        if (stableFrames >= 4) resolve();
+        else requestAnimationFrame(check);
+      };
+      requestAnimationFrame(check);
+    }));
     await trigger.evaluate((element) => {
       element.scrollIntoView({ block: 'center', behavior: 'instant' });
       element.focus({ preventScroll: true });
@@ -590,6 +602,19 @@ async function verifyAdaptiveHeader(targetPage) {
     const bar = document.querySelector('.site-header').getBoundingClientRect();
     scrollTo({ top: scrollY + bounds.top + Math.min(120, bounds.height / 2) - bar.height / 2, behavior: 'instant' });
   });
+  const setDarkSurface = (active) => targetPage.evaluate((active) => {
+    const id = 'verify-header-dark-surface';
+    document.getElementById(id)?.remove();
+    if (active) {
+      const header = document.querySelector('.site-header');
+      const surface = document.createElement('div');
+      surface.id = id;
+      surface.setAttribute('aria-hidden', 'true');
+      surface.style.cssText = `position:fixed;inset:0 0 auto;height:${header.clientHeight + 160}px;background:#121712;z-index:${Number(getComputedStyle(header).zIndex) - 1}`;
+      document.body.append(surface);
+    }
+    window.dispatchEvent(new Event('scroll'));
+  }, active);
   const expectControls = async (contrast) => {
     await expect.poll(async () => (await controls()).map((control) => control.contrast), {
       message: `Each visible navigation control uses ${contrast} foreground on this surface`,
@@ -621,193 +646,202 @@ async function verifyAdaptiveHeader(targetPage) {
     return { mean, edgeEnergy };
   };
   const distance = (left, right) => Math.hypot(...left.map((channel, index) => channel - right[index]));
-  for (const width of [1440, 390]) {
-    await targetPage.setViewportSize({ width, height: 900 });
-    await targetPage.mouse.move(0, 0);
-    await targetPage.evaluate(() => scrollTo({ top: 64, behavior: 'instant' }));
-    let innerOpacity;
-    try {
-      await header.evaluate((element) => {
-        const field = document.createElement('div');
-        field.id = 'verify-local-header-field';
-        field.setAttribute('aria-hidden', 'true');
-        field.style.cssText = `position:fixed;inset:0 0 auto;height:${element.clientHeight + 160}px;display:grid;grid-template-columns:1fr 1fr;z-index:${Number(getComputedStyle(element).zIndex) - 1}`;
-        for (const color of ['rgb(16,43,70)', 'rgb(241,221,194)']) {
-          const column = document.createElement('div');
-          column.style.cssText = `position:relative;background:${color}`;
-          field.append(column);
-        }
-        const stripes = document.createElement('div');
-        stripes.style.cssText = 'position:absolute;top:0;bottom:0;left:calc(42% - 16px);width:32px;background:repeating-linear-gradient(90deg,#000 0 4px,#fff 4px 8px)';
-        field.append(stripes);
-        document.body.append(field);
-        window.dispatchEvent(new Event('scroll'));
-      });
-      for (const swapped of [false, true]) {
-        if (swapped) await targetPage.evaluate(() => {
-          const field = document.querySelector('#verify-local-header-field');
-          field.children[0].style.backgroundColor = 'rgb(241,221,194)';
-          field.children[1].style.backgroundColor = 'rgb(16,43,70)';
+  try {
+    for (const width of [1440, 390]) {
+      await targetPage.setViewportSize({ width, height: 900 });
+      await targetPage.mouse.move(0, 0);
+      await targetPage.evaluate(() => scrollTo({ top: 64, behavior: 'instant' }));
+      let innerOpacity;
+      try {
+        await header.evaluate((element) => {
+          const field = document.createElement('div');
+          field.id = 'verify-local-header-field';
+          field.setAttribute('aria-hidden', 'true');
+          field.style.cssText = `position:fixed;inset:0 0 auto;height:${element.clientHeight + 160}px;display:grid;grid-template-columns:1fr 1fr;z-index:${Number(getComputedStyle(element).zIndex) - 1}`;
+          for (const color of ['rgb(16,43,70)', 'rgb(241,221,194)']) {
+            const column = document.createElement('div');
+            column.style.cssText = `position:relative;background:${color}`;
+            field.append(column);
+          }
+          const stripes = document.createElement('div');
+          stripes.style.cssText = 'position:absolute;top:0;bottom:0;left:calc(42% - 16px);width:32px;background:repeating-linear-gradient(90deg,#000 0 4px,#fff 4px 8px)';
+          field.append(stripes);
+          document.body.append(field);
           window.dispatchEvent(new Event('scroll'));
         });
-        await expect.poll(() => header.locator(controlSelector).evaluateAll((elements, swapped) => {
-          const checked = elements.filter((element) => element.getClientRects().length && getComputedStyle(element).visibility !== 'hidden')
-            .map((element) => {
-              const bounds = element.getBoundingClientRect(), x = bounds.left + bounds.width / 2;
-              return { x, actual: element.dataset.contrast };
-            }).filter(({ x }) => Math.abs(x - innerWidth / 2) > 72 && Math.abs(x - innerWidth * .42) > 84);
-          return {
-            left: checked.filter(({ x }) => x < innerWidth / 2).length,
-            right: checked.filter(({ x }) => x > innerWidth / 2).length,
-            mismatches: checked.filter(({ x, actual }) => actual !== ((x < innerWidth / 2) !== swapped ? 'light' : 'dark')).length,
-          };
-        }, swapped), { message: 'Opposite sides of the navigation adapt independently to their local backgrounds' }).toMatchObject({ mismatches: 0 });
-        const counts = await header.locator(controlSelector).evaluateAll((elements) => elements
-          .filter((element) => element.getClientRects().length && getComputedStyle(element).visibility !== 'hidden')
-          .map((element) => element.getBoundingClientRect().left + element.getBoundingClientRect().width / 2)
-          .filter((x) => Math.abs(x - innerWidth / 2) > 72 && Math.abs(x - innerWidth * .42) > 84)
-          .reduce((counts, x) => { counts[x < innerWidth / 2 ? 0 : 1]++; return counts; }, [0, 0]));
-        expect(counts.every((count) => count > 0), 'The fixture exercises controls on both colored halves').toBe(true);
+        for (const swapped of [false, true]) {
+          if (swapped) await targetPage.evaluate(() => {
+            const field = document.querySelector('#verify-local-header-field');
+            field.children[0].style.backgroundColor = 'rgb(241,221,194)';
+            field.children[1].style.backgroundColor = 'rgb(16,43,70)';
+            window.dispatchEvent(new Event('scroll'));
+          });
+          await expect.poll(() => header.locator(controlSelector).evaluateAll((elements, swapped) => {
+            const checked = elements.filter((element) => element.getClientRects().length && getComputedStyle(element).visibility !== 'hidden')
+              .map((element) => {
+                const bounds = element.getBoundingClientRect(), x = bounds.left + bounds.width / 2;
+                return { x, actual: element.dataset.contrast };
+              }).filter(({ x }) => Math.abs(x - innerWidth / 2) > 72 && Math.abs(x - innerWidth * .42) > 84);
+            return {
+              left: checked.filter(({ x }) => x < innerWidth / 2).length,
+              right: checked.filter(({ x }) => x > innerWidth / 2).length,
+              mismatches: checked.filter(({ x, actual }) => actual !== ((x < innerWidth / 2) !== swapped ? 'light' : 'dark')).length,
+            };
+          }, swapped), { message: 'Opposite sides of the navigation adapt independently to their local backgrounds' }).toMatchObject({ mismatches: 0 });
+          const counts = await header.locator(controlSelector).evaluateAll((elements) => elements
+            .filter((element) => element.getClientRects().length && getComputedStyle(element).visibility !== 'hidden')
+            .map((element) => element.getBoundingClientRect().left + element.getBoundingClientRect().width / 2)
+            .filter((x) => Math.abs(x - innerWidth / 2) > 72 && Math.abs(x - innerWidth * .42) > 84)
+            .reduce((counts, x) => { counts[x < innerWidth / 2 ? 0 : 1]++; return counts; }, [0, 0]));
+          expect(counts.every((count) => count > 0), 'The fixture exercises controls on both colored halves').toBe(true);
+          await settle();
+          innerOpacity = await header.locator('.header-inner').evaluate((element) => {
+            const original = element.style.opacity;
+            element.style.opacity = '0';
+            return original;
+          });
+          const pixels = await screenshotPixels();
+          const barHeight = (await header.boundingBox()).height;
+          const left = pixels.mean(width * .08, barHeight / 2 - 6);
+          const right = pixels.mean(width * .92 - 12, barHeight / 2 - 6);
+          const navy = [16, 43, 70], cream = [241, 221, 194];
+          expect(distance(left, right), 'Different underlying colors remain visible simultaneously through the fog').toBeGreaterThan(100);
+          expect(distance(left, swapped ? cream : navy), 'Left fog follows the local color without an opaque global tint').toBeLessThan(40);
+          expect(distance(right, swapped ? navy : cream), 'Right fog follows the local color without an opaque global tint').toBeLessThan(40);
+          const rawDetail = pixels.edgeEnergy(width * .42 - 8, barHeight + 48);
+          const fogDetail = pixels.edgeEnergy(width * .42 - 8, barHeight / 2 - 6);
+          expect(rawDetail, 'The uncovered fixture contains sharp text-scale detail').toBeGreaterThan(20);
+          expect(fogDetail, 'Native fog softens detail underneath the navigation').toBeLessThan(rawDetail * .35);
+          await header.locator('.header-inner').evaluate((element, value) => { element.style.opacity = value; }, innerOpacity);
+          innerOpacity = undefined;
+        }
+      } finally {
+        if (innerOpacity !== undefined) await header.locator('.header-inner').evaluate((element, value) => { element.style.opacity = value; }, innerOpacity);
+        await targetPage.evaluate(() => {
+          document.querySelector('#verify-local-header-field')?.remove();
+          window.dispatchEvent(new Event('scroll'));
+        });
+      }
+      await setDarkSurface(false);
+      await targetPage.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
+      await expectControls('dark');
+      await setDarkSurface(true);
+      await expectControls('light');
+      await setDarkSurface(false);
+      await scrollSurface('#roadmap');
+      await expectControls('dark');
+      await scrollSurface('[data-video-open]');
+      if (width >= 768) {
+        await expect.poll(() => header.locator(controlSelector).evaluateAll((elements) => {
+          const image = document.querySelector('[data-video-open]').getBoundingClientRect();
+          const contrasts = elements.filter((element) => element.getClientRects().length).map((element) => {
+            const bounds = element.getBoundingClientRect(), x = bounds.left + bounds.width / 2;
+            return { x, contrast: element.dataset.contrast };
+          }).filter(({ x }) => x > image.left + 72 && x < image.right - 72).map(({ contrast }) => contrast);
+          return { present: contrasts.length > 0, correct: contrasts.every((contrast) => contrast === 'light') };
+        }), { message: 'Controls directly above the dark product capture use light foreground' }).toEqual({ present: true, correct: true });
+      }
+      for (const selector of ['.deck-frame']) {
+        await targetPage.locator(selector).evaluate((element) => {
+          const bounds = element.getBoundingClientRect();
+          const bar = document.querySelector('.site-header').getBoundingClientRect();
+          scrollTo({ top: scrollY + bounds.top + 1 - bar.height / 2, behavior: 'instant' });
+        });
+        await frames();
         await settle();
-        innerOpacity = await header.locator('.header-inner').evaluate((element) => {
+        const labels = await header.locator(width < 768 ? '.mobile-navigation > summary' : '.navigation-link').evaluateAll((elements) => elements
+          .filter((element) => element.getClientRects().length).map((element) => {
+            const bounds = element.getBoundingClientRect();
+            return { x: bounds.left + bounds.width / 2, y: bounds.top + bounds.height / 2,
+              color: getComputedStyle(element).color.match(/[\d.]+/g).slice(0, 3).map(Number), label: element.textContent.trim() };
+          }));
+        expect(labels.length, 'The boundary probe exercises visible navigation text').toBeGreaterThan(0);
+        const originalOpacity = await header.locator('.header-inner').evaluate((element) => {
           const original = element.style.opacity;
           element.style.opacity = '0';
           return original;
         });
-        const pixels = await screenshotPixels();
-        const barHeight = (await header.boundingBox()).height;
-        const left = pixels.mean(width * .08, barHeight / 2 - 6);
-        const right = pixels.mean(width * .92 - 12, barHeight / 2 - 6);
-        const navy = [16, 43, 70], cream = [241, 221, 194];
-        expect(distance(left, right), 'Different underlying colors remain visible simultaneously through the fog').toBeGreaterThan(100);
-        expect(distance(left, swapped ? cream : navy), 'Left fog follows the local color without an opaque global tint').toBeLessThan(40);
-        expect(distance(right, swapped ? navy : cream), 'Right fog follows the local color without an opaque global tint').toBeLessThan(40);
-        const rawDetail = pixels.edgeEnergy(width * .42 - 8, barHeight + 48);
-        const fogDetail = pixels.edgeEnergy(width * .42 - 8, barHeight / 2 - 6);
-        expect(rawDetail, 'The uncovered fixture contains sharp text-scale detail').toBeGreaterThan(20);
-        expect(fogDetail, 'Native fog softens detail underneath the navigation').toBeLessThan(rawDetail * .35);
-        await header.locator('.header-inner').evaluate((element, value) => { element.style.opacity = value; }, innerOpacity);
-        innerOpacity = undefined;
+        try {
+          const pixels = await screenshotPixels();
+          const luminance = (rgb) => rgb.map((channel) => {
+            const value = channel / 255;
+            return value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4;
+          }).reduce((sum, channel, index) => sum + channel * [.2126, .7152, .0722][index], 0);
+          for (const label of labels) {
+            const foreground = luminance(label.color);
+            const background = luminance(pixels.mean(label.x - 4, label.y - 2, 9, 5));
+            const ratio = (Math.max(foreground, background) + .05) / (Math.min(foreground, background) + .05);
+            expect(ratio, `Rendered ${label.label} contrast at the ${selector} blur boundary at ${width}px`).toBeGreaterThanOrEqual(4.5);
+          }
+        } finally {
+          await header.locator('.header-inner').evaluate((element, value) => { element.style.opacity = value; }, originalOpacity);
+        }
       }
-    } finally {
-      if (innerOpacity !== undefined) await header.locator('.header-inner').evaluate((element, value) => { element.style.opacity = value; }, innerOpacity);
-      await targetPage.evaluate(() => {
-        document.querySelector('#verify-local-header-field')?.remove();
-        window.dispatchEvent(new Event('scroll'));
-      });
-    }
-    await targetPage.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
-    await expectControls('dark');
-    await scrollSurface('#features');
-    await expectControls('light');
-    await scrollSurface('#roadmap');
-    await expectControls('dark');
-    await scrollSurface('[data-video-open]');
-    if (width >= 768) {
-      await expect.poll(() => header.locator(controlSelector).evaluateAll((elements) => {
-        const image = document.querySelector('[data-video-open]').getBoundingClientRect();
-        const contrasts = elements.filter((element) => element.getClientRects().length).map((element) => {
-          const bounds = element.getBoundingClientRect(), x = bounds.left + bounds.width / 2;
-          return { x, contrast: element.dataset.contrast };
-        }).filter(({ x }) => x > image.left + 72 && x < image.right - 72).map(({ contrast }) => contrast);
-        return { present: contrasts.length > 0, correct: contrasts.every((contrast) => contrast === 'light') };
-      }), { message: 'Controls directly above the dark product capture use light foreground' }).toEqual({ present: true, correct: true });
-    }
-    for (const selector of ['#features', '.deck-frame']) {
-      await targetPage.locator(selector).evaluate((element) => {
-        const bounds = element.getBoundingClientRect();
-        const bar = document.querySelector('.site-header').getBoundingClientRect();
-        scrollTo({ top: scrollY + bounds.top + 1 - bar.height / 2, behavior: 'instant' });
-      });
-      await frames();
-      await settle();
-      const labels = await header.locator(width < 768 ? '.mobile-navigation > summary' : '.navigation-link').evaluateAll((elements) => elements
-        .filter((element) => element.getClientRects().length).map((element) => {
-          const bounds = element.getBoundingClientRect();
-          return { x: bounds.left + bounds.width / 2, y: bounds.top + bounds.height / 2,
-            color: getComputedStyle(element).color.match(/[\d.]+/g).slice(0, 3).map(Number), label: element.textContent.trim() };
-        }));
-      expect(labels.length, 'The boundary probe exercises visible navigation text').toBeGreaterThan(0);
-      const originalOpacity = await header.locator('.header-inner').evaluate((element) => {
-        const original = element.style.opacity;
-        element.style.opacity = '0';
-        return original;
-      });
-      try {
-        const pixels = await screenshotPixels();
-        const luminance = (rgb) => rgb.map((channel) => {
+      await scrollSurface('.site-footer');
+      const footerContrast = await targetPage.locator('.site-footer').evaluate((footer) => {
+        const rgb = getComputedStyle(footer).backgroundColor.match(/[\d.]+/g).slice(0, 3).map(Number);
+        const luminance = rgb.map((channel) => {
           const value = channel / 255;
           return value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4;
         }).reduce((sum, channel, index) => sum + channel * [.2126, .7152, .0722][index], 0);
-        for (const label of labels) {
-          const foreground = luminance(label.color);
-          const background = luminance(pixels.mean(label.x - 4, label.y - 2, 9, 5));
-          const ratio = (Math.max(foreground, background) + .05) / (Math.min(foreground, background) + .05);
-          expect(ratio, `Rendered ${label.label} contrast at the ${selector} blur boundary at ${width}px`).toBeGreaterThanOrEqual(4.5);
+        return (luminance + .05) / .05 >= 1.05 / (luminance + .05) ? 'dark' : 'light';
+      });
+      await expectControls(footerContrast);
+      await setDarkSurface(false);
+      await targetPage.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
+      await expectControls('dark');
+      const mobile = width < 768;
+      const open = async () => {
+        if (mobile) {
+          await targetPage.locator('#mobile-navigation > summary').focus();
+          await targetPage.keyboard.press('Enter');
         }
-      } finally {
-        await header.locator('.header-inner').evaluate((element, value) => { element.style.opacity = value; }, originalOpacity);
-      }
-    }
-    await scrollSurface('.site-footer');
-    const footerContrast = await targetPage.locator('.site-footer').evaluate((footer) => {
-      const rgb = getComputedStyle(footer).backgroundColor.match(/[\d.]+/g).slice(0, 3).map(Number);
-      const luminance = rgb.map((channel) => {
-        const value = channel / 255;
-        return value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4;
-      }).reduce((sum, channel, index) => sum + channel * [.2126, .7152, .0722][index], 0);
-      return (luminance + .05) / .05 >= 1.05 / (luminance + .05) ? 'dark' : 'light';
-    });
-    await expectControls(footerContrast);
-    await targetPage.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
-    await expectControls('dark');
-    const mobile = width < 768;
-    const open = async () => {
-      if (mobile) {
-        await targetPage.locator('#mobile-navigation > summary').focus();
+        await targetPage.locator(mobile ? '#mobile-product > summary' : '#product-menu > summary').focus();
         await targetPage.keyboard.press('Enter');
-      }
-      await targetPage.locator(mobile ? '#mobile-product > summary' : '#product-menu > summary').focus();
-      await targetPage.keyboard.press('Enter');
-      await settle();
-    };
-    const close = async () => {
-      await targetPage.keyboard.press('Escape');
-      if (mobile) await targetPage.keyboard.press('Escape');
-    };
-    await open();
-    const panelStyle = () => targetPage.locator(mobile ? '.mobile-panel' : '.product-panel').evaluate((panel) => ({
-      background: getComputedStyle(panel).backgroundColor,
-      title: getComputedStyle(panel.querySelector('.product-link-title')).color,
-      groupHeading: getComputedStyle(panel.querySelector('.product-group-label')).color,
-    }));
-    const originalPanelStyle = await panelStyle();
-    await scrollSurface('#features');
-    await expectControls('dark');
-    expect(await panelStyle(), 'Open dropdown panels retain their readable route palette while the page scrolls').toEqual(originalPanelStyle);
-    const accessibility = await new AxeBuilder({ page: targetPage }).include('.site-header').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
-    expect(accessibility.violations, `Unified Product navigation readability at ${width}px`).toEqual([]);
-    await close();
-    await expectControls('light');
-    await open();
-    await expectControls('dark');
-    await scrollSurface('#roadmap');
-    await expectControls('dark');
-    await close();
-    await expectControls('dark');
-    if (!mobile) {
-      await targetPage.locator('.header-action[data-download-open]').click();
-      await expect(targetPage.locator('#download-dialog')).toBeVisible();
-      const modalForegrounds = await controls();
-      await scrollSurface('#features');
-      await frames();
-      expect(await controls(), 'An open native modal freezes local navigation foregrounds').toEqual(modalForegrounds);
-      await targetPage.keyboard.press('Escape');
-      await expect(targetPage.locator('#download-dialog')).not.toBeVisible();
+        await settle();
+      };
+      const close = async () => {
+        await targetPage.keyboard.press('Escape');
+        if (mobile) await targetPage.keyboard.press('Escape');
+      };
+      await open();
+      const panelStyle = () => targetPage.locator(mobile ? '.mobile-panel' : '.product-panel').evaluate((panel) => ({
+        background: getComputedStyle(panel).backgroundColor,
+        title: getComputedStyle(panel.querySelector('.product-link-title')).color,
+        groupHeading: getComputedStyle(panel.querySelector('.product-group-label')).color,
+      }));
+      const originalPanelStyle = await panelStyle();
+      await setDarkSurface(true);
+      await expectControls('dark');
+      expect(await panelStyle(), 'Open dropdown panels retain their readable route palette while the page scrolls').toEqual(originalPanelStyle);
+      const accessibility = await new AxeBuilder({ page: targetPage }).include('.site-header').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
+      expect(accessibility.violations, `Unified Product navigation readability at ${width}px`).toEqual([]);
+      await close();
       await expectControls('light');
+      await open();
+      await expectControls('dark');
+      await setDarkSurface(false);
+      await scrollSurface('#roadmap');
+      await expectControls('dark');
+      await close();
+      await expectControls('dark');
+      if (!mobile) {
+        await targetPage.locator('.header-action[data-download-open]').click();
+        await expect(targetPage.locator('#download-dialog')).toBeVisible();
+        const modalForegrounds = await controls();
+        await setDarkSurface(true);
+        await frames();
+        expect(await controls(), 'An open native modal freezes local navigation foregrounds').toEqual(modalForegrounds);
+        await targetPage.keyboard.press('Escape');
+        await expect(targetPage.locator('#download-dialog')).not.toBeVisible();
+        await expectControls('light');
+      }
+      await setDarkSurface(false);
+      await targetPage.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
+      await expectControls('dark');
     }
-    await targetPage.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
-    await expectControls('dark');
+  } finally {
+    await setDarkSurface(false);
   }
   await targetPage.setViewportSize(originalViewport);
   await targetPage.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
@@ -820,7 +854,7 @@ async function verifyFixedHeader(targetPage, javaScriptEnabled = true) {
   await targetPage.mouse.move(0, 0);
   for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
     await targetPage.setViewportSize(viewport);
-    for (const destination of ['#workspace', '#roadmap', '#download']) {
+    for (const destination of ['#workspace', '#roadmap', '.site-footer']) {
       await targetPage.locator(destination).evaluate((element) => element.scrollIntoView({ block: 'start', behavior: 'instant' }));
       await expect(header).toHaveCSS('position', 'fixed');
       const bounds = await header.boundingBox();
@@ -897,6 +931,7 @@ async function verifyStaticBackdropDoesNotBlockPage(targetPage) {
 async function verifyDevlog(javaScriptEnabled) {
   const devlogContext = await browser.newContext({ javaScriptEnabled });
   const devlogPage = await devlogContext.newPage();
+  await devlogPage.route(releaseUrl, (route) => route.fulfill({ status: 200, contentType: 'text/html', body: '<h1>GitHub releases</h1>' }));
   const devlogErrors = [];
   devlogPage.on('pageerror', (error) => devlogErrors.push(error.message));
   const activate = async (link) => {
@@ -945,7 +980,7 @@ async function verifyDevlog(javaScriptEnabled) {
       const product = devlogPage.locator(mobile ? '#mobile-product' : '#product-menu');
       await activate(product.locator(':scope > summary'));
       expect(await product.locator('.product-link').evaluateAll((links) => links.map((link) => link.getAttribute('href'))))
-        .toEqual(['/#workspace', '/#features', '/#workflow', '/#principles', '/#faq', '/#download']);
+        .toEqual(['/#workspace', '/#roadmap', 'https://docs.lomi.dev', 'https://github.com/lomi-dev/lomi', releaseUrl, releaseUrl]);
       await activate(product.locator('a[href="/#workspace"]'));
     } else {
       await expect(devlogPage.locator('.product-fallback')).toHaveAttribute('href', '/#workspace');
@@ -964,11 +999,9 @@ async function verifyDevlog(javaScriptEnabled) {
     if (javaScriptEnabled || !mobile) {
       await openRoot();
       const download = devlogPage.locator(mobile ? '.mobile-download' : '.header-action');
-      await expect(download).toHaveAttribute('href', '/#download');
+      await expect(download).toHaveAttribute('href', releaseUrl);
       await activate(download);
-      await expect(devlogPage).toHaveURL(new URL('/#download', url).href);
-      await expect(devlogPage.locator('#download')).toBeInViewport();
-      await expectAnchorBelowHeader(devlogPage, '#download');
+      await expect(devlogPage).toHaveURL(releaseUrl);
     }
     await devlogPage.goto(devlogUrl);
     await activate(devlogPage.getByRole('link', { name: 'Back to lomi' }));
@@ -1001,8 +1034,7 @@ try {
   await expect(page).toHaveTitle(/\S/);
   await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-  await expect(page.locator('#download a[href="https://github.com/lomi-dev/lomi"]')).toBeVisible();
-  await expect(page.getByRole('region', { name: 'Newsletter signup' })).toBeVisible();
+  await expect(page.locator('.site-footer a[href="https://github.com/lomi-dev/lomi"]').first()).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Primary navigation', exact: true })).toBeVisible();
   const desktopNavigation = page.getByRole('navigation', { name: 'Primary navigation', exact: true });
   const desktopLinks = await desktopNavigation.locator('a.navigation-link:not(.product-fallback)').evaluateAll((links) => links.map((link) => {
@@ -1015,10 +1047,12 @@ try {
     await expect(desktopNavigation.locator('a.navigation-link:not(.product-fallback)').nth(index)).toHaveAccessibleName(link.label);
   }
   await expect(page.getByRole('contentinfo')).toBeVisible();
-  for (const section of ['workflow', 'features', 'roadmap', 'faq', 'download', 'newsletter']) {
-    await expect(page.locator(`#${section}`)).toBeVisible();
-    await expect(page.locator(`#${section}`).getByRole('heading', { level: 2 })).toBeVisible();
-  }
+  await expect(page.locator('#roadmap').getByRole('heading', { level: 2 })).toBeVisible();
+  await expect(page.locator('#roadmap .section-marker > span')).toHaveText('01');
+  expect(await page.locator('main > section').evaluateAll((sections) => sections.map((section) => section.classList.contains('hero') ? 'hero' : section.id))).toEqual(['hero', 'roadmap']);
+  await expect(page.locator('#workflow, #features, #principles, #faq, #download, #newsletter, #newsletter-form, .newsletter-noscript, .download-cta')).toHaveCount(0);
+  await expect(page.getByRole('textbox', { name: 'Email address' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Subscribe' })).toHaveCount(0);
   const anchors = await page.evaluate(() => {
     const ids = [...document.querySelectorAll('[id]')].map((element) => element.id);
     return {
@@ -1057,7 +1091,10 @@ try {
   await expect(productMenu.locator('.product-link')).toHaveCount(6);
   await expect(productMenu.locator('.product-group')).toHaveCount(3);
   const productDestinations = await productMenu.locator('.product-link').evaluateAll((links) => links.map((link) => link.getAttribute('href')));
-  expect(productDestinations).toEqual(['#workspace', '#features', '#workflow', '#principles', '#faq', '#download']);
+  expect(productDestinations).toEqual(['#workspace', '#roadmap', 'https://docs.lomi.dev', 'https://github.com/lomi-dev/lomi', releaseUrl, releaseUrl]);
+  await expect(productMenu.locator('.product-link').nth(4)).toHaveAttribute('data-download-open');
+  await expect(productMenu.locator('.product-link').nth(4)).toHaveAttribute('aria-controls', 'download-dialog');
+  await expect(productMenu.locator('.product-link').nth(5)).not.toHaveAttribute('data-download-open');
   for (const link of await productMenu.locator('.product-link').all()) {
     await expect(link.locator('.product-link-title')).toHaveText(/\S/);
   }
@@ -1113,7 +1150,7 @@ try {
   const productA11y = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
   expect(productA11y.violations, 'Accessibility with desktop Product open').toEqual([]);
   await page.keyboard.press('Escape');
-  for (const destination of productDestinations) {
+  for (const destination of productDestinations.filter((href) => href.startsWith('#'))) {
     await productSummary.click();
     await productMenu.locator(`a[href="${destination}"]`).click();
     await expect(page).toHaveURL(new URL(destination, url).href);
@@ -1158,7 +1195,7 @@ try {
   await expect(background).toHaveAttribute('data-state', 'running');
   const resumedPixels = await backgroundPixels(page);
   await expect.poll(() => backgroundPixels(page), { message: 'Removing reduced-motion preference restarts background pixels' }).not.toEqual(resumedPixels);
-  await page.locator('#workflow').evaluate((element) => element.scrollIntoView({ block: 'start', behavior: 'instant' }));
+  await page.locator('.site-footer').evaluate((element) => element.scrollIntoView({ block: 'start', behavior: 'instant' }));
   await expect(background).toHaveAttribute('data-state', 'offscreen');
   await expectStaticBackground(page, 'Offscreen background stops rendering new frames');
   await hero.evaluate((element) => element.scrollIntoView({ block: 'start', behavior: 'instant' }));
@@ -1206,8 +1243,8 @@ try {
   await verifyLongFooterColophon(page);
   await page.setViewportSize({ width: 844, height: 390 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(844);
-  await page.locator('#download').scrollIntoViewIfNeeded();
-  await expect(page.locator('#download')).toBeInViewport();
+  await page.locator('#roadmap').scrollIntoViewIfNeeded();
+  await expect(page.locator('#roadmap')).toBeInViewport();
 
   await page.setViewportSize({ width: 390, height: 844 });
   const mobileMenu = page.locator('#mobile-navigation');
@@ -1216,6 +1253,10 @@ try {
   await expect(mobileMenu).not.toHaveAttribute('open');
   const mobileProduct = mobileMenu.locator('#mobile-product');
   const mobileProductSummary = mobileProduct.locator(':scope > summary');
+  await expect(mobileProduct.locator('.product-group')).toHaveCount(3);
+  expect(await mobileProduct.locator('.product-link').evaluateAll((links) => links.map((link) => link.getAttribute('href')))).toEqual(productDestinations);
+  await expect(mobileProduct.locator('.product-link').nth(4)).toHaveAttribute('data-download-open');
+  await expect(mobileProduct.locator('.product-link').nth(5)).not.toHaveAttribute('data-download-open');
   const mobileRootLinks = mobileMenu.locator('.mobile-root-link');
   expect(await mobileRootLinks.evaluateAll((links) => links.map((link) => ({
     href: link.getAttribute('href'), label: link.textContent.trim(),
@@ -1250,7 +1291,7 @@ try {
   await mobileSummary.click();
   await expect(mobileMenu).not.toHaveAttribute('open');
   await expect(mobileProduct).not.toHaveAttribute('open');
-  for (const destination of productDestinations) {
+  for (const destination of productDestinations.filter((href) => href.startsWith('#'))) {
     await mobileSummary.click();
     await mobileProductSummary.click();
     const link = mobileProduct.locator(`a[href="${destination}"]`);
@@ -1269,21 +1310,6 @@ try {
   await expectAnchorBelowHeader(page, '#roadmap');
   await expect(mobileMenu).not.toHaveAttribute('open');
 
-  const faqItems = page.locator('#faq details');
-  expect(await faqItems.count()).toBeGreaterThan(0);
-  for (const item of await faqItems.all()) {
-    const summary = item.locator('summary');
-    await expect(item.locator('p')).not.toBeVisible();
-    await summary.focus();
-    await page.keyboard.press('Enter');
-    await expect(item).toHaveAttribute('open', '');
-    await expect(item.locator('p')).toBeVisible();
-    await expect(item.locator('p')).not.toBeEmpty();
-    await page.keyboard.press('Space');
-    await expect(item).not.toHaveAttribute('open');
-    await expect(item.locator('p')).not.toBeVisible();
-  }
-
   for (const width of [390, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     await page.evaluate(() => scrollTo(0, 0));
@@ -1292,48 +1318,8 @@ try {
     await writeFile(`artifacts/accessibility-${width}.json`, JSON.stringify(results.violations, null, 2));
     expect(results.violations, `Accessibility at ${width}px`).toEqual([]);
   }
-  const email = page.getByRole('textbox', { name: 'Email address' });
-  const subscribe = page.getByRole('button', { name: 'Subscribe' });
-  if (await subscribe.isEnabled()) {
-    let requestBody;
-    let authorization;
-    let cookie;
-    const endpoint = await page.locator('#newsletter-form').getAttribute('data-endpoint');
-    expect(new URL(endpoint).pathname).toBe('/v1/newsletter/subscribe');
-    await page.route(endpoint, async (route) => {
-      requestBody = route.request().postDataJSON();
-      authorization = route.request().headers().authorization;
-      cookie = route.request().headers().cookie;
-      await route.fulfill({ status: 202, contentType: 'application/json', body: JSON.stringify({ accepted: true }) });
-    });
-    await email.fill('reader@example.com');
-    await subscribe.click();
-    await expect(page.locator('#newsletter-status')).toHaveText('You’re on the list. Thanks for joining!');
-    expect(requestBody).toEqual({ email: 'reader@example.com' });
-    expect(authorization).toBeUndefined();
-    expect(cookie).toBeUndefined();
-    await expect(email).toHaveValue('');
-
-    await page.unroute(endpoint);
-    for (const result of [
-      { status: 500, body: '{}' },
-      { status: 200, body: '{"accepted":true}' },
-      { status: 202, body: '{"accepted":false}' },
-    ]) {
-      await page.route(endpoint, (route) => route.fulfill({ ...result, contentType: 'application/json' }));
-      await email.fill('reader@example.com');
-      await subscribe.click();
-      await expect(page.locator('#newsletter-status')).toHaveText('Something went wrong. Please try again.');
-      await expect(subscribe).toBeEnabled();
-      await page.unroute(endpoint);
-    }
-  } else {
-    await expect(email).toBeDisabled();
-    await expect(page.locator('#newsletter-status')).toHaveText('Newsletter signup is temporarily unavailable.');
-  }
-
   const downloadTriggers = page.locator('[data-download-open]');
-  const downloadTrigger = page.locator('#download [data-download-open]');
+  const downloadTrigger = page.locator('.hero [data-download-open]');
   const downloadDialog = page.getByRole('dialog', { name: 'Choose your download' });
   const osSelect = page.getByLabel('Operating system');
   const typeSelect = page.getByLabel('Package type');
@@ -1343,11 +1329,13 @@ try {
   await expect(page.locator('dialog')).toHaveCount(2);
   await expect(page.locator('#download-dialog')).toHaveCount(1);
   await expect(page.locator('#video-dialog')).toHaveCount(1);
-  expect(await downloadTriggers.count()).toBeGreaterThanOrEqual(2);
+  expect(await downloadTriggers.count()).toBeGreaterThanOrEqual(5);
   for (const trigger of await downloadTriggers.all()) {
     const inMobileMenu = await trigger.evaluate((element) => Boolean(element.closest('#mobile-navigation')));
+    const inProductMenu = await trigger.evaluate((element) => Boolean(element.closest('#product-menu, #mobile-product')));
     await page.setViewportSize({ width: inMobileMenu ? 390 : 1440, height: 900 });
     if (inMobileMenu) await mobileSummary.click();
+    if (inProductMenu) await (inMobileMenu ? mobileProductSummary : productSummary).click();
     await expect(trigger).toBeVisible();
     await expect(trigger).toHaveAttribute('aria-controls', 'download-dialog');
     await trigger.click();
@@ -1355,10 +1343,10 @@ try {
     await expect(osSelect).toBeFocused();
     await page.keyboard.press('Escape');
     await expect(downloadDialog).not.toBeVisible();
-    await expect(inMobileMenu ? mobileSummary : trigger).toBeFocused();
+    await expect(inMobileMenu ? mobileSummary : inProductMenu ? productSummary : trigger).toBeFocused();
   }
   const desktopHeaderDownload = page.locator('.site-header .header-actions [data-download-open]');
-  const mobileHeaderDownload = mobileMenu.locator('[data-download-open]');
+  const mobileHeaderDownload = mobileMenu.locator('.mobile-utilities [data-download-open]');
   await page.setViewportSize({ width: 390, height: 900 });
   await mobileSummary.click();
   await mobileHeaderDownload.click();
@@ -1449,9 +1437,11 @@ try {
   await expect(staticPage.getByRole('heading', { level: 1 })).toHaveCount(1);
   await expect(staticPage.getByRole('heading', { level: 1 })).toBeVisible();
   await verifyFixedHeader(staticPage, false);
-  for (const section of ['workflow', 'features', 'roadmap', 'faq', 'download', 'newsletter']) {
-    await expect(staticPage.locator(`#${section}`).getByRole('heading', { level: 2 })).toBeVisible();
-  }
+  await expect(staticPage.locator('#roadmap').getByRole('heading', { level: 2 })).toBeVisible();
+  expect(await staticPage.locator('main > section').evaluateAll((sections) => sections.map((section) => section.classList.contains('hero') ? 'hero' : section.id))).toEqual(['hero', 'roadmap']);
+  await expect(staticPage.locator('#workflow, #features, #principles, #faq, #download, #newsletter, #newsletter-form, .newsletter-noscript, .download-cta')).toHaveCount(0);
+  await expect(staticPage.getByRole('textbox', { name: 'Email address' })).toHaveCount(0);
+  await expect(staticPage.getByRole('button', { name: 'Subscribe' })).toHaveCount(0);
   const staticBackground = staticPage.locator('lomi-shape-waves');
   await expect(staticBackground).toHaveAttribute('data-renderer', 'fallback');
   await verifyTerminalFallback(staticBackground);
@@ -1485,27 +1475,16 @@ try {
   await staticHeroDownload.click();
   await expect(staticPage).toHaveURL(releaseUrl);
   await staticPage.goto(url);
-  const staticReleaseLink = staticPage.locator('#download').getByRole('link', { name: 'Browse releases on GitHub' });
-  await expect(staticReleaseLink).toBeVisible();
-  await expect(staticReleaseLink).toHaveAttribute('href', releaseUrl);
-  await expect(staticPage.getByRole('button', { name: 'Subscribe' })).toBeDisabled();
-  await expect(staticPage.locator('.newsletter-noscript')).toBeVisible();
   await expect(staticPage.locator('#mobile-navigation')).not.toBeVisible();
   await expect(staticPage.locator('#product-menu')).not.toBeVisible();
   const staticProduct = staticPage.locator('.product-fallback');
   await expect(staticProduct).toHaveAttribute('href', '#workspace');
   await staticProduct.click();
   await expectAnchorBelowHeader(staticPage, '#workspace');
-  const staticRoadmap = staticPage.locator('.desktop-navigation a[href="#roadmap"]');
+  const staticRoadmap = staticPage.locator('.desktop-navigation a.navigation-link[href="#roadmap"]');
   await staticRoadmap.click();
   await expectAnchorBelowHeader(staticPage, '#roadmap');
   await verifyStaticBackdropDoesNotBlockPage(staticPage);
-  const staticFaq = staticPage.locator('#faq details').first();
-  await staticFaq.locator('summary').focus();
-  await staticPage.keyboard.press('Enter');
-  await expect(staticFaq.locator('p')).toBeVisible();
-  await staticPage.keyboard.press('Space');
-  await expect(staticFaq.locator('p')).not.toBeVisible();
   await verifyViewportFooter(staticPage);
   await verifyLongFooterColophon(staticPage);
   await staticPage.setViewportSize({ width: 390, height: 844 });
@@ -1546,7 +1525,7 @@ try {
   await expect(fallbackPage.locator('.hero [data-download-open]')).toHaveAttribute('href', releaseUrl);
   expect(fallbackErrors, 'Canvas 2D unavailable fallback has no page errors').toEqual([]);
   await fallbackContext.close();
-  console.log('Passed: complete landing sections and anchors, 7 viewport widths including 200% equivalent reflow and landscape, terminal-glyph canvas pointer trail/fade/touch gating and pixel motion/reduced/resume/offscreen/resize and no-JS/unavailable-2D fallback, no CLI cards or client islands, two-image hero composition and lazy video dialog/keyboard/backdrop/touch/scroll lock/no-JS, exact viewport footer/keyboard access across 8 sizes plus long CMS copy at 320x400 with and without JS, desktop Product/mobile drill-in and Devlog routes with/without JS, mobile navigation and FAQ keyboard behavior, newsletter form, all 7 download packages, release fallback, every download trigger and focus restoration across desktop/mobile resizing, no-JS reading and release links, and mobile/desktop/dialog accessibility.');
+  console.log('Passed: Hero/Roadmap/Footer and remaining anchors, 7 viewport widths including 200% equivalent reflow and landscape, terminal-glyph canvas pointer trail/fade/touch gating and pixel motion/reduced/resume/offscreen/resize and no-JS/unavailable-2D fallback, no CLI cards or client islands, two-image hero composition and lazy video dialog/keyboard/backdrop/touch/scroll lock/no-JS, exact viewport footer/keyboard access across 8 sizes plus long CMS copy at 320x400 with and without JS, desktop Product/mobile drill-in and Devlog routes with/without JS, mobile navigation, deleted sections/FAQ/newsletter markup absent with/without JS, all 7 native download packages including Product Download, release fallback, every download trigger and focus restoration across desktop/mobile resizing, no-JS reading and release links, and mobile/desktop/dialog accessibility.');
 } finally {
   await browser.close();
 }

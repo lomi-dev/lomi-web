@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import seed from '../content/landing.json';
 import { landingSchema } from '../content/landing-schema';
 import { loadLanding } from '../content/load-landing';
+import { activeLandingLinks } from '../src/data/navigation';
 
 afterEach(() => { globalThis.fetch = originalFetch; });
 const originalFetch = globalThis.fetch;
@@ -54,6 +55,26 @@ describe('published landing content', () => {
     ]) {
       assert.equal(landingSchema.safeParse({ ...seed, navigation: { ...seed.navigation, links: [{ label: 'Unsafe', href }] } }).success, false, href);
     }
+  });
+
+  it('keeps published CMS links usable after removing landing sections', () => {
+    const publishedLinks = [
+      ...['workflow', 'features', 'principles', 'faq', 'newsletter'].map((id) => ({ label: id, href: `#${id}` })),
+      { label: 'Overview', href: '#workspace' },
+      { label: 'Roadmap', href: '#roadmap' },
+      { label: 'Download', href: '#download' },
+      { label: 'Devlog', href: '/devlog/' },
+      { label: 'Docs', href: 'https://docs.lomi.dev' },
+    ];
+    const original = structuredClone(publishedLinks);
+    assert.deepEqual(activeLandingLinks(publishedLinks), [
+      { label: 'Overview', href: '#workspace' },
+      { label: 'Roadmap', href: '#roadmap' },
+      { label: 'Download', href: 'https://github.com/lomi-dev/lomi/releases' },
+      { label: 'Devlog', href: '/devlog/' },
+      { label: 'Docs', href: 'https://docs.lomi.dev' },
+    ]);
+    assert.deepEqual(publishedLinks, original);
   });
 
   it('rejects unencrypted remote origins, credentials, and unexpected paths', async () => {
