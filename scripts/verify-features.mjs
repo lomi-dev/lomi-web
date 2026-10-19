@@ -1,10 +1,11 @@
 import { chromium, firefox, webkit, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { mkdir, readFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 
 const url = process.env.VERIFY_URL || 'http://127.0.0.1:4322';
 const browserType = { chromium, firefox, webkit }[process.env.VERIFY_BROWSER || 'chromium'];
-const browser = await browserType.launch();
+// Keep real scrollbars visible so long-copy transitions exercise gutter changes.
+const browser = await browserType.launch(browserType === chromium ? { ignoreDefaultArgs: ['--hide-scrollbars'] } : {});
 const seed = JSON.parse(await readFile(new URL('../content/landing.json', import.meta.url), 'utf8'));
 const errors = [];
 await mkdir('artifacts', { recursive: true });
@@ -14,11 +15,45 @@ async function open(options = {}, html, init) {
   if (init) await context.addInitScript(init);
   const page = await context.newPage();
   page.on('pageerror', (error) => { errors.push(error.message); console.error('Feature browser error:', error.message); });
+  page.on('requestfailed', (request) => { if (['script', 'document'].includes(request.resourceType())) console.error('Feature request failed:', request.url(), request.failure()?.errorText); });
   await page.route('https://api.github.com/**', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }));
   if (html) await page.route(new URL(url).href, (route) => route.fulfill({ contentType: 'text/html', body: html }));
   await page.goto(url, { waitUntil: 'networkidle' });
   await page.evaluate(() => document.fonts.ready);
-  if (options.javaScriptEnabled !== false) await expect(page.locator('[data-feature-gallery]')).toHaveAttribute('data-feature-ready', 'true');
+  if (options.javaScriptEnabled !== false) {
+    try { await expect(page.locator('[data-feature-gallery]')).toHaveAttribute('data-feature-ready', 'true'); }
+    catch (error) {
+      if (html) {
+        await writeFile('artifacts/features-fixture-input.html', html);
+        await writeFile('artifacts/features-fixture-rendered.html', await page.content());
+        const state = await page.evaluate(() => {
+          const root = document.querySelector('[data-feature-gallery]');
+          const modal = root?.querySelector('#feature-dialog');
+          const ancestors = [];
+          for (let element = root; element; element = element.parentElement) ancestors.push({
+            tag: element.tagName, hidden: element.hidden, inert: element.inert, display: getComputedStyle(element).display,
+          });
+          return {
+            readyState: document.readyState, nativeDialog: typeof HTMLDialogElement,
+            showModal: typeof modal?.showModal, rootReady: root?.getAttribute('data-feature-ready'),
+            dialog: Boolean(modal), panel: Boolean(modal?.querySelector('[data-feature-panel]')),
+            close: Boolean(modal?.querySelector('[data-feature-close]')), triggers: root?.querySelectorAll('[data-feature-open]').length,
+            slides: [...(root?.querySelectorAll('[data-feature-slide]') ?? [])].map((slide, index) => ({
+              title: slide.querySelectorAll(`#feature-dialog-title-${index}`).length,
+              description: slide.querySelectorAll(`#feature-dialog-description-${index}`).length,
+            })),
+            ancestors,
+            openDialogs: [...document.querySelectorAll('dialog[open]')].map((element) => element.id),
+            scripts: [...document.scripts].map((script) => ({ src: script.src, type: script.type, async: script.async })),
+            resources: performance.getEntriesByType('resource').filter((entry) => entry.initiatorType === 'script').map((entry) => ({ name: entry.name, duration: entry.duration })),
+          };
+        });
+        await writeFile('artifacts/features-fixture-state.json', JSON.stringify(state, null, 2));
+        await page.screenshot({ path: 'artifacts/features-fixture-failure.png' });
+      }
+      throw error;
+    }
+  }
   return { context, page };
 }
 
@@ -76,6 +111,10 @@ async function layout(page) {
 }
 
 async function axe(page, label) {
+  // Contrast snapshots describe the readable resting state; motion itself is
+  // sampled separately while its outgoing visual copies remain aria-hidden.
+  await expect.poll(() => dialog(page).evaluate((element) => element.getAnimations({ subtree: true })
+    .filter((animation) => ['running', 'paused'].includes(animation.playState)).length)).toBe(0);
   const result = await new AxeBuilder({ page }).include('#features').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
   expect(result.violations, `${label}: feature accessibility`).toEqual([]);
 }
@@ -84,6 +123,147 @@ async function close(page, opener) {
   await page.keyboard.press('Escape');
   await expect(dialog(page)).not.toBeVisible();
   await expect(opener).toBeFocused();
+  await expect(dialog(page).locator('[data-feature-motion-layer]')).toHaveCount(0);
+}
+
+async function settled(page, index) {
+  await selected(page, index);
+  await expect(dialog(page).locator('[data-feature-motion-layer]')).toHaveCount(0);
+  await expect.poll(() => dialog(page).evaluate((element) => element.getAnimations({ subtree: true })
+    .filter((animation) => ['running', 'paused'].includes(animation.playState)).length)).toBe(0);
+}
+
+async function directionStep(page, control, index, direction) {
+  // Seek native animations in the same task as the click, so direction is
+  // measured from rendered geometry without racing a short transition.
+  const motion = await dialog(page).evaluate((element, selector) => {
+    element.querySelector(selector).click();
+    const animations = element.getAnimations({ subtree: true }).filter((animation) => animation.constructor.name === 'Animation');
+    for (const animation of animations) {
+      animation.pause();
+      animation.currentTime = Number(animation.effect.getTiming().duration) * .35;
+    }
+    const slide = element.querySelector('[data-feature-slide]:not([hidden])');
+    const frame = slide.querySelector('[data-feature-modal-media]');
+    const picture = [...frame.querySelectorAll('picture')].find((item) => !item.closest('[data-feature-motion-layer]'));
+    const outgoing = element.querySelector('[data-feature-motion-layer="media"]');
+    const copy = slide.querySelector('[data-feature-copy-content]');
+    const bounds = frame.getBoundingClientRect();
+    const offset = (item) => {
+      if (!item) return null;
+      const rect = item.getBoundingClientRect();
+      return (rect.left + rect.right - bounds.left - bounds.right) / 2;
+    };
+    const transform = copy && getComputedStyle(copy).transform;
+    const layers = [...element.querySelectorAll('[data-feature-motion-layer]')];
+    return {
+      incoming: offset(picture), outgoing: offset(outgoing),
+      copyX: transform && transform !== 'none' ? new DOMMatrixReadOnly(transform).m41 : 0,
+      copyOpacity: copy ? Number(getComputedStyle(copy).opacity) : 1,
+      clipped: ['hidden', 'clip'].includes(getComputedStyle(frame).overflowX),
+      layers: layers.map((layer) => ({ kind: layer.dataset.featureMotionLayer,
+        inert: layer.inert, hidden: layer.getAttribute('aria-hidden'), ids: layer.querySelectorAll('[id]').length + Number(layer.hasAttribute('id')) })),
+      duplicateIds: [...element.querySelectorAll('[id]')].map((item) => item.id).filter((id, index, all) => all.indexOf(id) !== index),
+    };
+  }, control);
+  await selected(page, index);
+  if (index === 1 && direction === 1) await page.screenshot({ path: `artifacts/features-${browserType.name()}-navigation-midpoint.png` });
+  expect(motion.incoming * direction, 'Incoming picture enters from the requested side').toBeGreaterThan(1);
+  expect(motion.outgoing * direction, 'Outgoing picture moves in the opposite direction').toBeLessThan(-1);
+  expect(motion.copyX * direction, 'Description follows the requested horizontal direction').toBeGreaterThan(.1);
+  expect(Math.abs(motion.copyX), 'Description movement remains short').toBeLessThan(30);
+  expect(motion.copyOpacity, 'Incoming description fades in').toBeLessThan(1);
+  expect(motion.clipped, 'Moving pictures stay inside a clipped media frame').toBe(true);
+  expect(motion.layers.map((layer) => layer.kind).sort()).toEqual(['copy', 'media']);
+  for (const layer of motion.layers) expect(layer, 'Outgoing visual copies stay inert, hidden and ID-free').toMatchObject({ inert: true, hidden: 'true', ids: 0 });
+  expect(motion.duplicateIds, 'Visual copies do not duplicate accessible IDs').toEqual([]);
+  await dialog(page).evaluate((element) => element.getAnimations({ subtree: true }).filter((animation) => animation.playState === 'paused').forEach((animation) => animation.play()));
+  await settled(page, index);
+}
+
+async function verifyNavigationMotion(page) {
+  await card(page, 0).click();
+  await settled(page, 0);
+  await directionStep(page, '[data-feature-next]', 1, 1);
+  await directionStep(page, '[data-feature-prev]', 0, -1);
+  await directionStep(page, '[data-feature-prev]', 5, -1);
+  await directionStep(page, '[data-feature-next]', 0, 1);
+
+  await dialog(page).evaluate((element) => {
+    const probe = { starts: 0, maxMedia: 0, maxCopy: 0 };
+    const observer = new MutationObserver((records) => {
+      for (const record of records) for (const node of record.addedNodes) {
+        if (node instanceof Element) probe.starts += Number(node.matches('[data-feature-motion-layer="media"]')) + node.querySelectorAll('[data-feature-motion-layer="media"]').length;
+      }
+      probe.maxMedia = Math.max(probe.maxMedia, element.querySelectorAll('[data-feature-motion-layer="media"]').length);
+      probe.maxCopy = Math.max(probe.maxCopy, element.querySelectorAll('[data-feature-motion-layer="copy"]').length);
+    });
+    observer.observe(element, { childList: true, subtree: true });
+    window.__featureMotionProbe = { probe, observer };
+    for (let index = 0; index < 15; index++) element.querySelector('[data-feature-next]').click();
+  });
+  await settled(page, 3);
+  const rapid = await page.evaluate(() => {
+    const { probe, observer } = window.__featureMotionProbe;
+    observer.disconnect(); delete window.__featureMotionProbe;
+    return probe;
+  });
+  expect(rapid.starts, 'Fifteen clicks animate the current transition and latest intent only').toBeGreaterThan(0);
+  expect(rapid.starts).toBeLessThanOrEqual(2);
+  expect(rapid.maxMedia, 'Media layers never stack across queued intents').toBeLessThanOrEqual(1);
+  expect(rapid.maxCopy, 'Copy layers never stack across queued intents').toBeLessThanOrEqual(1);
+
+  await dialog(page).locator('[data-feature-dot="0"]').click();
+  await settled(page, 0);
+  await dialog(page).evaluate((element) => {
+    element.querySelector('[data-feature-next]').click();
+    element.querySelector('[data-feature-prev]').click();
+  });
+  await settled(page, 0);
+  await dialog(page).evaluate((element) => {
+    element.querySelector('[data-feature-next]').click();
+    element.querySelector('[data-feature-dot="4"]').click();
+    element.querySelector('[data-feature-prev]').click();
+  });
+  await settled(page, 3);
+
+  await dialog(page).evaluate((element) => {
+    element.querySelector('[data-feature-next]').click();
+    element.querySelector('[data-feature-next]').click();
+    element.getAnimations({ subtree: true }).filter((animation) => animation.constructor.name === 'Animation').forEach((animation) => animation.pause());
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await settled(page, 5);
+  await controlsVisible(page);
+  expect(await dialog(page).evaluate((element) => element.contains(document.activeElement)), 'Resizing retains focus inside the modal').toBe(true);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await settled(page, 5);
+
+  await dialog(page).evaluate((element) => {
+    element.querySelector('[data-feature-next]').click();
+    element.querySelector('[data-feature-next]').click();
+    element.getAnimations({ subtree: true }).filter((animation) => animation.constructor.name === 'Animation').forEach((animation) => animation.pause());
+  });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await settled(page, 1);
+  expect(await dialog(page).evaluate((element) => element.getAnimations({ subtree: true }).some((animation) => animation.effect.getKeyframes().some((frame) => frame.transform && frame.transform !== 'none'))), 'Live reduced motion clears all horizontal motion').toBe(false);
+  await dialog(page).locator('[data-feature-next]').click();
+  await selected(page, 2);
+  expect(await dialog(page).evaluate((element) => element.getAnimations({ subtree: true }).some((animation) => animation.effect.getKeyframes().some((frame) => frame.transform && frame.transform !== 'none'))), 'Reduced-motion navigation only fades').toBe(false);
+  await settled(page, 2);
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+
+  await dialog(page).evaluate((element) => {
+    element.querySelector('[data-feature-next]').click();
+    element.querySelector('[data-feature-dot="5"]').click();
+    element.getAnimations({ subtree: true }).filter((animation) => animation.constructor.name === 'Animation').forEach((animation) => animation.pause());
+  });
+  await close(page, card(page, 0));
+  await card(page, 1).click();
+  await settled(page, 1);
+  await page.waitForTimeout(750);
+  await settled(page, 1);
+  await close(page, card(page, 1));
 }
 
 try {
@@ -107,6 +287,7 @@ try {
     await expect(dialog(page).locator('[data-feature-close]')).toBeFocused();
     await close(page, opener);
   }
+  await verifyNavigationMotion(page);
   await card(page, 0).click();
   await dialog(page).locator('[data-feature-prev]').click();
   await selected(page, 5);
@@ -193,7 +374,7 @@ try {
   await dialog(page).evaluate((element) => element.querySelector('[data-feature-next]').click());
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await selected(page, 3);
-  expect(await dialog(page).evaluate((element) => element.getAnimations({ subtree: true }).some((animation) => animation.playState === 'running' && animation.effect.getKeyframes().some((frame) => frame.transform && frame.transform !== 'none'))), 'Live reduced-motion change cancels moving animation').toBe(false);
+  await expect.poll(() => dialog(page).evaluate((element) => element.getAnimations({ subtree: true }).some((animation) => animation.playState === 'running' && animation.effect.getKeyframes().some((frame) => frame.transform && frame.transform !== 'none'))), { message: 'Live reduced-motion change cancels moving animation', timeout: 1000 }).toBe(false);
   await close(page, card(page, 1));
   const serverHTML = await (await page.request.get(url)).text();
 
@@ -237,6 +418,12 @@ try {
       return '<!doctype html>' + doc.documentElement.outerHTML;
     }, { original: serverHTML, count, longCopy });
     const fixture = await open({}, html);
+    if (longCopy) {
+      // A long-to-short change removes the incoming region's scrollbar. The
+      // outgoing copy must keep its original width, wrapping and scroll offset.
+      await fixture.page.addStyleTag({ content: '#feature-dialog .feature-modal-copy::-webkit-scrollbar { width: 14px; }' });
+      await fixture.page.locator('#feature-dialog-description-0').evaluate((element) => { element.textContent = 'Short published feature description.'; });
+    }
     for (const viewport of longCopy ? [{ width: 320, height: 568 }, { width: 390, height: 844 }, { width: 1440, height: 500 }] : [{ width: 1440, height: 900 }]) {
       await fixture.page.setViewportSize(viewport);
       await card(fixture.page, count - 1).click();
@@ -258,6 +445,38 @@ try {
       if (count === 1) {
         await expect(dialog(fixture.page).locator('[data-feature-next]')).toBeDisabled();
         await expect(dialog(fixture.page).locator('[data-feature-prev]')).toBeDisabled();
+      } else if (longCopy) {
+        const geometry = await dialog(fixture.page).evaluate((element) => {
+          const copy = element.querySelector('[data-feature-slide]:not([hidden]) [data-feature-copy]');
+          const measure = (region) => {
+            if (!region) return null;
+            const description = region.querySelector('.feature-modal-description').getBoundingClientRect();
+            return { width: region.getBoundingClientRect().width, clientWidth: region.clientWidth,
+              scrollTop: region.scrollTop, textWidth: description.width, textHeight: description.height };
+          };
+          const before = measure(copy);
+          element.querySelector('[data-feature-next]').click();
+          element.getAnimations({ subtree: true }).filter((animation) => animation.constructor.name === 'Animation').forEach((animation) => { animation.pause(); animation.currentTime = 0; });
+          const incoming = element.querySelector('[data-feature-slide]:not([hidden]) [data-feature-copy]');
+          return { before, outgoing: measure(element.querySelector('[data-feature-motion-layer="copy"]')),
+            incoming: { clientWidth: incoming.clientWidth, scrollHeight: incoming.scrollHeight, clientHeight: incoming.clientHeight },
+            mediaLayers: element.querySelectorAll('[data-feature-motion-layer="media"]').length,
+            copyLayers: element.querySelectorAll('[data-feature-motion-layer="copy"]').length };
+        });
+        if (browserType === chromium) expect(geometry.before.width - geometry.before.clientWidth, 'Fixture exposes a classic scrollbar gutter').toBeGreaterThan(10);
+        expect(geometry.before.scrollTop, 'Long outgoing copy starts from a real scrolled position').toBeGreaterThan(0);
+        expect(geometry.outgoing, 'Long-to-short transition retains outgoing copy').not.toBeNull();
+        for (const property of ['width', 'clientWidth', 'scrollTop', 'textWidth', 'textHeight']) {
+          expect(Math.abs(geometry.outgoing[property] - geometry.before[property]), `Outgoing ${property} preserves scrolled text geometry at ${viewport.width}px`).toBeLessThanOrEqual(1);
+        }
+        expect(geometry.mediaLayers).toBe(1);
+        expect(geometry.copyLayers).toBe(1);
+        await dialog(fixture.page).evaluate((element) => element.getAnimations({ subtree: true }).filter((animation) => animation.playState === 'paused').forEach((animation) => animation.play()));
+        await expect(dialog(fixture.page).locator('[data-feature-motion-layer]')).toHaveCount(0);
+        const after = await dialog(fixture.page).locator('[data-feature-slide]:not([hidden]) [data-feature-copy]').evaluate((copy) => ({
+          clientWidth: copy.clientWidth, scrollHeight: copy.scrollHeight, clientHeight: copy.clientHeight,
+        }));
+        expect(after, 'Outgoing copy does not change the incoming scroller geometry').toEqual(geometry.incoming);
       } else {
         await dialog(fixture.page).locator('[data-feature-next]').click();
       }
@@ -308,7 +527,7 @@ try {
     await staticRun.context.close();
   }
   expect(errors, 'No runtime errors in feature scenarios').toEqual([]);
-  console.log(`Passed (${browserType.name()}): all feature cards, accessible names/descriptions, wrapping arrows/dots/keyboard, rapid input and reopen, native focus containment/Escape/backdrop, focus and scroll restoration, resize/mobile/tablet/short desktop, reduced motion/live cancellation, CMS 1/12 items and long copy, no-JS fallback, local pictures, no overflow and axe.`);
+  console.log(`Passed (${browserType.name()}): all feature cards, accessible names/descriptions, wrapping arrows/dots/keyboard, directional clipped media/copy transitions, bounded latest-intent queue, reverse/resize/reduced-motion/close cleanup, rapid input and reopen, native focus containment/Escape/backdrop, focus and scroll restoration, resize/mobile/tablet/short desktop, reduced motion/live cancellation, CMS 1/12 items and long copy, no-JS fallback, local pictures, no overflow and axe.`);
 } finally {
   await browser.close();
 }

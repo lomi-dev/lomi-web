@@ -19,8 +19,13 @@ export function initFeatureGallery(root: HTMLElement) {
   const dots = Array.from(dialog.querySelectorAll<HTMLButtonElement>('[data-feature-dot]'));
   const count = dialog.querySelector<HTMLElement>('[data-feature-count]');
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const navigationEasing = getComputedStyle(root).getPropertyValue('--ease-out').trim() || 'cubic-bezier(0.23, 1, 0.32, 1)';
   const animations = new Set<Animation>();
+  const motionLayers = new Set<HTMLElement>();
   let selected = 0;
+  let requested = 0;
+  let requestedDirection = 1;
+  let navigating = false;
   let generation = 0;
   let closing = false;
   let opener: HTMLElement | null = null;
@@ -32,11 +37,14 @@ export function initFeatureGallery(root: HTMLElement) {
     generation++;
     for (const animation of animations) animation.cancel();
     animations.clear();
+    for (const layer of motionLayers) layer.remove();
+    motionLayers.clear();
+    navigating = false;
   }
 
-  async function animate(element: HTMLElement, frames: Keyframe[], duration: number): Promise<void> {
+  async function animate(element: HTMLElement, frames: Keyframe[], duration: number, easing = 'cubic-bezier(.2,.7,.2,1)'): Promise<void> {
     if (typeof element.animate !== 'function') return;
-    const animation = element.animate(frames, { duration, easing: 'cubic-bezier(.2,.7,.2,1)', fill: 'both' });
+    const animation = element.animate(frames, { duration, easing, fill: 'both' });
     animations.add(animation);
     try {
       await animation.finished;
@@ -46,6 +54,31 @@ export function initFeatureGallery(root: HTMLElement) {
     } finally {
       animations.delete(animation);
     }
+  }
+
+  function outgoingLayer(source: HTMLElement, kind: 'media' | 'copy') {
+    const layer = source.cloneNode(true) as HTMLElement;
+    for (const element of [layer, ...layer.querySelectorAll<HTMLElement>('*')]) {
+      for (const attribute of Array.from(element.attributes)) {
+        if (['id', 'tabindex', 'aria-labelledby', 'aria-describedby', 'role'].includes(attribute.name)
+          || attribute.name.startsWith('data-feature-')) element.removeAttribute(attribute.name);
+      }
+    }
+    layer.inert = true;
+    layer.setAttribute('aria-hidden', 'true');
+    layer.dataset.featureMotionLayer = kind;
+    Object.assign(layer.style, {
+      position: 'absolute', inset: '0', width: '100%', height: '100%',
+      margin: '0', pointerEvents: 'none', overflow: kind === 'copy' ? 'hidden auto' : 'hidden', zIndex: '2',
+    });
+    motionLayers.add(layer);
+    return layer;
+  }
+
+  async function animateLayer(layer: HTMLElement, frames: Keyframe[], duration: number) {
+    await animate(layer, frames, duration, navigationEasing);
+    layer.remove();
+    motionLayers.delete(layer);
   }
 
   function saveAndSet(element: HTMLElement, name: string, value: string) {
@@ -91,6 +124,7 @@ export function initFeatureGallery(root: HTMLElement) {
 
   function cleanup() {
     cancelAnimations();
+    requested = selected;
     closing = false;
     backdropPointer = false;
     delete dialog!.dataset.state;
@@ -118,14 +152,89 @@ export function initFeatureGallery(root: HTMLElement) {
     if (count) count.textContent = `${String(selected + 1).padStart(2, '0')} / ${String(slides.length).padStart(2, '0')}`;
   }
 
-  function navigate(index: number) {
+  function startNavigation() {
+    if (requested === selected || !dialog!.open || closing) return;
+    const direction = requestedDirection;
+    const outgoing = slides[selected]!;
+    const previousPicture = outgoing.querySelector<HTMLElement>('[data-feature-modal-media] picture');
+    const previousCopy = outgoing.querySelector<HTMLElement>('[data-feature-copy]');
+    const previousScroll = previousCopy?.scrollTop ?? 0;
+    const previousCopyWidth = previousCopy?.getBoundingClientRect().width ?? 0;
+    const focusInSlide = outgoing.contains(document.activeElement);
+    cancelAnimations();
+    select(requested);
+    const version = generation;
+    const incoming = slides[selected]!;
+    const media = incoming.querySelector<HTMLElement>('[data-feature-modal-media]');
+    const picture = media?.querySelector<HTMLElement>('picture');
+    const copy = incoming.querySelector<HTMLElement>('[data-feature-copy]');
+    const content = copy?.querySelector<HTMLElement>('[data-feature-copy-content]');
+    if (focusInSlide) copy?.focus({ preventScroll: true });
+    navigating = true;
+    dialog!.dataset.state = 'navigating';
+    const transitions: Promise<void>[] = [];
+
+    if (reducedMotion.matches) {
+      for (const element of [picture, content]) {
+        if (element) transitions.push(animate(element, [{ opacity: 0.65 }, { opacity: 1 }], 80, navigationEasing));
+      }
+    } else {
+      if (media && picture) {
+        if (previousPicture) {
+          const layer = outgoingLayer(previousPicture, 'media');
+          media.append(layer);
+          transitions.push(animateLayer(layer, [
+            { transform: 'translateX(0)' }, { transform: `translateX(${-direction * 100}%)` },
+          ], 280));
+        }
+        transitions.push(animate(picture, [
+          { transform: `translateX(${direction * 100}%)` }, { transform: 'translateX(0)' },
+        ], 280, navigationEasing));
+      }
+      if (copy && content) {
+        if (previousCopy) {
+          const layer = outgoingLayer(previousCopy, 'copy');
+          // Keep the outgoing line breaks and scrollbar gutter while fading.
+          layer.style.width = `${previousCopyWidth}px`;
+          copy.append(layer);
+          layer.scrollTop = previousScroll;
+          transitions.push(animateLayer(layer, [
+            { opacity: 1, transform: 'translateX(0)' },
+            { opacity: 0, transform: `translateX(${-direction * 22}px)` },
+          ], 160));
+        }
+        transitions.push(animate(content, [
+          { opacity: 0, transform: `translateX(${direction * 22}px)` },
+          { opacity: 1, transform: 'translateX(0)' },
+        ], 220, navigationEasing));
+      }
+    }
+    void Promise.all(transitions).then(() => {
+      if (generation !== version || !dialog!.open || closing) return;
+      navigating = false;
+      dialog!.dataset.state = 'open';
+      // Complete the current movement, then head straight to the latest intent.
+      // Repeated input never restarts a slide or builds an animation backlog.
+      startNavigation();
+    });
+  }
+
+  function navigate(index: number, direction = Math.sign(index - requested)) {
     if (!dialog!.open || closing) return;
+    requested = (index + slides.length) % slides.length;
+    requestedDirection = direction < 0 ? -1 : 1;
+    if (!navigating) startNavigation();
+  }
+
+  function settleMotion() {
     const focusInSlide = slides[selected]?.contains(document.activeElement);
     cancelAnimations();
-    select(index);
-    if (focusInSlide) slides[selected]?.querySelector<HTMLElement>('[data-feature-copy]')?.focus({ preventScroll: true });
-    const media = slides[selected]?.querySelector<HTMLElement>('[data-feature-modal-media]');
-    if (media) void animate(media, [{ opacity: 0.65 }, { opacity: 1 }], reducedMotion.matches ? 80 : 120);
+    if (closing) finishClose(generation);
+    else if (dialog!.open) {
+      if (selected !== requested) select(requested);
+      if (focusInSlide) slides[selected]?.querySelector<HTMLElement>('[data-feature-copy]')?.focus({ preventScroll: true });
+      dialog!.dataset.state = 'open';
+    }
   }
 
   function finishClose(version: number) {
@@ -152,6 +261,7 @@ export function initFeatureGallery(root: HTMLElement) {
     const origin = thumbnail?.getBoundingClientRect();
     cancelAnimations();
     select(index);
+    requested = selected;
     opener = trigger;
     lockScroll();
     try {
@@ -207,8 +317,8 @@ export function initFeatureGallery(root: HTMLElement) {
   });
 
   closeButton.addEventListener('click', requestClose);
-  previousButton?.addEventListener('click', () => navigate(selected - 1));
-  nextButton?.addEventListener('click', () => navigate(selected + 1));
+  previousButton?.addEventListener('click', () => navigate(requested - 1, -1));
+  nextButton?.addEventListener('click', () => navigate(requested + 1, 1));
   if (previousButton) previousButton.disabled = slides.length < 2;
   if (nextButton) nextButton.disabled = slides.length < 2;
   dots.forEach((dot) => dot.addEventListener('click', () => {
@@ -236,8 +346,8 @@ export function initFeatureGallery(root: HTMLElement) {
     const target = event.target;
     if (target instanceof HTMLElement && (target.isContentEditable || target.closest('input, select, textarea, [contenteditable]:not([contenteditable="false"])'))) return;
     if ((event.key === 'Home' || event.key === 'End') && target instanceof HTMLElement && target.closest('[data-feature-copy]')) return;
-    const index = event.key === 'ArrowLeft' ? selected - 1
-      : event.key === 'ArrowRight' ? selected + 1
+    const index = event.key === 'ArrowLeft' ? requested - 1
+      : event.key === 'ArrowRight' ? requested + 1
         : event.key === 'Home' ? 0 : event.key === 'End' ? slides.length - 1 : null;
     if (index === null) return;
     event.preventDefault();
@@ -265,10 +375,9 @@ export function initFeatureGallery(root: HTMLElement) {
     backdropPointer = false;
     if (dismiss) requestClose();
   });
-  reducedMotion.addEventListener('change', () => {
-    cancelAnimations();
-    if (closing) finishClose(generation);
-    else if (dialog.open) dialog.dataset.state = 'open';
+  reducedMotion.addEventListener('change', settleMotion);
+  window.addEventListener('resize', () => {
+    if (dialog.open && animations.size > 0) settleMotion();
   });
 
   select(0);

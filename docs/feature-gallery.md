@@ -22,8 +22,16 @@ backdrop click closes the dialog and restores focus to the original preview.
 Resizing keeps that preview reachable.
 
 The opening motion connects the selected thumbnail to the enlarged media.
-Reduced motion uses short fades, including when the preference changes while
-the dialog is open. Rapid navigation and close/reopen cancel stale animations.
+Navigation slides the media horizontally in the chosen direction while the
+description moves a shorter distance and crossfades. Repeated input completes
+the current slide and proceeds directly to the latest requested feature,
+without restarting the motion or building a queue of intermediate slides.
+Outgoing visual layers are inert, excluded from accessibility, and removed
+when the transition finishes.
+
+Reduced motion uses short fades. Changing the motion preference or resizing
+during a transition settles on the latest requested feature. Closing the
+dialog removes temporary layers and prevents stale transitions after reopening.
 
 Without JavaScript or native dialog support, every description stays visible
 below its preview and the links jump to the matching text.

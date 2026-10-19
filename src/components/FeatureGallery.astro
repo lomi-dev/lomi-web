@@ -41,9 +41,11 @@ const count = content.items.length;
             <Picture src={placeholder(index)} alt="" formats={['avif', 'webp']} widths={[640, 960, 1440, 1920]} sizes="(min-width: 1600px) 960px, (min-width: 900px) 65vw, 92vw" loading="eager" decoding="async" />
           </div>
           <div class="feature-modal-copy" data-feature-copy tabindex="0" role="region" aria-labelledby={`feature-dialog-title-${index}`}>
-            <p class="feature-modal-detail">{item.detail}</p>
-            <h3 id={`feature-dialog-title-${index}`}>{item.title}</h3>
-            <p class="feature-modal-description" id={`feature-dialog-description-${index}`}>{item.description}</p>
+            <div data-feature-copy-content>
+              <p class="feature-modal-detail">{item.detail}</p>
+              <h3 id={`feature-dialog-title-${index}`}>{item.title}</h3>
+              <p class="feature-modal-description" id={`feature-dialog-description-${index}`}>{item.description}</p>
+            </div>
           </div>
         </article>)}
       </div>
@@ -100,7 +102,7 @@ const count = content.items.length;
   .feature-modal-media { position: relative; display: grid; align-items: center; grid-column: 1; grid-row: 1 / span 2; min-width: 0; min-height: 0; overflow: hidden; background: #000; border-right: 1px solid #e2e8da; }
   .feature-modal-media :global(picture) { display: block; width: 100%; height: 100%; min-height: 0; }
   .feature-modal-media :global(img) { display: block; width: 100%; height: 100%; object-fit: contain; }
-  .feature-modal-copy { grid-column: 2; grid-row: 1; padding: 72px 36px 24px; min-width: 0; min-height: 0; overflow: auto; overscroll-behavior: contain; }
+  .feature-modal-copy { position: relative; grid-column: 2; grid-row: 1; padding: 72px 36px 24px; min-width: 0; min-height: 0; overflow: hidden auto; overscroll-behavior: contain; }
   .feature-modal-detail { margin-bottom: 24px; max-width: calc(100% - 8px); color: #616e54; font-size: 12px; line-height: 1.6; }
   .feature-modal-copy h3 { font-size: clamp(26px, 2.6vw, 38px); line-height: 1.08; letter-spacing: -.045em; font-weight: 500; }
   .feature-modal-description { margin-top: 24px; color: #535c4d; font-size: 15px; line-height: 1.75; white-space: pre-line; }
@@ -112,8 +114,8 @@ const count = content.items.length;
   [data-feature-prev] svg { transform: rotate(180deg); }
   .feature-modal-dots { display: flex; flex-wrap: wrap; align-items: center; margin-top: 10px; gap: 0; }
   .feature-modal-dots button { display: grid; place-items: center; width: 26px; min-width: 26px; height: 28px; padding: 0; border: 0; background: transparent; cursor: pointer; }
-  .feature-modal-dots span { display: block; width: 5px; height: 5px; border-radius: 99px; background: #718164; }
-  .feature-modal-dots [aria-current='true'] span { width: 17px; background: var(--color-lime); box-shadow: 0 0 0 1px #6a823e; }
+  .feature-modal-dots span { display: block; width: 17px; height: 5px; transform: scaleX(.3); border-radius: 99px; background: #718164; }
+  .feature-modal-dots [aria-current='true'] span { transform: scaleX(1); background: var(--color-lime); box-shadow: 0 0 0 1px #6a823e; }
   .feature-dialog :focus-visible { outline: 2px solid var(--color-focus); outline-offset: 3px; }
   .feature-modal-close:disabled, .feature-modal-arrows button:disabled { opacity: .4; cursor: default; }
 
@@ -122,6 +124,7 @@ const count = content.items.length;
     .feature-modal-close:hover, .feature-modal-arrows button:not(:disabled):hover { color: #26301f; background: #edf3e2; border-color: #8b9f71; }
   }
   @media (prefers-reduced-motion: no-preference) {
+    .feature-modal-dots span { transition: transform 180ms var(--ease-out), background-color 180ms ease; }
     .gallery-media :global(img) { transition: transform 300ms var(--ease-out); }
     .gallery-preview:active .gallery-open { transform: scale(.96); transition: transform 150ms ease-out; }
     @media (hover: hover) { .gallery-preview:hover .gallery-media :global(img) { transform: scale(1.015); } }
