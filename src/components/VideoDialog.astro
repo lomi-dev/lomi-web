@@ -1,13 +1,38 @@
-<dialog class="video-dialog" id="video-dialog" aria-label="Watch Lomi">
-  <button class="video-close" type="button" data-video-close aria-label="Close video" autofocus>
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="m4 4 10 10M14 4 4 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" /></svg>
-  </button>
-  <div class="video-player" data-video-player></div>
+---
+import { Picture } from 'astro:assets';
+import workbench from '../assets/product/workbench.png';
+---
+
+<dialog class="video-dialog" id="video-dialog" aria-label="Watch Lomi" aria-describedby="video-instructions" tabindex="0" autofocus>
+  <p class="video-instructions" id="video-instructions">Press Escape to close, or click outside the video.</p>
+  <div class="video-player" data-video-player data-video-status="loading">
+    <div class="video-poster" data-video-poster aria-hidden="true">
+      <Picture src={workbench} alt="" formats={['avif', 'webp']} widths={[640, 960, 1440, 1920]} sizes="(min-width: 1112px) 1080px, calc(100vw - 32px)" loading="eager" decoding="async" />
+    </div>
+    <div class="video-mount" data-video-mount inert></div>
+  </div>
 </dialog>
 
 <script>
+  type YouTubePlayer = { mute: () => void; playVideo: () => void; destroy: () => void };
+  type YouTubeEvent = { target: YouTubePlayer; data?: number };
+  type YouTubeAPI = { Player: new (iframe: HTMLIFrameElement, options: {
+    events: {
+      onReady: (event: YouTubeEvent) => void;
+      onStateChange: (event: YouTubeEvent) => void;
+      onAutoplayBlocked: () => void;
+      onError: () => void;
+    };
+  }) => YouTubePlayer };
+  const youtubeWindow = window as Window & { YT?: YouTubeAPI; onYouTubeIframeAPIReady?: () => void };
   const dialog = document.querySelector<HTMLDialogElement>('#video-dialog');
   const player = dialog?.querySelector<HTMLElement>('[data-video-player]');
+  const mount = dialog?.querySelector<HTMLElement>('[data-video-mount]');
+  let apiPromise: Promise<YouTubeAPI> | null = null;
+  let youtubePlayer: YouTubePlayer | null = null;
+  let playbackVersion = 0;
+  let playbackTimeout = 0;
+  let revealFrame = 0;
   let returnFocus: HTMLElement | null = null;
   let scrollPosition = { x: 0, y: 0 };
   let previousRootOverflow = '';
@@ -15,6 +40,104 @@
   let backdropPointer = false;
   let motion: Animation | null = null;
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+
+  // Load the official API only after the visitor opens the video. A failed
+  // request can be retried on the next open without leaving a stale callback.
+  function loadYouTubeAPI(): Promise<YouTubeAPI> {
+    if (youtubeWindow.YT?.Player) return Promise.resolve(youtubeWindow.YT);
+    if (apiPromise) return apiPromise;
+    apiPromise = new Promise((resolve, reject) => {
+      const previousReady = youtubeWindow.onYouTubeIframeAPIReady;
+      const script = document.createElement('script');
+      let timeout = 0;
+      const cleanup = () => {
+        clearTimeout(timeout);
+        if (youtubeWindow.onYouTubeIframeAPIReady === ready) youtubeWindow.onYouTubeIframeAPIReady = previousReady;
+      };
+      const fail = () => {
+        cleanup();
+        script.remove();
+        apiPromise = null;
+        reject(new Error('YouTube player API did not load'));
+      };
+      const ready = () => {
+        cleanup();
+        if (youtubeWindow.YT?.Player) resolve(youtubeWindow.YT);
+        else fail();
+        previousReady?.();
+      };
+      youtubeWindow.onYouTubeIframeAPIReady = ready;
+      script.src = 'https://www.youtube.com/iframe_api';
+      script.async = true;
+      script.onerror = fail;
+      timeout = window.setTimeout(fail, 12000);
+      document.head.append(script);
+    });
+    return apiPromise;
+  }
+
+  const currentPlayback = (version: number) => version === playbackVersion && dialog?.open && dialog.dataset.state !== 'closing';
+
+  function revealPlayer(version: number, status: 'playing' | 'fallback') {
+    if (!currentPlayback(version) || !player || !mount) return;
+    clearTimeout(playbackTimeout);
+    mount.inert = false;
+    player.dataset.videoStatus = status;
+  }
+
+  function clearPlayback() {
+    playbackVersion++;
+    clearTimeout(playbackTimeout);
+    cancelAnimationFrame(revealFrame);
+    revealFrame = 0;
+    const active = youtubePlayer;
+    youtubePlayer = null;
+    try { active?.destroy(); } catch { /* Removing the iframe below also stops playback. */ }
+    mount?.replaceChildren();
+    if (mount) mount.inert = true;
+    if (player) player.dataset.videoStatus = 'loading';
+  }
+
+  function startPlayback() {
+    if (!mount) return;
+    clearPlayback();
+    const version = playbackVersion;
+    const iframe = document.createElement('iframe');
+    iframe.id = 'lomi-youtube-player';
+    iframe.title = 'Lomi video';
+    const source = new URL('https://www.youtube.com/embed/dQw4w9WgXcQ');
+    // Start through onReady, after mute(), to prevent an audible first frame.
+    source.search = new URLSearchParams({ autoplay: '0', controls: '1', playsinline: '1', enablejsapi: '1', origin: location.origin }).toString();
+    iframe.src = source.href;
+    iframe.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
+    iframe.allowFullscreen = true;
+    iframe.referrerPolicy = 'strict-origin-when-cross-origin';
+    mount.replaceChildren(iframe);
+    // If playback is blocked or unavailable, make YouTube's native play/error
+    // controls reachable rather than leaving the visitor behind a poster.
+    playbackTimeout = window.setTimeout(() => revealPlayer(version, 'fallback'), 15000);
+    void loadYouTubeAPI().then((api) => {
+      if (!currentPlayback(version)) return;
+      youtubePlayer = new api.Player(iframe, { events: {
+        onReady: ({ target }) => {
+          if (!currentPlayback(version)) return;
+          target.mute();
+          target.playVideo();
+        },
+        onStateChange: ({ data }) => {
+          if (data !== 1 || !currentPlayback(version) || player?.dataset.videoStatus === 'playing') return;
+          cancelAnimationFrame(revealFrame);
+          // PLAYING is the documented playback signal. Give the embedded
+          // document a paint opportunity before swapping the poster out.
+          revealFrame = requestAnimationFrame(() => {
+            revealFrame = requestAnimationFrame(() => revealPlayer(version, 'playing'));
+          });
+        },
+        onAutoplayBlocked: () => revealPlayer(version, 'fallback'),
+        onError: () => revealPlayer(version, 'fallback'),
+      } });
+    }).catch(() => revealPlayer(version, 'fallback'));
+  }
 
   // Sample the reference's unit-mass spring (stiffness 300, damping 30).
   // Normalize its response to land exactly at the requested duration's endpoint.
@@ -66,14 +189,14 @@
     if (!dialog?.open || dialog.dataset.state === 'closing') return;
     // Stop playback as soon as closing is requested, while the native dialog
     // remains modal until its exit animation has finished.
-    player?.replaceChildren();
+    clearPlayback();
     animateDialog(true);
   }
 
   document.querySelectorAll<HTMLAnchorElement>('[data-video-open]').forEach((trigger) => {
     trigger.addEventListener('click', (event) => {
       if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-      if (!dialog || !player || typeof dialog.showModal !== 'function') return;
+      if (!dialog || !player || !mount || typeof dialog.showModal !== 'function') return;
       if (dialog.open) {
         event.preventDefault();
         return;
@@ -89,17 +212,10 @@
       document.documentElement.style.overflow = 'hidden';
       document.body.style.overflow = 'hidden';
       animateDialog(false);
-      const iframe = document.createElement('iframe');
-      iframe.title = 'Lomi video';
-      iframe.src = 'https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1&playsinline=1';
-      iframe.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
-      iframe.allowFullscreen = true;
-      iframe.referrerPolicy = 'strict-origin-when-cross-origin';
-      player.replaceChildren(iframe);
+      startPlayback();
     });
   });
 
-  dialog?.querySelector('[data-video-close]')?.addEventListener('click', requestClose);
   dialog?.addEventListener('cancel', (event) => {
     event.preventDefault();
     requestClose();
@@ -118,7 +234,7 @@
     motion?.cancel();
     motion = null;
     delete dialog.dataset.state;
-    player?.replaceChildren();
+    clearPlayback();
     document.documentElement.style.overflow = previousRootOverflow;
     document.body.style.overflow = previousBodyOverflow;
     window.scrollTo({ left: scrollPosition.x, top: scrollPosition.y, behavior: 'instant' });
@@ -135,22 +251,26 @@
 </script>
 
 <style>
-  .video-dialog { width: min(1080px, calc(100vw - 32px), calc((100dvh - 88px) * 16 / 9)); max-width: none; max-height: calc(100dvh - 88px); inset-block: 56px 0; margin: auto; padding: 0; overflow: visible; border: 0; border-radius: 12px; background: #050705; color: #f0f4e9; box-shadow: 0 30px 100px #0008; }
+  .video-dialog { width: min(1080px, calc(100vw - 32px), calc((100dvh - 32px) * 16 / 9)); max-width: none; max-height: calc(100dvh - 32px); margin: auto; padding: 0; overflow: auto; overscroll-behavior: contain; border: 0; border-radius: 12px; background: #050705; color: #f0f4e9; box-shadow: 0 30px 100px #0008; }
+  .video-dialog:focus { outline: none; }
+  .video-dialog:focus-visible { outline: 2px solid #d5f8a8; outline-offset: 3px; }
   .video-dialog::backdrop { background: rgb(0 0 0 / 50%); backdrop-filter: blur(12px); opacity: 1; transition: opacity 300ms ease; }
   .video-dialog[data-state='closing']::backdrop { opacity: 0; transition-duration: 220ms; }
   @starting-style {
     .video-dialog[open]::backdrop { opacity: 0; }
   }
-  .video-close { position: absolute; z-index: 2; top: -54px; right: 0; display: grid; width: 44px; height: 44px; place-items: center; padding: 0; border: 1px solid #ffffff40; border-radius: 50%; background: rgb(16 21 15 / 80%); color: #f0f4e9; cursor: pointer; }
-  .video-close:focus-visible { outline: 2px solid #d5f8a8; outline-offset: 2px; }
-  .video-player { width: 100%; min-width: 200px; min-height: 200px; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 12px; background: #050705; }
+  .video-instructions { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .video-player { position: relative; width: 100%; min-width: 200px; min-height: 200px; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 12px; background: #050705; }
+  .video-poster, .video-mount { position: absolute; inset: 0; transition: opacity 200ms ease; }
+  .video-poster { pointer-events: none; }
+  .video-poster :global(picture), .video-poster :global(img) { display: block; width: 100%; height: 100%; }
+  .video-poster :global(img) { object-fit: cover; object-position: left top; }
+  .video-mount { opacity: 0; pointer-events: none; }
+  .video-player[data-video-status='playing'] .video-mount, .video-player[data-video-status='fallback'] .video-mount { opacity: 1; pointer-events: auto; }
+  .video-player[data-video-status='playing'] .video-poster, .video-player[data-video-status='fallback'] .video-poster { opacity: 0; }
   .video-player :global(iframe) { display: block; width: 100%; height: 100%; border: 0; }
-  @media (hover: hover) {
-    .video-close:hover { background: #263020; }
-  }
   @media (max-height: 350px) {
-    .video-dialog { width: min(640px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); inset-block: 0; overflow: auto; }
-    .video-close { position: sticky; top: 8px; right: 8px; float: right; margin: 8px 8px -52px 0; }
+    .video-dialog { width: min(640px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); }
   }
   @media (prefers-reduced-motion: reduce) {
     .video-dialog::backdrop, .video-dialog[data-state='closing']::backdrop { transition-duration: 100ms; }

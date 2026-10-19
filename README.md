@@ -141,10 +141,19 @@ devices show the control immediately.
 The native video dialog loads YouTube only after activation and removes the
 player as soon as closing starts. Its center-scale entrance and exit follow
 Magic UI's `from-center` example, with a dimmed, blurred backdrop. Reduced
-motion uses a short fade. The surface contains only the video; a floating close
-button sits above it, moving inside on very short screens. The close button,
-backdrop clicks, and Escape from
-the dialog controls dismiss it and restore focus to the screenshot.
+motion uses a short fade. The surface contains only the video, with no close
+button. Backdrop clicks and Escape from the dialog dismiss it and restore focus
+to the screenshot. Shift+Tab from the player returns to the dialog.
+
+The official YouTube IFrame API loads only after activation. It mutes the player
+before starting playback automatically; YouTube's native controls provide volume
+adjustment. The same workbench image used in the hero remains visible during
+loading. The first `PLAYING` event, followed by two animation frames, reveals the
+player. This is the closest documented playback signal; the cross-origin embed
+does not expose a first-painted-frame event. If autoplay is blocked, the player
+reports an error, or loading times out, the native controls become available for
+manual playback or YouTube's error message. Closing destroys the player and
+invalidates pending callbacks so reopening starts with a fresh muted session.
 Without JavaScript, the screenshot links to
 the same video on YouTube. Replace the placeholder video ID in both components
 before launch. Use `http://localhost:4322` for local video playback: YouTube

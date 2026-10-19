@@ -43,6 +43,10 @@ The main caption and alt text use the CMS fields. The captures are shown directl
 without an additional window header or view selector. It does not execute code
 or run the application. The play control opens the user-selected YouTube video
 `dQw4w9WgXcQ`; its iframe is created on activation and removed on close.
+The same workbench capture acts as the loading poster inside the dialog. The
+[official YouTube IFrame API](https://developers.google.com/youtube/iframe_api_reference)
+starts playback after muting, retains the native controls, and signals when the
+poster can be replaced by the player. No custom controls cover the playing video.
 The native dialog's motion is inspired by [Magic UI's Hero Video Dialog](https://magicui.design/docs/components/hero-video-dialog),
 using the `from-center` scale and its stiffness-300, damping-30 spring response.
 It is implemented with the Web Animations API and the browser's native dialog;

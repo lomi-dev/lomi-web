@@ -148,7 +148,25 @@ async function mockVideoRequests(targetPage) {
   const requests = [];
   await targetPage.route(/^https:\/\/(?:[^/]+\.)?(?:youtube\.com|youtube-nocookie\.com|youtu\.be|ytimg\.com|googlevideo\.com)\//, async (route) => {
     requests.push(route.request().url());
-    await route.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><html lang="en"><head><title>Mock video</title></head><body><main><h1>Mock video</h1><button type="button">Play mock video</button></main></body></html>' });
+    if (new URL(route.request().url()).pathname === '/iframe_api') {
+      await route.fulfill({ status: 200, contentType: 'text/javascript', body: `
+        window.__mockYouTube = { players: [] };
+        window.YT = { PlayerState: { PLAYING: 1 }, Player: class {
+          constructor(iframe, options) {
+            this.iframe = iframe; this.events = options.events; this.calls = [];
+            window.__mockYouTube.players.push(this);
+          }
+          mute() { this.calls.push('mute'); }
+          playVideo() { this.calls.push('playVideo'); }
+          stopVideo() { this.calls.push('stopVideo'); }
+          destroy() { this.calls.push('destroy'); this.iframe.remove(); }
+          getIframe() { return this.iframe; }
+        }};
+        window.onYouTubeIframeAPIReady?.();
+      ` });
+      return;
+    }
+    await route.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><html lang="en"><head><title>Mock video</title></head><body><main><h1>Mock video</h1><button type="button">Play mock video</button><label>Volume<input aria-label="Volume" type="range" min="0" max="100" value="0"></label></main></body></html>' });
   });
   return requests;
 }
@@ -176,46 +194,84 @@ async function settleVideoMotion(dialog) {
 async function verifyVideoDialog(targetPage, requests, touch = false) {
   const trigger = targetPage.locator('[data-video-open]');
   const dialog = targetPage.getByRole('dialog', { name: 'Watch Lomi', exact: true });
-  const close = dialog.getByRole('button', { name: 'Close video' });
+  const player = targetPage.locator('#video-dialog [data-video-player]');
+  const poster = player.locator('[data-video-poster]');
+  const mount = player.locator('[data-video-mount]');
+  let currentPlayer = -1;
+  const emit = async (name, data, index = currentPlayer) => targetPage.evaluate(({ name, data, index }) => {
+    const instance = window.__mockYouTube.players[index];
+    instance.events[name]?.({ target: instance, data });
+  }, { name, data, index });
+  const calls = (index = currentPlayer) => targetPage.evaluate((index) => window.__mockYouTube.players[index].calls, index);
   await expect(trigger).toHaveCount(1);
   await expect(trigger).toHaveAttribute('href', videoUrl);
   await expect(trigger).toHaveAttribute('aria-controls', 'video-dialog');
   await expect(targetPage.locator('#video-dialog iframe')).toHaveCount(0);
-  await expect(targetPage.locator('#video-dialog .video-toolbar, #video-dialog .video-fallback, #video-dialog h2')).toHaveCount(0);
+  await expect(targetPage.locator('#video-dialog [data-video-close], #video-dialog .video-close, #video-dialog .video-toolbar, #video-dialog .video-fallback, #video-dialog h2, #video-dialog button, #video-dialog input[type="range"]')).toHaveCount(0);
+  await expect(poster.locator('img')).toHaveCount(1);
+  await expect.poll(() => poster.locator('img').evaluate((image) => image.naturalWidth)).toBeGreaterThan(0);
   expect(requests, 'YouTube receives no requests before activation').toEqual([]);
   await trigger.evaluate((element) => element.scrollIntoView({ block: 'center', behavior: 'instant' }));
-  if (touch) await expectPlayCenteredOnImage(targetPage);
-  else {
+  if (!touch) {
     await trigger.focus();
     await expect(trigger).toBeFocused();
     await trigger.evaluate((element) => {
       element.scrollIntoView({ block: 'center', behavior: 'instant' });
       element.focus({ preventScroll: true });
     });
-    await expectPlayCenteredOnImage(targetPage);
   }
+  await expectPlayCenteredOnImage(targetPage);
   const initial = await targetPage.evaluate(() => ({ x: scrollX, y: scrollY, root: document.documentElement.style.overflow, body: document.body.style.overflow }));
-  const expectOpen = async () => {
+  const expectOpen = async (start = true) => {
     await expect(dialog).toBeVisible();
     await settleVideoMotion(dialog);
-    await expect(close).toBeFocused();
-    const iframe = dialog.locator('iframe');
+    await expect(dialog).toBeFocused();
+    const iframe = mount.locator('iframe');
     await expect(iframe).toHaveCount(1);
     const source = new URL(await iframe.getAttribute('src'));
     expect(source.origin).toBe('https://www.youtube.com');
     expect(source.pathname).toBe('/embed/dQw4w9WgXcQ');
-    expect(source.searchParams.get('autoplay')).toBe('1');
+    expect(source.searchParams.get('autoplay'), 'Playback waits for the API to mute first').toBe('0');
+    expect(source.searchParams.get('controls')).toBe('1');
+    expect(source.searchParams.get('playsinline')).toBe('1');
+    expect(source.searchParams.get('enablejsapi')).toBe('1');
+    expect(source.searchParams.get('origin')).toBe(new URL(targetPage.url()).origin);
     await expect(iframe).toHaveAttribute('title', 'Lomi video');
-    await expect(targetPage.frameLocator('#video-dialog iframe').getByRole('heading', { name: 'Mock video' })).toBeVisible();
-    expect(requests.length).toBeGreaterThan(0);
+    await expect(targetPage.frameLocator('#video-dialog iframe').locator('h1')).toHaveText('Mock video');
+    await expect(player).toHaveAttribute('data-video-status', 'loading');
+    await expect(poster).toHaveCSS('opacity', '1');
+    await expect(mount).toHaveAttribute('inert', '');
+    await expect(mount).toHaveCSS('opacity', '0');
+    await expect.poll(() => targetPage.evaluate(() => window.__mockYouTube?.players.length || 0)).toBeGreaterThan(currentPlayer + 1);
+    currentPlayer = await targetPage.evaluate(() => window.__mockYouTube.players.length - 1);
+    expect(await calls(), 'Iframe loading alone does not start playback').toEqual([]);
+    await emit('onReady');
+    expect(await calls(), 'The player is muted before any play request').toEqual(['mute', 'playVideo']);
+    await expect(player).toHaveAttribute('data-video-status', 'loading');
+    await expect(poster, 'The screenshot stays visible after readiness until playback starts').toHaveCSS('opacity', '1');
+    await expect(mount).toHaveAttribute('inert', '');
+    if (start) {
+      await emit('onStateChange', 1);
+      await expect(player).toHaveAttribute('data-video-status', 'playing');
+      await expect(poster).toHaveCSS('opacity', '0');
+      await expect(mount).toHaveCSS('opacity', '1');
+      await expect(mount).not.toHaveAttribute('inert');
+    }
+    expect(requests.some((request) => new URL(request).pathname === '/iframe_api')).toBe(true);
     expect(await targetPage.evaluate(() => getComputedStyle(document.documentElement).overflowY)).toBe('hidden');
     expect(await targetPage.evaluate(() => getComputedStyle(document.body).overflowY)).toBe('hidden');
   };
   const expectClosed = async () => {
-    await expect(targetPage.locator('#video-dialog iframe')).toHaveCount(0);
+    await expect(mount.locator('iframe')).toHaveCount(0);
     await expect(dialog).not.toBeVisible();
     await expect(trigger).toBeFocused();
+    expect(await calls(), 'Closing unloads the API player').toContain('destroy');
     expect(await targetPage.evaluate(() => ({ x: scrollX, y: scrollY, root: document.documentElement.style.overflow, body: document.body.style.overflow })), 'Closing video restores page scrolling and position').toEqual(initial);
+  };
+  const escape = async () => {
+    // Cross-origin iframe key events cannot reach the parent native dialog.
+    await dialog.focus();
+    await targetPage.keyboard.press('Escape');
   };
   if (!touch) await targetPage.locator('#video-dialog').evaluate((element) => {
     const observer = new MutationObserver(() => {
@@ -245,25 +301,56 @@ async function verifyVideoDialog(targetPage, requests, touch = false) {
     await targetPage.mouse.wheel(0, 500);
     await targetPage.waitForTimeout(100);
     expect(await targetPage.evaluate(() => scrollY), 'The page stays locked behind the video').toBe(initial.y);
-    await close.focus();
     await trigger.evaluate((element) => element.focus({ preventScroll: true }));
-    await expect(close, 'The modal makes background controls inert').toBeFocused();
+    await expect(dialog, 'The modal makes background controls inert').toBeFocused();
     await targetPage.keyboard.press('Tab');
-    await expect(dialog.locator('iframe'), 'Tab reaches the video player from Close').toBeFocused();
+    await expect(mount.locator('iframe'), 'Tab reaches native player controls').toBeFocused();
+    await targetPage.frameLocator('#video-dialog iframe').getByRole('button', { name: 'Play mock video' }).focus();
     await targetPage.keyboard.press('Shift+Tab');
-    await expect(close).toBeFocused();
+    await expect(dialog, 'Shift+Tab returns from the first player control to the dialog for Escape').toBeFocused();
+    const volume = targetPage.frameLocator('#video-dialog iframe').getByRole('slider', { name: 'Volume' });
+    await volume.focus();
+    await targetPage.keyboard.press('ArrowRight');
+    await expect(volume).toHaveValue('1');
+    await dialog.focus();
     const accessibility = await new AxeBuilder({ page: targetPage }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
     expect(accessibility.violations, 'Video dialog accessibility').toEqual([]);
   }
-  await targetPage.keyboard.press('Escape');
+  await escape();
   await expectClosed();
   if (!touch) {
-    await trigger.click();
-    await expectOpen();
-    await close.click();
+    await trigger.evaluate((element) => element.click());
+    await expect.poll(() => targetPage.evaluate(() => window.__mockYouTube.players.length)).toBeGreaterThan(currentPlayer + 1);
+    currentPlayer = await targetPage.evaluate(() => window.__mockYouTube.players.length - 1);
+    await escape();
     await expectClosed();
+    await emit('onReady');
+    await emit('onStateChange', 1);
+    expect(await calls(), 'Closing before readiness prevents late mute or play calls').toEqual(['destroy']);
+    await expect(mount.locator('iframe')).toHaveCount(0);
+    for (const event of ['onAutoplayBlocked', 'onError']) {
+      await trigger.click();
+      await expectOpen(false);
+      await emit(event, event === 'onError' ? 100 : undefined);
+      await expect(player).toHaveAttribute('data-video-status', 'fallback');
+      await expect(poster).toHaveCSS('opacity', '0');
+      await expect(mount).not.toHaveAttribute('inert');
+      await expect(mount).toHaveCSS('opacity', '1');
+      await escape();
+      await expectClosed();
+    }
+    const stale = currentPlayer;
     await trigger.click();
-    await expectOpen();
+    await expectOpen(false);
+    await emit('onReady', undefined, stale);
+    await emit('onStateChange', 1, stale);
+    await emit('onError', 100, stale);
+    await targetPage.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    await expect(player, 'Callbacks from a closed player cannot reveal the new session').toHaveAttribute('data-video-status', 'loading');
+    await expect(poster).toHaveCSS('opacity', '1');
+    expect(await calls()).toEqual(['mute', 'playVideo']);
+    await emit('onStateChange', 1);
+    await expect(player).toHaveAttribute('data-video-status', 'playing');
     const bounds = await dialog.boundingBox();
     expect(bounds.x, 'Video modal leaves a clickable backdrop').toBeGreaterThan(2);
     await targetPage.mouse.click(bounds.x / 2, bounds.y + bounds.height / 2);
@@ -273,7 +360,7 @@ async function verifyVideoDialog(targetPage, requests, touch = false) {
     expect(await dialog.evaluate((element) => element.getAnimations().flatMap((animation) => animation.effect.getKeyframes())
       .every((frame) => !frame.transform || frame.transform === 'none')), 'Reduced-motion video entrance avoids scaling').toBe(true);
     await expectOpen();
-    await targetPage.keyboard.press('Escape');
+    await escape();
     await expectClosed();
     await targetPage.emulateMedia({ reducedMotion: 'no-preference' });
     const pendingScroll = await trigger.evaluate((element) => {
@@ -285,31 +372,31 @@ async function verifyVideoDialog(targetPage, requests, touch = false) {
     await expectOpen();
     await targetPage.waitForTimeout(350);
     expect(await targetPage.evaluate(() => scrollY), 'Opening video cancels pending smooth page scrolling').toBe(pendingScroll);
-    await targetPage.keyboard.press('Escape');
+    await escape();
     await expect(dialog).not.toBeVisible();
-    await expect(targetPage.locator('#video-dialog iframe')).toHaveCount(0);
+    await expect(mount.locator('iframe')).toHaveCount(0);
     await expect(trigger).toBeFocused();
     expect(await targetPage.evaluate(() => scrollY), 'Closing after pending scrolling restores the activation position').toBe(pendingScroll);
   } else {
     await trigger.tap();
     await expectOpen();
     await targetPage.setViewportSize({ width: 844, height: 390 });
-    await targetPage.keyboard.press('Escape');
+    await escape();
     await expect(dialog).not.toBeVisible();
-    await expect(targetPage.locator('#video-dialog iframe')).toHaveCount(0);
+    await expect(mount.locator('iframe')).toHaveCount(0);
     await expect(trigger).toBeFocused();
     await expect(trigger, 'Portrait-to-landscape dismissal keeps the video opener visible').toBeInViewport();
     await trigger.tap();
     await expect(dialog).toBeVisible();
     await targetPage.setViewportSize({ width: 320, height: 200 });
     await settleVideoMotion(dialog);
-    await expect(close, 'The video close control stays reachable in a short viewport').toBeInViewport();
-    const playerBounds = await dialog.locator('iframe').boundingBox();
+    await expect(dialog, 'The short-view modal remains available for Escape').toBeInViewport();
+    const playerBounds = await player.boundingBox();
     expect(playerBounds.width, 'Short-view video player width').toBeGreaterThanOrEqual(200);
     expect(playerBounds.height, 'Short-view video player height').toBeGreaterThanOrEqual(200);
-    await close.tap();
+    await escape();
     await expect(dialog).not.toBeVisible();
-    await expect(targetPage.locator('#video-dialog iframe')).toHaveCount(0);
+    await expect(mount.locator('iframe')).toHaveCount(0);
     await expect(trigger).toBeFocused();
     await expect(trigger).toBeInViewport();
     expect(await targetPage.evaluate(() => ({ root: document.documentElement.style.overflow, body: document.body.style.overflow }))).toEqual({ root: initial.root, body: initial.body });
@@ -333,7 +420,7 @@ async function backgroundPixels(targetPage) {
 }
 
 async function pointerColorContrast(targetPage, center, duration = 0) {
-  return targetPage.locator('canvas[data-background-canvas]').evaluate(async (canvas, { point, duration }) => {
+  const sampleCanvas = (canvas, { point, duration }) => {
     const context = canvas.getContext('2d');
     const styles = getComputedStyle(canvas.closest('lomi-shape-waves'));
     const swatch = document.createElement('canvas');
@@ -352,8 +439,9 @@ async function pointerColorContrast(targetPage, center, duration = 0) {
     const ambientContrast = contrast(ambient);
     const interactionContrast = contrast(interaction);
     const threshold = ambientContrast + (interactionContrast - ambientContrast) * .2;
-    const pixelContrast = (data, index) => contrast(background.map((channel, component) =>
-      channel + (data[index + component] - channel) * data[index + 3] / 255));
+    const pixelContrast = (data, index) => Math.max(
+      Math.abs(data[index] - background[0]), Math.abs(data[index + 1] - background[1]),
+      Math.abs(data[index + 2] - background[2])) * data[index + 3] / 255;
     const scaleX = canvas.width / canvas.clientWidth;
     const scaleY = canvas.height / canvas.clientHeight;
     const left = Math.max(0, Math.floor((point.x - 170) * scaleX));
@@ -367,9 +455,12 @@ async function pointerColorContrast(targetPage, center, duration = 0) {
         for (let x = 0; x < width; x++) {
           const index = (y * width + x) * 4;
           const value = pixelContrast(pixels, index);
-          const distance = Math.hypot((left + x) / scaleX - point.x, (top + y) / scaleY - point.y);
           peak = Math.max(peak, value);
-          if (value > threshold && distance < 140) nearChanged++;
+          if (value > threshold) {
+            const dx = (left + x) / scaleX - point.x;
+            const dy = (top + y) / scaleY - point.y;
+            if (dx * dx + dy * dy < 140 * 140) nearChanged++;
+          }
         }
       }
       const control = context.getImageData(0, 0, Math.min(96, canvas.width), Math.min(96, canvas.height)).data;
@@ -377,17 +468,24 @@ async function pointerColorContrast(targetPage, center, duration = 0) {
       for (let index = 0; index < control.length; index += 4) controlPeak = Math.max(controlPeak, pixelContrast(control, index));
       return { peak, nearChanged, controlPeak, threshold, ambientContrast, interactionContrast };
     };
+    if (!duration) return sample();
     const observed = sample();
     const until = performance.now() + duration;
-    while (performance.now() < until) {
-      await new Promise(requestAnimationFrame);
-      const frame = sample();
-      observed.peak = Math.max(observed.peak, frame.peak);
-      observed.nearChanged = Math.max(observed.nearChanged, frame.nearChanged);
-      observed.controlPeak = Math.max(observed.controlPeak, frame.controlPeak);
-    }
-    return observed;
-  }, { point: center, duration });
+    return { result: new Promise((resolve) => {
+      const tick = () => {
+        const frame = sample();
+        observed.peak = Math.max(observed.peak, frame.peak);
+        observed.nearChanged = Math.max(observed.nearChanged, frame.nearChanged);
+        observed.controlPeak = Math.max(observed.controlPeak, frame.controlPeak);
+        if (performance.now() < until) requestAnimationFrame(tick);
+        else resolve(observed);
+      };
+      requestAnimationFrame(tick);
+    }) };
+  };
+  const canvas = targetPage.locator('canvas[data-background-canvas]');
+  return duration ? canvas.evaluateHandle(sampleCanvas, { point: center, duration })
+    : canvas.evaluate(sampleCanvas, { point: center, duration });
 }
 
 async function verifyBackgroundPointer() {
@@ -405,9 +503,15 @@ async function verifyBackgroundPointer() {
   expect(palette.interactionContrast, 'Pointer color contrasts more strongly than ambient shapes').toBeGreaterThan(palette.ambientContrast);
   expect(palette.peak, 'Fresh pointer region contains only ambient background colors').toBeLessThanOrEqual(palette.threshold);
   await pointerPage.mouse.move(box.x + center.x - 100, box.y + center.y);
-  const observed = pointerColorContrast(pointerPage, center, 500);
-  await pointerPage.mouse.move(box.x + center.x + 100, box.y + center.y, { steps: 12 });
-  const response = await observed;
+  // Sample the full transient ripple: its strongest tint can arrive after the gesture.
+  const sampler = await pointerColorContrast(pointerPage, center, 1500);
+  let response;
+  try {
+    await pointerPage.mouse.move(box.x + center.x + 100, box.y + center.y, { steps: 12 });
+    response = await sampler.evaluate(async (sampler) => await sampler.result);
+  } finally {
+    await sampler.dispose();
+  }
   expect(response.nearChanged, 'A continuous 200px pointer sweep changes nearby cells toward the interaction color').toBeGreaterThan(0);
   expect(response.controlPeak, 'A distant control region remains ambient throughout the ripple').toBeLessThanOrEqual(palette.threshold);
   await expect.poll(async () => (await read()).peak, { message: 'A stationary pointer stops injection and the ripple fades', timeout: 15000, intervals: [100, 250, 500] }).toBeLessThanOrEqual(palette.threshold);
