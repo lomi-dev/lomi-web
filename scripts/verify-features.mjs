@@ -66,6 +66,8 @@ async function selected(page, index, count = 6, title = seed.features.items[inde
   await expect(modal).toHaveAttribute('aria-describedby', `feature-dialog-description-${index}`);
   if (title) await expect(modal).toHaveAccessibleName(title);
   await expect(modal.locator('[data-feature-slide]:not([hidden])')).toHaveCount(1);
+  await expect(modal.locator('[data-feature-navigation]')).toHaveCount(1);
+  await expect(modal.locator('[data-feature-slide]:not([hidden]) [data-feature-navigation]')).toHaveCount(1);
   await expect(page.locator(`#feature-dialog-title-${index}`)).toBeVisible();
   await expect(page.locator(`#feature-dialog-description-${index}`)).toBeVisible();
   if (count === 6) await expect(page.locator(`#feature-dialog-description-${index}`)).toHaveText(seed.features.items[index].description);
@@ -140,6 +142,14 @@ async function directionStep(page, control, index, direction) {
     const beforeSlide = element.querySelector('[data-feature-slide]:not([hidden])');
     const left = (root, selector) => root.querySelector(selector).getBoundingClientRect().left;
     const box = (item) => { const rect = item.getBoundingClientRect(); return { x: rect.x, y: rect.y, width: rect.width, height: rect.height }; };
+    const navigation = element.querySelector('[data-feature-navigation]');
+    const navigationState = (nav) => ({
+      count: nav.querySelector('.feature-modal-paging > span').textContent.trim(),
+      current: [...nav.querySelectorAll('.feature-modal-dots button')].findIndex((dot) => dot.getAttribute('aria-current') === 'true'),
+      countColor: getComputedStyle(nav.querySelector('.feature-modal-paging > span')).color,
+      countNumerals: getComputedStyle(nav.querySelector('.feature-modal-paging > span')).fontVariantNumeric,
+      previousIcon: getComputedStyle(nav.querySelector('.feature-modal-arrows button:first-child svg')).transform,
+    });
     const before = {
       slide: beforeSlide.getBoundingClientRect().left,
       media: left(beforeSlide, '[data-feature-modal-media]'),
@@ -147,9 +157,15 @@ async function directionStep(page, control, index, direction) {
       copy: left(beforeSlide, '[data-feature-copy]'),
       description: left(beforeSlide, '.feature-modal-description'),
       close: box(element.querySelector('[data-feature-close]')),
-      navigation: box(element.querySelector('.feature-modal-navigation')),
+      navigation: left(beforeSlide, '[data-feature-navigation]'),
+      count: left(navigation, '.feature-modal-paging > span'),
+      arrows: left(navigation, '.feature-modal-arrows'),
+      dots: left(navigation, '.feature-modal-dots'),
+      navigationState: navigationState(navigation),
     };
-    element.querySelector(selector).click();
+    const trigger = element.querySelector(selector);
+    trigger.focus({ preventScroll: true });
+    trigger.click();
     const animations = element.getAnimations({ subtree: true }).filter((animation) => animation.constructor.name === 'Animation');
     for (const animation of animations) {
       animation.pause();
@@ -168,23 +184,34 @@ async function directionStep(page, control, index, direction) {
         picture: left(slide, 'picture') - before.picture,
         copy: left(slide, '[data-feature-copy]') - before.copy,
         description: left(slide, '.feature-modal-description') - before.description,
+        navigation: left(slide, '[data-feature-navigation]') - before.navigation,
+        count: left(navigation, '.feature-modal-paging > span') - before.count,
+        arrows: left(navigation, '.feature-modal-arrows') - before.arrows,
+        dots: left(navigation, '.feature-modal-dots') - before.dots,
       },
       outgoingDisplacements: outgoing ? {
         media: left(outgoing, '.feature-modal-media') - before.media,
         picture: left(outgoing, 'picture') - before.picture,
         copy: left(outgoing, '.feature-modal-copy') - before.copy,
         description: left(outgoing, '.feature-modal-description') - before.description,
+        navigation: left(outgoing, '.feature-modal-navigation') - before.navigation,
+        count: left(outgoing, '.feature-modal-paging > span') - before.count,
+        arrows: left(outgoing, '.feature-modal-arrows') - before.arrows,
+        dots: left(outgoing, '.feature-modal-dots') - before.dots,
       } : null,
       opacity: [slide, copy, slide.querySelector('.feature-modal-description'), slide.querySelector('picture'), slide.querySelector('[data-feature-modal-media]'),
         outgoing, outgoing?.querySelector('.feature-modal-copy'), outgoing?.querySelector('picture'), outgoing?.querySelector('.feature-modal-media')]
         .map((item) => item ? Number(getComputedStyle(item).opacity) : null),
       ownership: animations.map((animation) => animation.effect.target === slide ? 'incoming' : animation.effect.target === outgoing ? 'outgoing' : 'child'),
       clipped: ['hidden', 'clip'].includes(getComputedStyle(frame).overflowX),
-      fixedControls: { before: { close: before.close, navigation: before.navigation },
-        after: { close: box(element.querySelector('[data-feature-close]')), navigation: box(element.querySelector('.feature-modal-navigation')) } },
+      close: { before: before.close, after: box(element.querySelector('[data-feature-close]')) },
+      navigationIdentity: element.querySelector('[data-feature-navigation]') === navigation,
+      triggerFocused: document.activeElement === trigger,
+      navigationSnapshot: { before: before.navigationState, outgoing: outgoing ? navigationState(outgoing.querySelector('.feature-modal-navigation')) : null },
       layers: layers.map((layer) => ({ kind: layer.dataset.featureMotionLayer,
         inert: layer.inert, hidden: layer.getAttribute('aria-hidden'), ids: layer.querySelectorAll('[id]').length + Number(layer.hasAttribute('id')),
-        media: layer.querySelectorAll('.feature-modal-media').length, copy: layer.querySelectorAll('.feature-modal-copy').length })),
+        media: layer.querySelectorAll('.feature-modal-media').length, copy: layer.querySelectorAll('.feature-modal-copy').length,
+        navigation: layer.querySelectorAll('.feature-modal-navigation').length, liveHooks: layer.querySelectorAll('[data-feature-navigation], [data-feature-count], [data-feature-prev], [data-feature-next], [data-feature-dot]').length })),
       duplicateIds: [...element.querySelectorAll('[id]')].map((item) => item.id).filter((id, index, all) => all.indexOf(id) !== index),
     };
   }, control);
@@ -203,10 +230,21 @@ async function directionStep(page, control, index, direction) {
   expect(motion.opacity, 'Media and copy retain full opacity during the swipe').toEqual([1, 1, 1, 1, 1, 1, 1, 1, 1]);
   expect(motion.ownership.sort(), 'Only the incoming and outgoing whole slides own motion').toEqual(['incoming', 'outgoing']);
   expect(motion.clipped, 'Both complete features stay inside the shared clipped viewport').toBe(true);
-  expect(motion.fixedControls.after, 'Close and navigation remain stationary').toEqual(motion.fixedControls.before);
+  expect(motion.close.after, 'Close remains stationary while navigation swipes').toEqual(motion.close.before);
+  expect(motion.navigationIdentity, 'The same live navigation moves into the incoming feature').toBe(true);
+  expect(motion.triggerFocused, 'Focused navigation control survives reparenting').toBe(true);
+  expect(motion.navigationSnapshot.outgoing, 'Outgoing navigation preserves its old count, current dot and styling').toEqual(motion.navigationSnapshot.before);
   expect(motion.layers.map((layer) => layer.kind)).toEqual(['slide']);
-  for (const layer of motion.layers) expect(layer, 'One outgoing feature contains image and copy, inert, hidden and ID-free').toMatchObject({ inert: true, hidden: 'true', ids: 0, media: 1, copy: 1 });
+  for (const layer of motion.layers) expect(layer, 'One outgoing feature contains image, copy and a passive navigation snapshot').toMatchObject({ inert: true, hidden: 'true', ids: 0, media: 1, copy: 1, navigation: 1, liveHooks: 0 });
   expect(motion.duplicateIds, 'Visual copies do not duplicate accessible IDs').toEqual([]);
+  if (index === 1 && direction === 1) {
+    for (let step = 0; step < 24; step++) {
+      await page.keyboard.press(step < 12 ? 'Tab' : 'Shift+Tab');
+      expect(await dialog(page).evaluate((element) => element.contains(document.activeElement)
+        && !document.activeElement.closest('[data-feature-motion-layer]')), 'Tab keeps focus on live controls and ignores outgoing navigation').toBe(true);
+    }
+    await dialog(page).evaluate((element, selector) => element.querySelector(selector).focus({ preventScroll: true }), control);
+  }
   await dialog(page).evaluate((element) => element.getAnimations({ subtree: true }).filter((animation) => animation.playState === 'paused').forEach((animation) => animation.play()));
   await settled(page, index);
 }
@@ -218,6 +256,13 @@ async function verifyNavigationMotion(page) {
   await directionStep(page, '[data-feature-prev]', 0, -1);
   await directionStep(page, '[data-feature-prev]', 5, -1);
   await directionStep(page, '[data-feature-next]', 0, 1);
+  await dialog(page).locator('[data-feature-next]').focus();
+  await page.keyboard.press('ArrowRight');
+  await settled(page, 1);
+  await expect(dialog(page).locator('[data-feature-next]')).toBeFocused();
+  await page.keyboard.press('ArrowLeft');
+  await settled(page, 0);
+  await expect(dialog(page).locator('[data-feature-next]')).toBeFocused();
 
   await dialog(page).evaluate((element) => {
     const probe = { starts: 0, maxSlides: 0 };
@@ -228,18 +273,22 @@ async function verifyNavigationMotion(page) {
       probe.maxSlides = Math.max(probe.maxSlides, element.querySelectorAll('[data-feature-motion-layer="slide"]').length);
     });
     observer.observe(element, { childList: true, subtree: true });
-    window.__featureMotionProbe = { probe, observer };
+    const button = element.querySelector('[data-feature-next]');
+    button.focus({ preventScroll: true });
+    window.__featureMotionProbe = { probe, observer, button };
     for (let index = 0; index < 15; index++) element.querySelector('[data-feature-next]').click();
   });
   await settled(page, 3);
   const rapid = await page.evaluate(() => {
-    const { probe, observer } = window.__featureMotionProbe;
+    const { probe, observer, button } = window.__featureMotionProbe;
+    const focused = document.activeElement === button;
     observer.disconnect(); delete window.__featureMotionProbe;
-    return probe;
+    return { ...probe, focused };
   });
   expect(rapid.starts, 'Fifteen clicks animate the current transition and latest intent only').toBeGreaterThan(0);
   expect(rapid.starts).toBeLessThanOrEqual(2);
   expect(rapid.maxSlides, 'Whole-slide layers never stack across queued intents').toBeLessThanOrEqual(1);
+  expect(rapid.focused, 'The same live arrow keeps focus through queued reparenting').toBe(true);
 
   await dialog(page).locator('[data-feature-dot="0"]').click();
   await settled(page, 0);
@@ -418,11 +467,14 @@ try {
       const cardTemplate = firstCard.cloneNode(true), cards = firstCard.parentElement;
       const firstSlide = root.querySelector('[data-feature-slide]');
       const slideTemplate = firstSlide.cloneNode(true), slides = firstSlide.parentElement;
-      const firstDot = root.querySelector('[data-feature-dot]');
+      slideTemplate.querySelector('[data-feature-navigation]')?.remove();
+      const navigation = root.querySelector('[data-feature-navigation]');
+      navigation.remove();
+      const firstDot = navigation.querySelector('[data-feature-dot]');
       const dotTemplate = firstDot.cloneNode(true), dots = firstDot.parentElement;
       root.querySelectorAll('[data-feature-card]').forEach((element) => element.remove());
       root.querySelectorAll('[data-feature-slide]').forEach((element) => element.remove());
-      root.querySelectorAll('[data-feature-dot]').forEach((element) => element.remove());
+      dots.replaceChildren();
       for (let index = 0; index < count; index++) {
         const card = cardTemplate.cloneNode(true), slide = slideTemplate.cloneNode(true), dot = dotTemplate.cloneNode(true);
         const opener = card.querySelector('[data-feature-open]');
@@ -445,6 +497,8 @@ try {
         card.querySelector('[id^="feature-description-"]').textContent = description;
         cards.append(card); slides.append(slide); dots.append(dot);
       }
+      navigation.querySelector('[data-feature-count]').textContent = `01 / ${String(count).padStart(2, '0')}`;
+      slides.querySelector('[data-feature-slide]').append(navigation);
       return '<!doctype html>' + doc.documentElement.outerHTML;
     }, { original: serverHTML, count, longCopy });
     const fixture = await open({}, html);
@@ -555,7 +609,7 @@ try {
     await staticRun.context.close();
   }
   expect(errors, 'No runtime errors in feature scenarios').toEqual([]);
-  console.log(`Passed (${browserType.name()}): all feature cards, accessible names/descriptions, wrapping arrows/dots/keyboard, directional whole-feature swipes with image/copy in lockstep, bounded latest-intent queue, reverse/resize/reduced-motion/close cleanup, rapid input and reopen, native focus containment/Escape/backdrop, focus and scroll restoration, resize/mobile/tablet/short desktop, reduced motion/live cancellation, CMS 1/12 items and long copy, no-JS fallback, local pictures, no overflow and axe.`);
+  console.log(`Passed (${browserType.name()}): all feature cards, accessible names/descriptions, wrapping arrows/dots/keyboard, directional whole-feature swipes with image/copy/navigation in lockstep, bounded latest-intent queue, reverse/resize/reduced-motion/close cleanup, rapid input and reopen, native focus containment/Escape/backdrop, focus and scroll restoration, resize/mobile/tablet/short desktop, reduced motion/live cancellation, CMS 1/12 items and long copy, no-JS fallback, local pictures, no overflow and axe.`);
 } finally {
   await browser.close();
 }

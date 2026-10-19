@@ -45,11 +45,11 @@ const count = content.items.length;
             <h3 id={`feature-dialog-title-${index}`}>{item.title}</h3>
             <p class="feature-modal-description" id={`feature-dialog-description-${index}`}>{item.description}</p>
           </div>
+          {index === 0 && <div class="feature-modal-navigation" data-feature-navigation>
+            <div class="feature-modal-paging"><span class="feature-modal-count" data-feature-count>01 / {String(count).padStart(2, '0')}</span><div class="feature-modal-arrows"><button class="feature-modal-previous" type="button" data-feature-prev aria-label="Previous feature"><Icon name="arrow" width={19} height={19} /></button><button type="button" data-feature-next aria-label="Next feature"><Icon name="arrow" width={19} height={19} /></button></div></div>
+            <div class="feature-modal-dots" aria-label="Choose a feature" role="group">{content.items.map((item, dotIndex) => <button type="button" data-feature-dot={dotIndex} aria-label={`Show ${item.title}`} aria-current={dotIndex === 0 ? 'true' : undefined}><span></span></button>)}</div>
+          </div>}
         </article>)}
-      </div>
-      <div class="feature-modal-navigation">
-        <div class="feature-modal-paging"><span data-feature-count>01 / {String(count).padStart(2, '0')}</span><div class="feature-modal-arrows"><button type="button" data-feature-prev aria-label="Previous feature"><Icon name="arrow" width={19} height={19} /></button><button type="button" data-feature-next aria-label="Next feature"><Icon name="arrow" width={19} height={19} /></button></div></div>
-        <div class="feature-modal-dots" aria-label="Choose a feature" role="group">{content.items.map((item, index) => <button type="button" data-feature-dot={index} aria-label={`Show ${item.title}`} aria-current={index === 0 ? 'true' : undefined}><span></span></button>)}</div>
       </div>
     </div>
   </dialog>
@@ -108,10 +108,10 @@ const count = content.items.length;
   .feature-modal-navigation { position: relative; z-index: 1; grid-column: 2; grid-row: 2; min-width: 0; padding: 20px 36px 26px; border-top: 1px solid transparent; background: #fff; }
   .feature-modal-navigation::before { content: ''; position: absolute; top: -1px; left: 36px; right: 36px; height: 1px; background: #e1e7d8; }
   .feature-modal-paging { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-  [data-feature-count] { color: #59654e; font-size: 12px; font-variant-numeric: tabular-nums; }
+  .feature-modal-count { color: #59654e; font-size: 12px; font-variant-numeric: tabular-nums; }
   .feature-modal-arrows { display: flex; gap: 8px; }
   .feature-modal-arrows button { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid #ccd5c1; border-radius: 50%; color: #37422e; background: #fff; cursor: pointer; }
-  [data-feature-prev] svg { transform: rotate(180deg); }
+  .feature-modal-previous svg { transform: rotate(180deg); }
   .feature-modal-dots { display: flex; flex-wrap: wrap; align-items: center; margin-top: 10px; gap: 0; }
   .feature-modal-dots button { display: grid; place-items: center; width: 26px; min-width: 26px; height: 28px; padding: 0; border: 0; background: transparent; cursor: pointer; }
   .feature-modal-dots span { display: block; width: 17px; height: 5px; transform: scaleX(.3); border-radius: 99px; background: #718164; }

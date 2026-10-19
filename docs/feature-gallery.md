@@ -22,8 +22,11 @@ backdrop click closes the dialog and restores focus to the original preview.
 Resizing keeps that preview reachable.
 
 The opening motion connects the selected thumbnail to the enlarged media.
-Navigation moves the entire feature slide, including its media and description,
-as one unit in the chosen direction. The dialog frame and navigation stay fixed.
+Navigation moves the entire feature slide, including its media, description,
+counter, arrows, dots, and divider, as one unit in the chosen direction. The
+dialog frame and close button stay fixed. One live navigation is moved into
+the selected slide, preserving its controls and keyboard focus; the outgoing
+slide carries an inert snapshot of its previous navigation state.
 Repeated input completes the current slide and proceeds directly to the latest
 requested feature,
 without restarting the motion or building a queue of intermediate slides.

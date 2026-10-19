@@ -7,10 +7,11 @@ export function initFeatureGallery(root: HTMLElement) {
   if (initializedGalleries.has(root) || typeof HTMLDialogElement === 'undefined') return;
   const dialog = root.querySelector<HTMLDialogElement>('#feature-dialog');
   const panel = dialog?.querySelector<HTMLElement>('[data-feature-panel]');
+  const navigation = dialog?.querySelector<HTMLElement>('[data-feature-navigation]');
   const closeButton = dialog?.querySelector<HTMLButtonElement>('[data-feature-close]');
   const slides = Array.from(dialog?.querySelectorAll<HTMLElement>('[data-feature-slide]') ?? []);
   const triggers = Array.from(root.querySelectorAll<HTMLAnchorElement>('[data-feature-open]'));
-  if (!dialog || typeof dialog.showModal !== 'function' || !panel || !closeButton || !slides.length || !triggers.length) return;
+  if (!dialog || typeof dialog.showModal !== 'function' || !panel || !navigation || !closeButton || !slides.length || !triggers.length) return;
   if (slides.some((slide, index) => !slide.querySelector(`#feature-dialog-title-${index}`)
     || !slide.querySelector(`#feature-dialog-description-${index}`))) return;
 
@@ -140,6 +141,8 @@ export function initFeatureGallery(root: HTMLElement) {
 
   function select(index: number) {
     selected = (index + slides.length) % slides.length;
+    // Keep one live set of controls inside the moving feature, with its handlers.
+    if (navigation!.parentElement !== slides[selected]) slides[selected]!.append(navigation!);
     slides.forEach((slide, slideIndex) => { slide.hidden = slideIndex !== selected; });
     const copy = slides[selected]?.querySelector<HTMLElement>('[data-feature-copy]');
     if (copy) copy.scrollTop = 0;
@@ -152,27 +155,36 @@ export function initFeatureGallery(root: HTMLElement) {
     if (count) count.textContent = `${String(selected + 1).padStart(2, '0')} / ${String(slides.length).padStart(2, '0')}`;
   }
 
+  function restoreSlideFocus(focused: Element | null, focusInSlide: boolean) {
+    if (focused instanceof HTMLElement && navigation!.contains(focused)) {
+      focused.focus({ preventScroll: true });
+    } else if (focusInSlide) {
+      slides[selected]?.querySelector<HTMLElement>('[data-feature-copy]')?.focus({ preventScroll: true });
+    }
+  }
+
   function startNavigation() {
     if (requested === selected || !dialog!.open || closing) return;
     const direction = requestedDirection;
     const outgoing = slides[selected]!;
     const previousCopy = outgoing.querySelector<HTMLElement>('[data-feature-copy]');
     const previousScroll = previousCopy?.scrollTop ?? 0;
-    const focusInSlide = outgoing.contains(document.activeElement);
+    const focused = document.activeElement;
+    const focusInSlide = outgoing.contains(focused);
     cancelAnimations();
+    // Snapshot the old counter and controls before select moves and updates them.
+    const layer = reducedMotion.matches ? null : outgoingLayer(outgoing);
     select(requested);
     const version = generation;
     const incoming = slides[selected]!;
-    const copy = incoming.querySelector<HTMLElement>('[data-feature-copy]');
-    if (focusInSlide) copy?.focus({ preventScroll: true });
+    restoreSlideFocus(focused, focusInSlide);
     navigating = true;
     dialog!.dataset.state = 'navigating';
     const transitions: Promise<void>[] = [];
 
     if (reducedMotion.matches) {
       transitions.push(animate(incoming, [{ opacity: 0.65 }, { opacity: 1 }], 80, navigationEasing));
-    } else {
-      const layer = outgoingLayer(outgoing);
+    } else if (layer) {
       incoming.parentElement!.append(layer);
       const outgoingCopy = layer.querySelector<HTMLElement>('.feature-modal-copy');
       if (outgoingCopy) outgoingCopy.scrollTop = previousScroll;
@@ -201,12 +213,13 @@ export function initFeatureGallery(root: HTMLElement) {
   }
 
   function settleMotion() {
-    const focusInSlide = slides[selected]?.contains(document.activeElement);
+    const focused = document.activeElement;
+    const focusInSlide = slides[selected]?.contains(focused) ?? false;
     cancelAnimations();
     if (closing) finishClose(generation);
     else if (dialog!.open) {
       if (selected !== requested) select(requested);
-      if (focusInSlide) slides[selected]?.querySelector<HTMLElement>('[data-feature-copy]')?.focus({ preventScroll: true });
+      restoreSlideFocus(focused, focusInSlide);
       dialog!.dataset.state = 'open';
     }
   }
@@ -305,6 +318,7 @@ export function initFeatureGallery(root: HTMLElement) {
     if (event.key === 'Tab') {
       const controls = Array.from(dialog.querySelectorAll<HTMLElement>('a[href], button, input, select, textarea, [tabindex]'))
         .filter((element) => element.tabIndex >= 0 && !element.matches(':disabled')
+          && !element.closest('[inert]')
           && element.getClientRects().length > 0 && getComputedStyle(element).visibility === 'visible');
       const first = controls[0];
       const last = controls.at(-1);
