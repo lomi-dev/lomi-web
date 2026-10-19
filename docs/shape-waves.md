@@ -20,7 +20,8 @@ links, focus, scrolling, or clicks. The inherited CSS custom
 properties set the opaque background (`--shape-waves-background`, default
 `#0b0e0b`), shape color (`--shape-waves-color`, default `#4f633a`), and pointer
 color (`--shape-waves-interaction-color`, default `#ffffff`). The white hero
-uses `#ffffff`, `#cad6bf`, and `#6b922c` respectively. Text contrast masks and
+uses `#ffffff`, `#9baa8b`, and `#6b922c` respectively. The field renders at 95%
+opacity with a light central mask to preserve text contrast. Text masks and
 compositing belong to the hero, outside this component.
 
 Nine compound SVG stroke paths provide the server-rendered, no-JavaScript fallback.
