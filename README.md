@@ -17,8 +17,8 @@ required to work on the layout.
 
 The page includes:
 
-- A white hero with pale geometric shape waves, six floating agent marks, pointer
-  depth, and a shared motion control.
+- A white hero with centered copy, pill actions, and overlapping real
+  desktop captures over an interactive field of terminal characters.
 - A floating glass navigation bar: Product opens a three-column dropdown,
   followed by Roadmap, Devlog, and Docs. Mobile Product uses a Back drill-in.
 - A separate `/devlog/` page with a Work in progress placeholder.
@@ -42,17 +42,18 @@ The [design analysis](docs/design-analysis.md) documents all six reference sites
 Appllama, Coda, the four articles about generic AI content, and the decisions
 behind this layout.
 
-## Hero motion and React Bits
+## Hero background and motion
 
-The hero uses one React island for six decorative cards, based on the official
-React Bits TiltedCard. CSS handles their floating motion. Pause stops floating
-and pointer depth; live reduced-motion preferences disable both. Content and
-cards render on the server and remain readable without JavaScript.
+The hero uses static HTML for its centered content and layered screenshots,
+without React hydration or CLI icon cards. The primary workbench capture and
+source-control detail share a responsive grid; the smaller detail overlaps on
+the right while leaving the video control and caption clear. The archived
+React Bits TiltedCard source and agent marks remain available locally.
 
 The background is an authored Canvas 2D interpretation of React Bits Shape Waves:
-small triangles, circles, and squares evolve in broad bands. Moving the mouse
-leaves a green ripple that changes nearby shapes, spreads, and fades. It
-shares the hero pause control and stops rendering offscreen or in a hidden tab.
+small `> _ $ / ~ | { } +` characters evolve in broad bands. Moving the mouse
+leaves a green ripple that changes nearby characters, spreads, and fades. It
+respects reduced-motion preferences and stops rendering offscreen or in a hidden tab.
 A static SVG field appears without JavaScript or Canvas 2D. No WebGPU dependency is needed.
 See [background implementation](docs/shape-waves.md) for its rendering limits.
 
@@ -132,14 +133,17 @@ local `/devlog/` route. On Devlog, section links return to the homepage.
 
 ## Video, download, and newsletter behavior
 
-The hero shows the top of the desktop workspace on the first screen. Scrolling
-reveals the complete capture. Hovering or focusing it shows a play control in
+The hero shows a large workbench capture below its copy, with an overlapping
+source-control detail. On mobile the primary image uses a closer crop. Scrolling
+reveals the complete composition. Hovering or focusing it shows a play control in
 the center of the complete image, with no position changes on scroll. Touch
 devices show the control immediately.
 The native video dialog loads YouTube only after activation and removes the
 player as soon as closing starts. Its center-scale entrance and exit follow
 Magic UI's `from-center` example, with a dimmed, blurred backdrop. Reduced
-motion uses a short fade. The close button, backdrop clicks, and Escape from
+motion uses a short fade. The surface contains only the video; a floating close
+button sits above it, moving inside on very short screens. The close button,
+backdrop clicks, and Escape from
 the dialog controls dismiss it and restore focus to the screenshot.
 Without JavaScript, the screenshot links to
 the same video on YouTube. Replace the placeholder video ID in both components
@@ -180,10 +184,10 @@ anchors, unique IDs, keyboard navigation, Product dropdown and mobile drill-in,
 Devlog navigation with and without JavaScript, FAQ, newsletter states,
 all seven installer mappings, release failures, dialog focus, no-JavaScript
 fallbacks, the video dialog lifecycle, reduced motion, and desktop/mobile/dialog
-accessibility with axe. Hero checks cover all six active local SVGs and labels,
-floating and pointer motion, keyboard pause/resume, live reduced motion,
-icon placement, actual background pixel changes and frozen states, canvas
-resizing, and static fallback without JavaScript or Canvas 2D. Download focus
+accessibility with axe. Hero checks cover the absence of CLI cards and React
+islands, layered image placement, live reduced motion,
+actual background pixel changes and frozen states, canvas resizing, and static
+fallback without JavaScript or Canvas 2D. Download focus
 is checked across desktop/mobile resizes while the dialog is open.
 Footer dimensions, resizing, and keyboard access to every
 link are checked at eight window sizes from 320 × 200 to 1920 × 1080, both with
@@ -212,8 +216,8 @@ deployment rebuild hook if desired. Then deploy the Astro `dist/` output when
 ready. Nothing is published automatically from this branch.
 
 The site uses local Geist and JetBrains Mono fonts, a white opening composition,
-and Lomi's Lime accent. React hydrates only the decorative hero cards; the other
-sections retain their static/native behavior. YouTube is embedded only after
+and Lomi's Lime accent. The page ships no hydrated React islands; the JSX
+components render static HTML and native elements provide interaction. YouTube is embedded only after
 the visitor activates the video. There are no site trackers, runtime Iconify
 calls, or external font requests. Asset provenance is
 recorded in [docs/assets.md](docs/assets.md).

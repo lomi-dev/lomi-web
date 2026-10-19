@@ -1,12 +1,12 @@
 ---
-import { staticShapePaths } from './shape-waves';
+import { staticShapePaths, TERMINAL_GLYPHS, TERMINAL_GLYPH_STROKE, terminalGlyphOpacity } from './shape-waves';
 
 const paths = staticShapePaths();
 ---
 
-<lomi-shape-waves aria-hidden="true" data-renderer="fallback" data-state="fallback">
+<lomi-shape-waves aria-hidden="true" data-background-symbol="terminal-characters" data-renderer="fallback" data-state="fallback">
   <svg class="shape-waves-fallback" data-background-fallback viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" focusable="false" aria-hidden="true">
-    {paths.map((path, index) => <path d={path} fill="currentColor" opacity={0.62 + index * 0.16} />)}
+    {paths.map((path, index) => <path data-terminal-glyph={TERMINAL_GLYPHS[index]} d={path} fill="none" stroke="currentColor" stroke-width={TERMINAL_GLYPH_STROKE} stroke-linecap="round" stroke-linejoin="round" opacity={terminalGlyphOpacity(index)} />)}
   </svg>
   <canvas data-background-canvas aria-hidden="true"></canvas>
 </lomi-shape-waves>

@@ -1,5 +1,9 @@
 # React Bits and agent marks
 
+The CLI card scene is archived. The current hero uses real product captures
+and the authored Shape Waves background; it does not import TiltedCard or
+hydrate a React island. The source and licenses below remain versioned.
+
 ## Vendored TiltedCard
 
 `src/components/react-bits/TiltedCard.tsx` and `TiltedCard.css` are unmodified

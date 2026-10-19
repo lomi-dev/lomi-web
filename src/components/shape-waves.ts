@@ -3,20 +3,44 @@
  * https://reactbits.dev/backgrounds/shape-waves
  * No upstream shader, noise implementation, or runtime code is copied.
  */
-const PITCH = 16;
+const PITCH = 24;
 const MAX_CELLS = 7000;
 const FRAME_INTERVAL = 1000 / 30;
-const TAU = Math.PI * 2;
 const LEVELS = 18;
 const TINT_LEVELS = 10;
 const RIPPLE_STEP = 1 / 60;
 const SPLASH_RADIUS = 50;
 const SPLASH_SIGMA = 20;
+export const TERMINAL_GLYPHS = ['>', '_', '$', '/', '~', '|', '{', '}', '+'] as const;
+export const TERMINAL_GLYPH_STROKE = 1.1;
+const GLYPH_COUNT = TERMINAL_GLYPHS.length;
+
+type GlyphCommand = readonly ['M' | 'L' | 'Q', ...number[]];
+// Authored terminal strokes, independent of font loading. All coordinates fit
+// within +/-5px; even with round caps they stay inside the 14px clearing tile.
+const GLYPH_COMMANDS: readonly (readonly GlyphCommand[])[] = [
+  [['M', -3.5, -4], ['L', 3.5, 0], ['L', -3.5, 4]],
+  [['M', -4, 4.5], ['L', 4, 4.5]],
+  [['M', 3, -3], ['Q', 1, -5, -2, -3.5], ['Q', -5, -1.5, 0, 0], ['Q', 5, 1.5, 2, 3.5], ['Q', -1, 5, -3, 3], ['M', 0, -5], ['L', 0, 5]],
+  [['M', -3.5, 5], ['L', 3.5, -5]],
+  [['M', -4, 0.8], ['Q', -2, -2, 0, 0], ['Q', 2, 2, 4, -0.8]],
+  [['M', 0, -5], ['L', 0, 5]],
+  [['M', 2, -5], ['Q', -1, -5, -1, -2], ['L', -1, -1], ['Q', -1, 0, -3, 0], ['Q', -1, 0, -1, 1], ['L', -1, 2], ['Q', -1, 5, 2, 5]],
+  [['M', -2, -5], ['Q', 1, -5, 1, -2], ['L', 1, -1], ['Q', 1, 0, 3, 0], ['Q', 1, 0, 1, 1], ['L', 1, 2], ['Q', 1, 5, -2, 5]],
+  [['M', 0, -4], ['L', 0, 4], ['M', -4, 0], ['L', 4, 0]],
+];
+
+export const terminalGlyphOpacity = (index: number) => 0.62 + index / (GLYPH_COUNT - 1) * 0.32;
+const levelScale = (level: number) => 0.9 + level / (LEVELS - 1) * 0.1;
+
+function terminalGlyphPath(glyph: number, x = 0, y = 0, scale = 1): string {
+  return GLYPH_COMMANDS[glyph].map(([command, ...coordinates]) => command + coordinates.map((value, index) =>
+    Number((value * scale + (index % 2 ? y : x)).toFixed(2)),
+  ).join(' ')).join('');
+}
 
 const fieldLevel = (x: number, y: number, time: number) => Math.floor(sampleField(x, y, time) * LEVELS);
-const levelRadius = (level: number) => 3.2 + level / (LEVELS - 1) * 0.8;
-
-type Cell = { x: number; y: number; radius: number; shape: number };
+type Cell = { x: number; y: number; level: number; glyph: number };
 type Rgb = [number, number, number];
 
 /** Canvas resolves named colors and short/modern rgb syntax before parsing. */
@@ -60,27 +84,16 @@ function forEachCell(width: number, height: number, time: number, visit: (cell: 
     for (let column = 0; column < columns; column++) {
       const x = offsetX + column * pitch;
       const level = fieldLevel(x, y, time);
-      visit({ x, y, radius: levelRadius(level), shape: Math.floor(level / (LEVELS / 3)) });
+      visit({ x, y, level, glyph: Math.floor(level / (LEVELS / GLYPH_COUNT)) });
     }
   }
 }
 
-/** Three compound paths keep the server-rendered fallback DOM small. */
+/** Nine compound stroke paths keep the server-rendered fallback DOM small. */
 export function staticShapePaths(width = 1600, height = 1000): string[] {
-  const paths = ['', '', ''];
-  const number = (value: number) => Number(value.toFixed(1));
-  forEachCell(width, height, 0, ({ x, y, radius: r, shape }) => {
-    const left = number(x - r);
-    const right = number(x + r);
-    const top = number(y - r);
-    const bottom = number(y + r);
-    if (shape === 0) {
-      paths[shape] += `M${number(x)} ${top}L${right} ${bottom}H${left}Z`;
-    } else if (shape === 1) {
-      paths[shape] += `M${right} ${number(y)}A${number(r)} ${number(r)} 0 1 0 ${left} ${number(y)}A${number(r)} ${number(r)} 0 1 0 ${right} ${number(y)}Z`;
-    } else {
-      paths[shape] += `M${left} ${top}H${right}V${bottom}H${left}Z`;
-    }
+  const paths = Array<string>(GLYPH_COUNT).fill('');
+  forEachCell(width, height, 0, ({ x, y, level, glyph }) => {
+    paths[glyph] += terminalGlyphPath(glyph, x, y, levelScale(level));
   });
   return paths;
 }
@@ -107,6 +120,7 @@ export function registerShapeWaves() {
     private background = '#0b0e0b';
     private interactionRgb: Rgb = [255, 255, 255];
     private hoverColors: string[] = [];
+    private glyphPaths: Path2D[] = [];
     private glowSprite: HTMLCanvasElement | null = null;
     private glowDpr = 0;
     private cellX = new Float64Array(0);
@@ -144,6 +158,9 @@ export function registerShapeWaves() {
         this.interactionRgb = normalizedSrgb(this.context, style.getPropertyValue('--shape-waves-interaction-color').trim(), '#ffffff');
         this.hoverColors = Array.from({ length: TINT_LEVELS }, (_, index) =>
           `rgb(${rgb.map((channel, channelIndex) => Math.round(channel + (this.interactionRgb[channelIndex] - channel) * index / (TINT_LEVELS - 1))).join(',')})`,
+        );
+        this.glyphPaths = Array.from({ length: LEVELS * GLYPH_COUNT }, (_, index) =>
+          new Path2D(terminalGlyphPath(index % GLYPH_COUNT, 0, 0, levelScale(Math.floor(index / GLYPH_COUNT)))),
         );
         this.resize();
         this.resizeObserver = new ResizeObserver(this.resize);
@@ -187,6 +204,7 @@ export function registerShapeWaves() {
       this.rippleBacklog = 0;
       this.glowSprite = null;
       this.glowDpr = 0;
+      this.glyphPaths = [];
     }
 
     private stop() {
@@ -355,17 +373,18 @@ export function registerShapeWaves() {
         for (let index = 0; index < this.paintKeys.length; index++) {
           const level = fieldLevel(this.cellX[index], this.cellY[index], this.time);
           const charge = Math.max(0, Math.min(0.999, this.heights[index]));
-          const shapeStep = Math.floor(charge * 3);
+          const glyphStep = Math.floor(charge * GLYPH_COUNT);
           const tint = Math.max(0, Math.min(1, (charge - 0.15) / 0.7));
           const tintLevel = Math.round(tint * tint * (3 - 2 * tint) * (TINT_LEVELS - 1));
-          const key = (level * 3 + shapeStep) * TINT_LEVELS + tintLevel;
+          const key = (level * GLYPH_COUNT + glyphStep) * TINT_LEVELS + tintLevel;
           if (key === this.paintKeys[index]) continue;
           this.paintKeys[index] = key;
           this.dirtyCells[dirtyCount++] = index;
         }
         if (!dirtyCount && !this.fullRedraw) return;
 
-        const paths: (Path2D | undefined)[] = new Array(3 * TINT_LEVELS);
+        const paths: (Path2D | undefined)[] = new Array(GLYPH_COUNT * TINT_LEVELS);
+        const placement = new DOMMatrix();
         this.context.globalAlpha = 1;
         this.context.fillStyle = this.background;
         if (this.fullRedraw) this.context.fillRect(0, 0, this.width, this.height);
@@ -375,27 +394,18 @@ export function registerShapeWaves() {
           const x = this.cellX[index];
           const y = this.cellY[index];
           const key = this.paintKeys[index];
-          const level = Math.floor(key / (3 * TINT_LEVELS));
-          const shapeStep = Math.floor(key / TINT_LEVELS) % 3;
+          const level = Math.floor(key / (GLYPH_COUNT * TINT_LEVELS));
+          const glyphStep = Math.floor(key / TINT_LEVELS) % GLYPH_COUNT;
           const tintLevel = key % TINT_LEVELS;
-          const r = levelRadius(level);
-          const shape = (Math.floor(level / (LEVELS / 3)) + shapeStep) % 3;
+          const glyph = (Math.floor(level / (LEVELS / GLYPH_COUNT)) + glyphStep) % GLYPH_COUNT;
           // The 14px tile clears the glyph and its cell-local glow without
-          // touching a neighbor on the >=16px grid.
+          // touching a neighbor on the >=24px grid.
           if (!this.fullRedraw) this.context.rect(x - 7, y - 7, 14, 14);
-          const group = shape * TINT_LEVELS + tintLevel;
+          const group = glyph * TINT_LEVELS + tintLevel;
           const path = paths[group] ??= new Path2D();
-          if (shape === 0) {
-            path.moveTo(x, y - r);
-            path.lineTo(x + r, y + r);
-            path.lineTo(x - r, y + r);
-            path.closePath();
-          } else if (shape === 1) {
-            path.moveTo(x + r, y);
-            path.arc(x, y, r, 0, TAU);
-          } else {
-            path.rect(x - r, y - r, r * 2, r * 2);
-          }
+          placement.e = x;
+          placement.f = y;
+          path.addPath(this.glyphPaths[level * GLYPH_COUNT + glyph], placement);
         }
         if (!this.fullRedraw) this.context.fill();
         this.fullRedraw = false;
@@ -408,13 +418,16 @@ export function registerShapeWaves() {
             this.context.drawImage(this.glowSprite, this.cellX[index] - 7, this.cellY[index] - 7, 14, 14);
           }
         }
+        this.context.lineWidth = TERMINAL_GLYPH_STROKE;
+        this.context.lineCap = 'round';
+        this.context.lineJoin = 'round';
         for (let index = 0; index < paths.length; index++) {
           const path = paths[index];
           if (!path) continue;
-          this.context.fillStyle = this.hoverColors[index % TINT_LEVELS];
-          const baseAlpha = 0.62 + Math.floor(index / TINT_LEVELS) * 0.16;
+          this.context.strokeStyle = this.hoverColors[index % TINT_LEVELS];
+          const baseAlpha = terminalGlyphOpacity(Math.floor(index / TINT_LEVELS));
           this.context.globalAlpha = baseAlpha + (1 - baseAlpha) * (index % TINT_LEVELS) / (TINT_LEVELS - 1);
-          this.context.fill(path);
+          this.context.stroke(path);
         }
         this.context.globalAlpha = 1;
         if (this.dataset.renderer !== 'canvas') this.dataset.renderer = 'canvas';

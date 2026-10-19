@@ -1,14 +1,8 @@
-<dialog class="video-dialog" id="video-dialog" aria-labelledby="video-title">
-  <div class="video-panel">
-    <div class="video-toolbar">
-      <h2 id="video-title">Watch Lomi</h2>
-      <button class="video-close" type="button" data-video-close aria-label="Close video" autofocus>
-        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="m4 4 10 10M14 4 4 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" /></svg>
-      </button>
-    </div>
-    <div class="video-player" data-video-player></div>
-    <a class="video-fallback" href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" target="_blank" rel="noopener noreferrer">Watch on YouTube <span aria-hidden="true">↗</span></a>
-  </div>
+<dialog class="video-dialog" id="video-dialog" aria-label="Watch Lomi">
+  <button class="video-close" type="button" data-video-close aria-label="Close video" autofocus>
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="m4 4 10 10M14 4 4 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" /></svg>
+  </button>
+  <div class="video-player" data-video-player></div>
 </dialog>
 
 <script>
@@ -141,29 +135,22 @@
 </script>
 
 <style>
-  .video-dialog { width: min(1080px, calc(100vw - 32px)); max-width: none; max-height: calc(100dvh - 32px); margin: auto; padding: 0; overflow: auto; border: 1px solid #414b38; border-radius: 12px; background: #10150f; color: #f0f4e9; box-shadow: 0 30px 100px #0008; }
+  .video-dialog { width: min(1080px, calc(100vw - 32px), calc((100dvh - 88px) * 16 / 9)); max-width: none; max-height: calc(100dvh - 88px); inset-block: 56px 0; margin: auto; padding: 0; overflow: visible; border: 0; border-radius: 12px; background: #050705; color: #f0f4e9; box-shadow: 0 30px 100px #0008; }
   .video-dialog::backdrop { background: rgb(0 0 0 / 50%); backdrop-filter: blur(12px); opacity: 1; transition: opacity 300ms ease; }
   .video-dialog[data-state='closing']::backdrop { opacity: 0; transition-duration: 220ms; }
   @starting-style {
     .video-dialog[open]::backdrop { opacity: 0; }
   }
-  .video-panel { padding: 8px; }
-  .video-toolbar { position: sticky; z-index: 1; top: 0; display: flex; min-height: 44px; align-items: center; justify-content: space-between; gap: 12px; padding-left: 10px; background: #10150f; }
-  .video-toolbar h2 { margin: 0; color: #c6cfbc; font-size: 13px; font-weight: 500; }
-  .video-close { display: grid; flex: 0 0 44px; width: 44px; height: 44px; place-items: center; padding: 0; border: 0; border-radius: 50%; background: transparent; color: #dce5d2; cursor: pointer; }
-  .video-close:focus-visible, .video-fallback:focus-visible { outline: 2px solid #d5f8a8; outline-offset: 2px; }
-  .video-player { width: 100%; min-width: 200px; min-height: 200px; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 6px; background: #050705; }
+  .video-close { position: absolute; z-index: 2; top: -54px; right: 0; display: grid; width: 44px; height: 44px; place-items: center; padding: 0; border: 1px solid #ffffff40; border-radius: 50%; background: rgb(16 21 15 / 80%); color: #f0f4e9; cursor: pointer; }
+  .video-close:focus-visible { outline: 2px solid #d5f8a8; outline-offset: 2px; }
+  .video-player { width: 100%; min-width: 200px; min-height: 200px; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 12px; background: #050705; }
   .video-player :global(iframe) { display: block; width: 100%; height: 100%; border: 0; }
-  .video-fallback { display: flex; min-height: 44px; align-items: center; justify-content: center; gap: 7px; color: #b7c2aa; font-size: 12px; text-underline-offset: 3px; }
   @media (hover: hover) {
     .video-close:hover { background: #263020; }
-    .video-fallback:hover { color: #f0f4e9; text-decoration: underline; }
-  }
-  @media (max-height: 600px) {
-    .video-dialog { width: min(1080px, calc((100dvh - 140px) * 16 / 9), calc(100vw - 24px)); }
   }
   @media (max-height: 350px) {
-    .video-dialog { width: min(640px, calc(100vw - 24px)); }
+    .video-dialog { width: min(640px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); inset-block: 0; overflow: auto; }
+    .video-close { position: sticky; top: 8px; right: 8px; float: right; margin: 8px 8px -52px 0; }
   }
   @media (prefers-reduced-motion: reduce) {
     .video-dialog::backdrop, .video-dialog[data-state='closing']::backdrop { transition-duration: 100ms; }

@@ -21,7 +21,7 @@ The social preview is a browser capture of the page with this logo.
 Final workspace source: `src/assets/clouds.png` (1536 × 1024).
 
 The original image and CloudBackdrop component are retained as unused assets.
-The current hero uses a white composition with agent marks rather than the
+The current hero uses a white composition with layered product captures rather than the
 previous photographic panorama. The source image remains unchanged.
 
 Created using the built-in `image_gen` tool. The two user-supplied landing-page images were visual direction references, not copied into the website. Astro exports responsive AVIF and WebP versions with PNG fallbacks at build time.
@@ -32,13 +32,14 @@ Exact generation prompt:
 
 ## Application screenshots
 
-The hero uses an unchanged, real native capture from the desktop README,
+The hero uses two unchanged, real native captures from the desktop README,
 copied from `../lomi/docs/images/` into `src/assets/product/`:
 
 - `workbench.png`: project explorer, TypeScript editor, and native terminal.
+- `source-control.png`: Git history and a code diff, cropped in the foreground.
 
-The capture is 2880 × 1800. Astro generates responsive AVIF and WebP variants.
-The caption and alt text use the CMS fields. The capture is shown directly,
+Both captures are 2880 × 1800. Astro generates responsive AVIF and WebP variants.
+The main caption and alt text use the CMS fields. The captures are shown directly,
 without an additional window header or view selector. It does not execute code
 or run the application. The play control opens the user-selected YouTube video
 `dQw4w9WgXcQ`; its iframe is created on activation and removed on close.
@@ -48,22 +49,21 @@ It is implemented with the Web Animations API and the browser's native dialog;
 no additional React island or animation dependency is loaded.
 The dimmed backdrop remains available when a browser does not render backdrop
 blur.
-The other native captures, `browser.png` and `source-control.png`, remain local
-assets for future sections.
+The native `browser.png` capture remains a local asset for future sections.
 
 The older root-level `workbench.png`, `workbench-light.png`, and
 `source-control.png` assets remain unused. No interface was reconstructed or
 generated. Review the captures against the final launch release.
 
-`public/social-card.png` is a 1200 × 630 browser capture of the current agent hero
-with its geometric wave field and glass navigation,
-scaled from a wider browser view so the headline, controls, and six active marks fit.
+`public/social-card.png` is a 1200 × 630 browser capture of the current hero
+with centered copy, terminal-character waves, and glass navigation,
+scaled from a wider browser view so the headline, controls, and product composition fit.
 
-## Agent marks and motion
+## Archived agent marks
 
-The six active agent marks are local Iconify SVGs from the desktop
-application's existing assets. The light hero uses the original dark Codex
-mark; the previously fetched white variant remains archived.
+The unused agent marks are local Iconify SVGs from the desktop
+application's existing assets. The dark and white Codex variants are retained
+alongside the other marks; none are rendered in the current hero.
 They represent Codex, Claude Code, OpenCode, Cursor CLI, Grok Build,
 and Antigravity CLI. Monochrome marks use CSS masks; colored marks retain their
 original colors. No brand geometry was recreated or generated. The unused
