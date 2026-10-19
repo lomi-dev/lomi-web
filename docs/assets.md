@@ -60,7 +60,7 @@ The older root-level `workbench.png`, `workbench-light.png`, and
 generated. Review the captures against the final launch release.
 
 `public/social-card.png` is a 1200 × 630 browser capture of the current hero
-with centered copy, terminal-character waves, and glass navigation,
+with centered copy, terminal-character waves, and fixed navigation,
 scaled from a wider browser view so the headline, controls, and product composition fit.
 
 ## Archived agent marks

@@ -49,7 +49,7 @@ const { caption, alt } = Astro.props;
 
 <style>
   .deck-root { display: block; width: 100%; min-width: 0; }
-  .deck-figure { min-width: 0; margin: 0; scroll-margin-top: 90px; }
+  .deck-figure { min-width: 0; margin: 0; }
   .deck-composition { display: grid; grid-template-areas: 'capture'; min-width: 0; }
   .deck-frame, .deck-detail { grid-area: capture; align-self: start; min-width: 0; overflow: hidden; border: 1px solid #d5dccd; border-radius: 16px; background: #fff; box-shadow: 0 24px 70px -32px rgb(30 45 19 / 25%); }
   .deck-frame { position: relative; display: block; width: 86%; aspect-ratio: 8 / 5; }

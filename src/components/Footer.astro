@@ -43,7 +43,9 @@ const { content } = Astro.props;
     background: #c8ff3d;
     color: #0b0d0c;
     overflow-wrap: anywhere;
-    padding: clamp(20px, 4vw, 64px);
+    --footer-gutter: clamp(20px, 4vw, 64px);
+    padding: var(--footer-gutter);
+    padding-top: calc(var(--site-header-height) + var(--footer-gutter));
   }
 
   .site-footer * { box-sizing: border-box; }
@@ -122,7 +124,7 @@ const { content } = Astro.props;
   }
 
   @media (max-height: 700px) {
-    .site-footer { padding: clamp(16px, 3vw, 32px); }
+    .site-footer { --footer-gutter: clamp(16px, 3vw, 32px); }
     .footer-frame { gap: 20px; }
     .footer-invitation h2 { font-size: clamp(44px, 5.5vw, 72px); }
     .footer-invitation p { margin: 16px 0; }
@@ -132,7 +134,7 @@ const { content } = Astro.props;
   /* Compact spacing for short windows; the same frame remains the only
      scroll container. The outer footer stays exactly 100dvh at every size. */
   @media (max-height: 390px) {
-    .site-footer { padding: 12px 20px; }
+    .site-footer { padding: 12px 20px; padding-top: calc(var(--site-header-height) + 12px); }
     .footer-frame { display: block; padding: 4px; margin: -4px; height: calc(100% + 8px); }
     .footer-brand { width: 85px; }
     .footer-body { margin: 20px 0; padding: 4px; align-content: start; }
@@ -146,7 +148,7 @@ const { content } = Astro.props;
   }
 
   @media (max-height: 200px) {
-    .site-footer { padding: 8px 16px; }
+    .site-footer { padding: 8px 16px; padding-top: calc(var(--site-header-height) + 8px); }
     .footer-body { margin-top: 12px; }
   }
 </style>

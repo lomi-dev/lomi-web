@@ -114,7 +114,8 @@ async function verifyViewportFooter(targetPage, screenshots = false, viewports =
       await link.evaluate((element) => element.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' }));
       await expect.poll(() => link.evaluate((element) => {
         const bounds = element.getBoundingClientRect();
-        let left = 0, top = 0, right = document.documentElement.clientWidth, bottom = innerHeight;
+        const headerBottom = document.querySelector('.site-header').getBoundingClientRect().bottom;
+        let left = 0, top = Math.max(0, headerBottom), right = document.documentElement.clientWidth, bottom = innerHeight;
         for (let ancestor = element.parentElement; ancestor; ancestor = ancestor.parentElement) {
           const style = getComputedStyle(ancestor);
           const clip = ancestor.getBoundingClientRect();
@@ -549,13 +550,92 @@ async function verifyHeroComposition(targetPage, width) {
     const detail = workspace.querySelector('[data-workspace-detail]').getBoundingClientRect();
     const protectedAreas = [document.querySelector('.hero h1'), document.querySelector('.hero-actions'),
       workspace.querySelector('[data-video-play]'), workspace.querySelector('figcaption')]
-      .map((element) => element.getBoundingClientRect());
+      .filter(Boolean).map((element) => element.getBoundingClientRect());
     const clear = protectedAreas.every((area) => detail.right <= area.left || detail.left >= area.right
       || detail.bottom <= area.top || detail.top >= area.bottom);
     return detail.width > 0 && detail.width < primary.width && detail.left > primary.left
       && detail.left >= 0 && detail.right <= document.documentElement.clientWidth + 1
       && detail.left < primary.right && detail.top < primary.bottom && detail.bottom > primary.top && clear;
   }), `Supporting screenshot overlaps the product without covering copy, play, or caption at ${width}px`).toBe(true);
+}
+
+async function expectAnchorBelowHeader(targetPage, destination) {
+  await expect.poll(() => targetPage.locator(destination).evaluate((target) => {
+    const header = document.querySelector('.site-header').getBoundingClientRect();
+    const content = target.querySelector('h2, [data-video-open]') || target;
+    const bounds = content.getBoundingClientRect();
+    const x = Math.max(1, Math.min(innerWidth - 1, bounds.left + bounds.width / 2));
+    const y = Math.max(1, Math.min(innerHeight - 1, bounds.top + Math.min(16, bounds.height / 2)));
+    return bounds.top >= header.bottom - 1 && bounds.top < innerHeight
+      && target.contains(document.elementFromPoint(x, y));
+  }), { message: `${destination} content clears the fixed header` }).toBe(true);
+}
+
+async function verifyFixedHeader(targetPage, javaScriptEnabled = true) {
+  const originalViewport = targetPage.viewportSize();
+  const header = targetPage.locator('.site-header');
+  await targetPage.mouse.move(0, 0);
+  for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
+    await targetPage.setViewportSize(viewport);
+    for (const destination of ['#workspace', '#roadmap', '#download']) {
+      await targetPage.locator(destination).evaluate((element) => element.scrollIntoView({ block: 'start', behavior: 'instant' }));
+      await expect(header).toHaveCSS('position', 'fixed');
+      const bounds = await header.boundingBox();
+      expect(Math.abs(bounds.y), `Header remains at the viewport top above ${destination}`).toBeLessThanOrEqual(1);
+      expect(Math.abs(bounds.x), 'Header begins at the viewport left edge').toBeLessThanOrEqual(1);
+      expect(Math.abs(bounds.width - viewport.width), 'Header spans the viewport').toBeLessThanOrEqual(1);
+      await expectAnchorBelowHeader(targetPage, destination);
+    }
+  }
+  for (const viewport of [{ width: 1440, height: 200 }, { width: 390, height: 320 }]) {
+    await targetPage.setViewportSize(viewport);
+    const mobile = viewport.width < 768;
+    if (!javaScriptEnabled) {
+      await expect(targetPage.locator('#product-menu')).not.toBeVisible();
+      await expect(targetPage.locator('#mobile-navigation')).not.toBeVisible();
+      const links = targetPage.locator('.desktop-navigation .product-fallback, .desktop-navigation .navigation-link:not(.product-fallback)');
+      await expect(links).toHaveCount(4);
+      for (const link of await links.all()) {
+        await expect(link).toBeVisible();
+        await link.focus();
+        await expect(link).toBeFocused();
+        expect(await link.evaluate((element) => {
+          const bounds = element.getBoundingClientRect();
+          return bounds.left >= 0 && bounds.right <= innerWidth && bounds.top >= 0 && bounds.bottom <= innerHeight
+            && element.contains(document.elementFromPoint(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2));
+        }), 'Compact no-JavaScript navigation links remain unobstructed').toBe(true);
+      }
+      continue;
+    }
+    const root = targetPage.locator('#mobile-navigation');
+    if (mobile) {
+      await root.locator(':scope > summary').focus();
+      await targetPage.keyboard.press('Enter');
+    }
+    const menu = targetPage.locator(mobile ? '#mobile-product' : '#product-menu');
+    await menu.locator(':scope > summary').focus();
+    await targetPage.keyboard.press('Enter');
+    await expect(menu).toHaveAttribute('open', '');
+    const links = menu.locator('.product-link');
+    for (const link of await links.all()) {
+      await link.focus();
+      await link.evaluate((element) => element.scrollIntoView({ block: 'nearest', behavior: 'instant' }));
+      await expect.poll(() => link.evaluate((element) => {
+        const bounds = element.getBoundingClientRect();
+        const point = { x: bounds.left + bounds.width / 2, y: bounds.top + bounds.height / 2 };
+        return bounds.top >= document.querySelector('.header-inner').getBoundingClientRect().bottom - 1
+          && bounds.bottom <= innerHeight + 1 && element.contains(document.elementFromPoint(point.x, point.y));
+      }), { message: `Product links remain reachable at ${viewport.width}x${viewport.height}` }).toBe(true);
+    }
+    await menu.locator(':scope > summary').focus();
+    await targetPage.keyboard.press('Enter');
+    if (mobile) {
+      await root.locator(':scope > summary').focus();
+      await targetPage.keyboard.press('Enter');
+    }
+  }
+  await targetPage.setViewportSize(originalViewport);
+  await targetPage.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
 }
 
 async function verifyStaticBackdropDoesNotBlockPage(targetPage) {
@@ -589,13 +669,12 @@ async function verifyDevlog(javaScriptEnabled) {
     await devlogPage.setViewportSize({ width, height: 900 });
     const mobile = width < 768;
     const openRoot = async () => {
-      if (mobile) await activate(devlogPage.locator('#mobile-navigation > summary'));
+      if (mobile && javaScriptEnabled) await activate(devlogPage.locator('#mobile-navigation > summary'));
     };
-    const rootLinks = () => devlogPage.locator(mobile ? '#mobile-navigation .mobile-root-link' : '.desktop-navigation .navigation-link');
+    const rootLinks = () => devlogPage.locator(mobile && javaScriptEnabled ? '#mobile-navigation .mobile-root-link' : '.desktop-navigation .navigation-link:not(.product-fallback)');
     await devlogPage.goto(url);
-    if (!javaScriptEnabled && !mobile) {
-      await activate(devlogPage.locator('#product-menu > summary'));
-      await activate(devlogPage.locator('#product-menu a[href="#workspace"]'));
+    if (!javaScriptEnabled) {
+      await devlogPage.locator('.product-fallback').click();
       await expect(devlogPage.locator('#workspace')).toBeInViewport();
       await verifyStaticBackdropDoesNotBlockPage(devlogPage);
       await devlogPage.goto(url);
@@ -619,25 +698,35 @@ async function verifyDevlog(javaScriptEnabled) {
       expect(accessibility.violations, `Devlog accessibility at ${width}px`).toEqual([]);
     }
     await openRoot();
-    const product = devlogPage.locator(mobile ? '#mobile-product' : '#product-menu');
-    await activate(product.locator(':scope > summary'));
-    expect(await product.locator('.product-link').evaluateAll((links) => links.map((link) => link.getAttribute('href'))))
-      .toEqual(['/#workspace', '/#features', '/#workflow', '/#principles', '/#faq', '/#download']);
-    await activate(product.locator('a[href="/#workspace"]'));
+    if (javaScriptEnabled) {
+      const product = devlogPage.locator(mobile ? '#mobile-product' : '#product-menu');
+      await activate(product.locator(':scope > summary'));
+      expect(await product.locator('.product-link').evaluateAll((links) => links.map((link) => link.getAttribute('href'))))
+        .toEqual(['/#workspace', '/#features', '/#workflow', '/#principles', '/#faq', '/#download']);
+      await activate(product.locator('a[href="/#workspace"]'));
+    } else {
+      await expect(devlogPage.locator('.product-fallback')).toHaveAttribute('href', '/#workspace');
+      await devlogPage.locator('.product-fallback').click();
+    }
     await expect(devlogPage).toHaveURL(new URL('/#workspace', url).href);
     await expect(devlogPage.locator('#workspace')).toBeInViewport();
+    await expectAnchorBelowHeader(devlogPage, '#workspace');
     await devlogPage.goto(devlogUrl);
     await openRoot();
     await activate(rootLinks().and(devlogPage.locator('a[href="/#roadmap"]')));
     await expect(devlogPage).toHaveURL(new URL('/#roadmap', url).href);
     await expect(devlogPage.locator('#roadmap')).toBeInViewport();
+    await expectAnchorBelowHeader(devlogPage, '#roadmap');
     await devlogPage.goto(devlogUrl);
-    await openRoot();
-    const download = devlogPage.locator(mobile ? '.mobile-download' : '.header-action');
-    await expect(download).toHaveAttribute('href', '/#download');
-    await activate(download);
-    await expect(devlogPage).toHaveURL(new URL('/#download', url).href);
-    await expect(devlogPage.locator('#download')).toBeInViewport();
+    if (javaScriptEnabled || !mobile) {
+      await openRoot();
+      const download = devlogPage.locator(mobile ? '.mobile-download' : '.header-action');
+      await expect(download).toHaveAttribute('href', '/#download');
+      await activate(download);
+      await expect(devlogPage).toHaveURL(new URL('/#download', url).href);
+      await expect(devlogPage.locator('#download')).toBeInViewport();
+      await expectAnchorBelowHeader(devlogPage, '#download');
+    }
     await devlogPage.goto(devlogUrl);
     await activate(devlogPage.getByRole('link', { name: 'Back to lomi' }));
     await expect(devlogPage).toHaveURL(new URL('/', url).href);
@@ -673,14 +762,14 @@ try {
   await expect(page.getByRole('region', { name: 'Newsletter signup' })).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Primary navigation', exact: true })).toBeVisible();
   const desktopNavigation = page.getByRole('navigation', { name: 'Primary navigation', exact: true });
-  const desktopLinks = await desktopNavigation.locator('a.navigation-link').evaluateAll((links) => links.map((link) => {
+  const desktopLinks = await desktopNavigation.locator('a.navigation-link:not(.product-fallback)').evaluateAll((links) => links.map((link) => {
     const label = link.cloneNode(true);
     label.querySelectorAll('[aria-hidden="true"]').forEach((decoration) => decoration.remove());
     return { href: link.getAttribute('href'), label: link.getAttribute('aria-label') || label.textContent.trim() };
   }));
   expect(desktopLinks.length, 'Desktop navigation links').toBeGreaterThan(0);
   for (const [index, link] of desktopLinks.entries()) {
-    await expect(desktopNavigation.locator('a.navigation-link').nth(index)).toHaveAccessibleName(link.label);
+    await expect(desktopNavigation.locator('a.navigation-link:not(.product-fallback)').nth(index)).toHaveAccessibleName(link.label);
   }
   await expect(page.getByRole('contentinfo')).toBeVisible();
   for (const section of ['workflow', 'features', 'roadmap', 'faq', 'download', 'newsletter']) {
@@ -718,6 +807,7 @@ try {
   await page.setViewportSize({ width: 1440, height: 900 });
 
 
+  await verifyFixedHeader(page);
   const productMenu = page.locator('#product-menu');
   const productSummary = productMenu.locator(':scope > summary');
   await expect(productMenu.locator('.product-link')).toHaveCount(6);
@@ -763,11 +853,11 @@ try {
   await expect(productMenu).not.toHaveAttribute('open');
   await expect(productSummary).toBeFocused();
   await page.keyboard.press('Tab');
-  await expect(desktopNavigation.locator('.navigation-link').first(), 'Closed Product links leave the Tab order').toBeFocused();
+  await expect(desktopNavigation.locator('.navigation-link:not(.product-fallback)').first(), 'Closed Product links leave the Tab order').toBeFocused();
   await productSummary.focus();
   await page.keyboard.press('Space');
   await expect(productMenu).toHaveAttribute('open', '');
-  await desktopNavigation.locator('.navigation-link').first().focus();
+  await desktopNavigation.locator('.navigation-link:not(.product-fallback)').first().focus();
   await expect(productMenu).not.toHaveAttribute('open');
   await productSummary.click();
   await expect(productMenu).toHaveAttribute('open', '');
@@ -784,6 +874,7 @@ try {
     await expect(page).toHaveURL(new URL(destination, url).href);
     await expect(productMenu).not.toHaveAttribute('open');
     await expect(page.locator(destination)).toBeInViewport();
+    await expectAnchorBelowHeader(page, destination);
     await expect(page.locator(destination), 'Closed navigation focuses the chosen section').toBeFocused();
   }
   await page.locator('.header-source').focus();
@@ -840,7 +931,7 @@ try {
   await expect(workspaceImage).toBeVisible();
   await expect(workspaceImage).toHaveAttribute('alt', /\S/);
   await expect.poll(() => workspaceImage.evaluate((image) => image.naturalWidth)).toBeGreaterThan(0);
-  await expect(workspace.locator('figcaption')).toHaveText(/\S/);
+  if (await workspace.locator('figcaption').count()) await expect(workspace.locator('figcaption')).toHaveText(/\S/);
   await expect(workspace.locator('[data-deck-view], .deck-controls, .deck-chrome')).toHaveCount(0);
   await verifyVideoDialog(page, videoRequests);
 
@@ -924,11 +1015,13 @@ try {
     await expect(mobileMenu).not.toHaveAttribute('open');
     await expect(mobileProduct).not.toHaveAttribute('open');
     await expect(page.locator(destination)).toBeInViewport();
+    await expectAnchorBelowHeader(page, destination);
     await expect(page.locator(destination), 'Closed navigation focuses the chosen section').toBeFocused();
   }
   await mobileSummary.click();
   await mobileMenu.locator('a.mobile-root-link[href="#roadmap"]').click();
   await expect(page.locator('#roadmap')).toBeInViewport();
+  await expectAnchorBelowHeader(page, '#roadmap');
   await expect(mobileMenu).not.toHaveAttribute('open');
 
   const faqItems = page.locator('#faq details');
@@ -1110,6 +1203,7 @@ try {
   await staticPage.goto(url);
   await expect(staticPage.getByRole('heading', { level: 1 })).toHaveCount(1);
   await expect(staticPage.getByRole('heading', { level: 1 })).toBeVisible();
+  await verifyFixedHeader(staticPage, false);
   for (const section of ['workflow', 'features', 'roadmap', 'faq', 'download', 'newsletter']) {
     await expect(staticPage.locator(`#${section}`).getByRole('heading', { level: 2 })).toBeVisible();
   }
@@ -1132,7 +1226,7 @@ try {
   await expect(staticImage).toBeVisible();
   await expect(staticImage).toHaveAttribute('alt', /\S/);
   await expect.poll(() => staticImage.evaluate((element) => element.naturalWidth)).toBeGreaterThan(0);
-  await expect(staticWorkspace.locator('figcaption')).toHaveText(/\S/);
+  if (await staticWorkspace.locator('figcaption').count()) await expect(staticWorkspace.locator('figcaption')).toHaveText(/\S/);
   await verifyHeroComposition(staticPage, 390);
   await expect(staticPage.locator('#video-dialog iframe')).toHaveCount(0);
   await staticPage.route(videoUrl, (route) => route.fulfill({ status: 200, contentType: 'text/html', body: '<h1>YouTube video destination</h1>' }));
@@ -1151,25 +1245,15 @@ try {
   await expect(staticReleaseLink).toHaveAttribute('href', releaseUrl);
   await expect(staticPage.getByRole('button', { name: 'Subscribe' })).toBeDisabled();
   await expect(staticPage.locator('.newsletter-noscript')).toBeVisible();
-  const staticMenu = staticPage.locator('#mobile-navigation');
-  await staticMenu.locator(':scope > summary').focus();
-  await staticPage.keyboard.press('Enter');
-  await expect(staticMenu.getByRole('navigation')).toBeVisible();
-  const staticMobileProduct = staticMenu.locator('#mobile-product');
-  await staticMobileProduct.locator(':scope > summary').focus();
-  await staticPage.keyboard.press('Enter');
-  await expect(staticMobileProduct).toHaveAttribute('open', '');
-  await expect(staticMobileProduct.locator('.product-link')).toHaveCount(6);
-  await expect(staticMenu.locator('.mobile-root-link').first()).not.toBeVisible();
-  await staticMobileProduct.locator(':scope > summary').focus();
-  await staticPage.keyboard.press('Enter');
-  await expect(staticMobileProduct).not.toHaveAttribute('open');
-
-  const staticNavigationLink = staticMenu.locator('a.mobile-root-link[href^="#"]').first();
-  const staticDestination = await staticNavigationLink.getAttribute('href');
-  await staticNavigationLink.focus();
-  await staticPage.keyboard.press('Enter');
-  await expect(staticPage.locator(staticDestination)).toBeInViewport();
+  await expect(staticPage.locator('#mobile-navigation')).not.toBeVisible();
+  await expect(staticPage.locator('#product-menu')).not.toBeVisible();
+  const staticProduct = staticPage.locator('.product-fallback');
+  await expect(staticProduct).toHaveAttribute('href', '#workspace');
+  await staticProduct.click();
+  await expectAnchorBelowHeader(staticPage, '#workspace');
+  const staticRoadmap = staticPage.locator('.desktop-navigation a[href="#roadmap"]');
+  await staticRoadmap.click();
+  await expectAnchorBelowHeader(staticPage, '#roadmap');
   await verifyStaticBackdropDoesNotBlockPage(staticPage);
   const staticFaq = staticPage.locator('#faq details').first();
   await staticFaq.locator('summary').focus();

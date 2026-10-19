@@ -19,7 +19,7 @@ The page includes:
 
 - A white hero with centered copy, pill actions, and overlapping real
   desktop captures over an interactive field of terminal characters.
-- A floating glass navigation bar: Product opens a three-column dropdown,
+- A fixed navigation bar at the viewport's top edge: Product opens a three-column dropdown,
   followed by Roadmap, Devlog, and Docs. Mobile Product uses a Back drill-in.
 - A separate `/devlog/` page with a Work in progress placeholder.
 - A real desktop capture starting in the hero, with a centered video control
@@ -32,6 +32,11 @@ The page includes:
 The footer follows the current viewport height with `100dvh` (`100vh` fallback).
 Its content scrolls inside the footer when a narrow or short window cannot fit
 everything; the outer footer keeps its exact size and every link stays reachable.
+The fixed header stays at the top on both pages. Anchor offsets and the footer's
+top spacing account for its 72px desktop or 64px mobile height.
+The header is transparent over the hero and gains a softly blurred surface after
+scrolling or opening a menu. Without JavaScript, compact direct navigation links
+remain available at every width, without a disclosure covering the destination.
 
 The roadmap is explicitly a draft, with no invented release dates. Product copy
 comes from the desktop application's README. Feature/platform restrictions are
