@@ -161,7 +161,7 @@ const productGroups: { label: string; links: { label: string; description: strin
 
 <style>
   .site-header {
-    --header-surface: rgb(15 20 14 / 97%);
+    --header-surface: rgb(15 20 14 / 72%);
     --header-panel: #10150f;
     --header-line: #303b2a;
     --header-text: #f3f6ed;
@@ -173,9 +173,9 @@ const productGroups: { label: string; links: { label: string; description: strin
     position: fixed; top: 0; inset-inline: 0; z-index: 20;
     color: var(--header-text);
   }
-  .site-header::before { content: ''; position: absolute; z-index: 0; inset: 0 0 -12px; background: var(--header-surface); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); mask-image: linear-gradient(#000 0%, #000 calc(100% - 12px), transparent 100%); opacity: 0; transition: opacity 180ms ease; }
+  .site-header::before { content: ''; position: absolute; z-index: 0; inset: 0; background: var(--header-surface); -webkit-backdrop-filter: blur(24px) saturate(1.15); backdrop-filter: blur(24px) saturate(1.15); opacity: 0; transition: opacity 180ms ease; }
   .site-header[data-scrolled]::before, .site-header:not([data-navigation-ready])::before, .site-header:has(.product-menu[open], .mobile-navigation[open])::before { opacity: 1; }
-  .site-header[data-theme='light'] { --header-surface: rgb(255 255 255 / 97%); --header-panel: #fff; --header-line: #dfe5d8; --header-text: #202c18; --header-muted: #4f5e43; --header-subtle: #5c6b4e; --header-hover: #eef3e8; --header-icon: #4b6c16; --header-focus: var(--color-focus); }
+  .site-header[data-theme='light'] { --header-surface: rgb(255 255 255 / 72%); --header-panel: #fff; --header-line: #dfe5d8; --header-text: #202c18; --header-muted: #3f4b36; --header-subtle: #5c6b4e; --header-hover: #eef3e8; --header-icon: #4b6c16; --header-focus: var(--color-focus); }
   .navigation-backdrop { position: fixed; inset: 0; z-index: -1; visibility: hidden; opacity: 0; background: rgb(5 10 5 / 26%); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); transition: opacity 180ms ease, visibility 180ms; }
   .site-header[data-theme='light'] .navigation-backdrop { background: rgb(30 43 21 / 10%); }
   .site-header[data-navigation-ready]:has(.product-menu[open], .mobile-navigation[open]) .navigation-backdrop { visibility: visible; opacity: 1; }
@@ -254,5 +254,8 @@ const productGroups: { label: string; links: { label: string; description: strin
     .product-menu[open] .product-panel, .mobile-navigation[open] > .mobile-panel { animation: none; }
     .site-header::before, .menu-chevron, .product-link-title :global(svg), .navigation-backdrop { transition: none; }
     .header-action:active { transform: none; }
+  }
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .site-header::before { background: var(--header-panel); }
   }
 </style>
