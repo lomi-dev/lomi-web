@@ -1,6 +1,7 @@
 ---
 import { Picture } from 'astro:assets';
 import Icon from './Icon';
+import wordmark from '../assets/lomi-wordmark.svg?raw';
 import workspacePlaceholder from '../assets/placeholders/workspace.png';
 import detailPlaceholder from '../assets/placeholders/detail.png';
 import type { Landing } from '../../content/landing-schema';
@@ -33,23 +34,27 @@ const count = content.items.length;
   </div>
 
   <dialog id="feature-dialog" class="feature-dialog" aria-labelledby="feature-dialog-title-0" aria-describedby="feature-dialog-description-0" tabindex="-1">
-    <div class="feature-dialog-chrome"><button class="feature-modal-close" type="button" data-feature-close aria-label="Close feature details"><Icon name="close" width={20} height={20} /></button></div>
     <div class="feature-modal-panel" data-feature-panel>
+      <div class="feature-dialog-chrome">
+        <span class="feature-dialog-wordmark" aria-hidden="true" set:html={wordmark} />
+        <span class="feature-dialog-position" data-feature-count>01 / {String(count).padStart(2, '0')}</span>
+        <button class="feature-modal-close" type="button" data-feature-close aria-label="Close feature details"><Icon name="close" width={19} height={19} /></button>
+      </div>
       <div class="feature-slides" data-feature-pages>
         {content.items.map((item, index) => <article class="feature-slide" data-feature-slide id={`feature-slide-${index}`} hidden={index !== 0}>
           <div class="feature-modal-media" data-feature-modal-media>
-            <Picture src={placeholder(index)} alt="" formats={['avif', 'webp']} widths={[640, 960, 1440, 1920]} sizes="(min-width: 1600px) 960px, (min-width: 900px) 65vw, 92vw" loading="eager" decoding="async" />
+            <Picture src={placeholder(index)} alt="" formats={['avif', 'webp']} widths={[640, 960, 1440, 1920]} sizes="(min-width: 1200px) 1040px, 92vw" loading="eager" decoding="async" />
           </div>
           <div class="feature-modal-copy" data-feature-copy tabindex="0" role="region" aria-labelledby={`feature-dialog-title-${index}`}>
-            <p class="feature-modal-detail">{item.detail}</p>
-            <h3 id={`feature-dialog-title-${index}`}>{item.title}</h3>
+            <div class="feature-modal-title"><p class="feature-modal-detail">{item.detail}</p><h3 id={`feature-dialog-title-${index}`}>{item.title}</h3></div>
             <p class="feature-modal-description" id={`feature-dialog-description-${index}`}>{item.description}</p>
           </div>
         </article>)}
       </div>
       <div class="feature-modal-navigation">
-        <div class="feature-modal-paging"><span data-feature-count>01 / {String(count).padStart(2, '0')}</span><div class="feature-modal-arrows"><button type="button" data-feature-prev aria-label="Previous feature"><Icon name="arrow" width={19} height={19} /></button><button type="button" data-feature-next aria-label="Next feature"><Icon name="arrow" width={19} height={19} /></button></div></div>
-        <div class="feature-modal-dots" aria-label="Choose a feature" role="group">{content.items.map((item, index) => <button type="button" data-feature-dot={index} aria-label={`Show ${item.title}`} aria-current={index === 0 ? 'true' : undefined}><span></span></button>)}</div>
+        <button class="feature-modal-step" type="button" data-feature-prev aria-label="Previous feature"><Icon name="arrow" width={17} height={17} /><span>Previous</span></button>
+        <div class="feature-modal-tabs" aria-label="Choose a feature" role="group">{content.items.map((item, index) => <button type="button" data-feature-dot={index} aria-label={`Show ${item.title}`} aria-current={index === 0 ? 'true' : undefined}><span>{String(index + 1).padStart(2, '0')}</span></button>)}</div>
+        <button class="feature-modal-step" type="button" data-feature-next aria-label="Next feature"><span>Next</span><Icon name="arrow" width={17} height={17} /></button>
       </div>
     </div>
   </dialog>
@@ -89,58 +94,52 @@ const count = content.items.length;
   .gallery-preview:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 6px; }
   .gallery-preview:focus-visible .gallery-open { color: var(--color-ink); background: var(--color-lime); border-color: var(--color-lime); }
 
-  .feature-dialog { width: min(1360px, calc(100vw - 64px)); max-width: none; max-height: calc(100dvh - 48px); margin: auto; padding: 0; overflow: auto; overscroll-behavior: contain; border: 1px solid #394132; border-radius: 22px; color: #f3f6ed; background: #111610; box-shadow: 0 32px 100px rgb(0 0 0 / 35%); }
+  .feature-dialog { width: min(1160px, calc(100vw - 48px)); max-width: none; max-height: calc(100dvh - 32px); margin: auto; padding: 0; overflow: hidden; overscroll-behavior: contain; border: 1px solid #e0e5d8; border-radius: 20px; color: var(--color-ink); background: #fff; box-shadow: 0 24px 80px rgb(24 35 15 / 16%); }
   .feature-dialog:not([open]) { display: none; }
-  .feature-dialog::backdrop { background: rgb(4 8 4 / 64%); backdrop-filter: blur(14px); }
-  .feature-dialog-chrome { position: sticky; z-index: 5; top: 0; height: 0; }
-  .feature-modal-close { position: absolute; top: 18px; right: 18px; display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid #56614d; border-radius: 50%; color: #e1e7d8; background: #111610; cursor: pointer; }
-  .feature-modal-panel { position: relative; display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(300px, 1fr); grid-template-rows: minmax(0, 1fr) auto; height: min(78dvh, calc(100dvh - 50px), 760px); }
+  .feature-dialog::backdrop { background: rgb(31 40 24 / 26%); backdrop-filter: blur(12px); }
+  .feature-modal-panel { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: 66px minmax(0, 1fr) minmax(120px, .32fr) auto; height: min(88dvh, calc(100dvh - 34px), 880px); }
+  .feature-dialog-chrome { display: flex; align-items: center; justify-content: space-between; gap: 16px; grid-row: 1; padding-inline: 28px 14px; }
+  .feature-dialog-wordmark { display: flex; width: 53px; color: #26301f; }
+  .feature-dialog-wordmark :global(svg) { display: block; width: 100%; height: auto; }
+  .feature-dialog-position { padding: 6px 12px; border-radius: 8px; background: #f3f5ed; color: #536047; font-size: 12px; font-variant-numeric: tabular-nums; }
+  .feature-modal-close { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 12px; color: #37422e; background: #f3f5ed; cursor: pointer; }
   .feature-slides, .feature-slide { display: contents; }
   .feature-slide[hidden] { display: none; }
-  .feature-modal-media { position: relative; display: grid; align-items: center; grid-column: 1; grid-row: 1 / span 2; min-width: 0; min-height: 0; overflow: hidden; background: #000; border-right: 1px solid #30372a; }
-  .feature-modal-media :global(picture) { display: block; width: 100%; height: 100%; min-height: 0; }
+  .feature-modal-media { position: relative; display: grid; place-items: center; grid-row: 2; min-width: 0; min-height: 0; padding: 22px 32px; overflow: hidden; background: #f1f4e9; border-block: 1px solid #e4e9da; }
+  .feature-modal-media :global(picture) { display: block; width: 100%; max-width: 1040px; height: 100%; min-height: 0; overflow: hidden; border: 1px solid rgb(11 13 12 / 10%); border-radius: 10px; background: #000; box-shadow: 0 8px 24px rgb(34 49 23 / 8%); }
   .feature-modal-media :global(img) { display: block; width: 100%; height: 100%; object-fit: contain; }
-  .feature-modal-copy { grid-column: 2; grid-row: 1; padding: 72px 36px 24px; min-width: 0; min-height: 0; overflow: auto; overscroll-behavior: contain; }
-  .feature-modal-detail { margin-bottom: 24px; max-width: calc(100% - 8px); color: #b2bf9f; font-size: 12px; line-height: 1.6; }
-  .feature-modal-copy h3 { font-size: clamp(26px, 2.6vw, 38px); line-height: 1.08; letter-spacing: -.045em; font-weight: 500; }
-  .feature-modal-description { margin-top: 24px; color: #b9c3b0; font-size: 15px; line-height: 1.75; white-space: pre-line; }
-  .feature-modal-navigation { grid-column: 2; grid-row: 2; min-width: 0; margin: 0 36px; padding: 20px 0 26px; border-top: 1px solid #35402e; }
-  .feature-modal-paging { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-  [data-feature-count] { color: #c3cdb9; font-size: 12px; font-variant-numeric: tabular-nums; }
-  .feature-modal-arrows { display: flex; gap: 8px; }
-  .feature-modal-arrows button { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid #56614d; border-radius: 50%; color: #e1e7d8; background: transparent; cursor: pointer; }
+  .feature-modal-copy { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); align-content: start; gap: 32px; grid-row: 3; padding: 24px 32px; min-width: 0; min-height: 0; overflow: auto; overscroll-behavior: contain; }
+  .feature-modal-title { min-width: 0; }
+  .feature-modal-detail { margin-bottom: 8px; color: #616e54; font-size: 13px; line-height: 1.5; }
+  .feature-modal-copy h3 { font-size: clamp(27px, 2.7vw, 36px); line-height: 1.08; letter-spacing: -.045em; font-weight: 500; }
+  .feature-modal-description { color: #535c4d; font-size: 15px; line-height: 1.75; white-space: pre-line; }
+  .feature-modal-navigation { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 20px; grid-row: 4; min-width: 0; margin-inline: 32px; padding-block: 14px; border-top: 1px solid #e5e9de; }
+  .feature-modal-step { display: flex; align-items: center; justify-content: center; gap: 10px; min-width: 44px; height: 44px; padding: 0 14px; border: 1px solid #dfe5d6; border-radius: 10px; color: #39462f; background: #fff; cursor: pointer; font-size: 13px; }
   [data-feature-prev] svg { transform: rotate(180deg); }
-  .feature-modal-dots { display: flex; flex-wrap: wrap; align-items: center; margin-top: 10px; gap: 0; }
-  .feature-modal-dots button { display: grid; place-items: center; width: 26px; min-width: 26px; height: 28px; padding: 0; border: 0; background: transparent; cursor: pointer; }
-  .feature-modal-dots span { display: block; width: 5px; height: 5px; border-radius: 99px; background: #87947b; }
-  .feature-modal-dots [aria-current='true'] span { width: 17px; background: var(--color-lime); }
-  .feature-dialog :focus-visible { outline: 2px solid var(--color-lime); outline-offset: 3px; }
-  .feature-modal-close:disabled, .feature-modal-arrows button:disabled { opacity: .4; cursor: default; }
+  .feature-modal-tabs { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px; min-width: 0; }
+  .feature-modal-tabs button { display: grid; place-items: center; width: 34px; min-width: 34px; height: 36px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: #59654e; font-size: 12px; font-variant-numeric: tabular-nums; cursor: pointer; }
+  .feature-modal-tabs [aria-current='true'] { color: var(--color-ink); background: var(--color-lime); }
+  .feature-dialog :focus-visible { outline: 2px solid var(--color-focus); outline-offset: 3px; }
+  .feature-modal-step:disabled { opacity: .4; cursor: default; }
 
   @media (hover: hover) {
     .gallery-preview:hover .gallery-open { color: var(--color-ink); background: var(--color-lime); border-color: var(--color-lime); }
-    .feature-modal-close:hover, .feature-modal-arrows button:not(:disabled):hover { color: var(--color-lime); border-color: #a9ba91; }
+    .feature-modal-close:hover, .feature-modal-step:not(:disabled):hover { background: #edf3e2; }
+    .feature-modal-tabs button:not([aria-current='true']):hover { background: #f0f3e9; }
   }
   @media (prefers-reduced-motion: no-preference) {
     .gallery-media :global(img) { transition: transform 300ms var(--ease-out); }
     .gallery-preview:active .gallery-open { transform: scale(.96); transition: transform 150ms ease-out; }
     @media (hover: hover) { .gallery-preview:hover .gallery-media :global(img) { transform: scale(1.015); } }
   }
-  @media (max-width: 1050px) { .gallery-heading { gap: 40px; } .feature-modal-copy { padding-inline: 26px; } .feature-modal-navigation { margin-inline: 26px; } }
+  @media (max-width: 1050px) { .gallery-heading { gap: 40px; } }
   @media (max-width: 899px) {
     .gallery-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .gallery-tile, .gallery-grid[data-layout='compact'] > .gallery-tile { grid-column: span 1; }
     .gallery-grid[data-layout='editorial'] > .gallery-tile:first-child { grid-column: span 2; grid-row: auto; }
     .gallery-grid[data-layout='editorial'] > .gallery-tile:first-child .gallery-media { aspect-ratio: 16 / 10; flex: auto; }
     .gallery-grid[data-layout='compact'] > .gallery-tile:only-child { grid-column: span 2; }
-    .feature-dialog { width: min(660px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); border-radius: 18px; }
-    .feature-modal-panel { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, .85fr) minmax(0, 1fr) auto; height: min(88dvh, calc(100dvh - 34px), 820px); }
-    .feature-modal-media { grid-column: 1; grid-row: 1; border: 0; border-bottom: 1px solid #30372a; }
-    .feature-modal-copy { grid-column: 1; grid-row: 2; padding: 28px 26px 24px; }
-    .feature-modal-detail { margin-bottom: 16px; }
-    .feature-modal-description { margin-top: 18px; font-size: 14px; }
-    .feature-modal-navigation { grid-column: 1; grid-row: 3; margin: 0 26px; padding: 18px 0 22px; }
-    .feature-modal-dots { margin-top: 8px; }
+    .feature-modal-copy { gap: 24px; }
   }
   @media (max-width: 599px) {
     .feature-gallery { padding-block: 40px 64px; }
@@ -152,8 +151,16 @@ const count = content.items.length;
     .gallery-caption { padding-top: 16px; }
     .gallery-caption h3 { font-size: 21px; }
     .gallery-open { right: 14px; bottom: 14px; }
-    .feature-modal-close { top: 12px; right: 12px; }
-    .feature-modal-copy { padding-inline: 22px; }
-    .feature-modal-navigation { margin-inline: 22px; }
+    .feature-dialog { width: calc(100vw - 24px); max-height: calc(100dvh - 24px); border-radius: 16px; }
+    .feature-modal-panel { grid-template-rows: 60px minmax(0, 1fr) minmax(140px, .7fr) auto; height: min(90dvh, calc(100dvh - 26px), 880px); }
+    .feature-dialog-chrome { padding-inline: 18px 8px; }
+    .feature-modal-media { padding: 14px 18px; }
+    .feature-modal-copy { grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 20px 18px; }
+    .feature-modal-description { font-size: 14px; }
+    .feature-modal-navigation { gap: 4px; margin-inline: 18px; padding-block: 10px; }
+    .feature-modal-step { width: 44px; padding: 0; }
+    .feature-modal-step > span { display: none; }
+    .feature-modal-tabs { gap: 2px; }
+    .feature-modal-tabs button { width: 24px; min-width: 24px; height: 36px; }
   }
 </style>

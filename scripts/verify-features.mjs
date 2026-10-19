@@ -68,11 +68,7 @@ async function layout(page) {
   const slide = dialog(page).locator('[data-feature-slide]:not([hidden])');
   const media = await slide.locator('[data-feature-modal-media]').boundingBox();
   const copy = await slide.locator('[data-feature-copy]').boundingBox();
-  if (page.viewportSize().width >= 900) {
-    expect(media.x + media.width, 'Desktop media sits left of its copy').toBeLessThanOrEqual(copy.x + 1);
-  } else {
-    expect(media.y + media.height, 'Narrow modal stacks media above copy').toBeLessThanOrEqual(copy.y + 1);
-  }
+  expect(media.y + media.height, 'Feature media sits above the editorial copy').toBeLessThanOrEqual(copy.y + 1);
 }
 
 async function axe(page, label) {
@@ -290,10 +286,9 @@ try {
     const staticRun = await open({ javaScriptEnabled: false, viewport });
     for (let index = 0; index < 6; index++) {
       await expect(staticRun.page.locator(`#feature-description-${index}`)).toBeVisible();
-      // Position the next trigger without fighting the previous native smooth
-      // hash scroll; the click below still exercises the real fallback link.
-      await card(staticRun.page, index).evaluate((element) => element.scrollIntoView({ block: 'center', behavior: 'instant' }));
-      await card(staticRun.page, index).click();
+      // Native keyboard activation avoids racing smooth fragment scrolling
+      // against Playwright's pointer stability checks in a no-JS document.
+      await card(staticRun.page, index).press('Enter');
       await expect(staticRun.page).toHaveURL(new URL(`/#feature-description-${index}`, url).href);
       await expect(staticRun.page.locator(`#feature-description-${index}`)).toBeInViewport();
       await expect(dialog(staticRun.page)).not.toBeVisible();
