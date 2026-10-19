@@ -1,13 +1,13 @@
 ---
 import { Picture } from 'astro:assets';
-import workbench from '../assets/product/workbench.png';
+import workspacePlaceholder from '../assets/placeholders/workspace.png';
 ---
 
 <dialog class="video-dialog" id="video-dialog" aria-label="Watch Lomi" aria-describedby="video-instructions" tabindex="0" autofocus>
   <p class="video-instructions" id="video-instructions">Press Escape to close, or click outside the video.</p>
   <div class="video-player" data-video-player data-video-status="loading" aria-busy="true">
     <div class="video-poster" data-video-poster aria-hidden="true">
-      <Picture src={workbench} alt="" formats={['avif', 'webp']} widths={[640, 960, 1440, 1920]} sizes="(min-width: 1112px) 1080px, calc(100vw - 32px)" loading="eager" decoding="async" />
+      <Picture src={workspacePlaceholder} alt="" formats={['avif', 'webp']} widths={[640, 960, 1440, 1920]} sizes="(min-width: 1112px) 1080px, calc(100vw - 32px)" loading="eager" decoding="async" />
       <span class="video-loading" data-video-loading><span class="video-loading-ring"></span></span>
     </div>
     <div class="video-mount" data-video-mount inert></div>
@@ -269,7 +269,7 @@ import workbench from '../assets/product/workbench.png';
   .video-poster, .video-mount { position: absolute; inset: 0; transition: opacity 200ms ease; }
   .video-poster { pointer-events: none; }
   .video-poster :global(picture), .video-poster :global(img) { display: block; width: 100%; height: 100%; }
-  .video-poster :global(img) { object-fit: cover; object-position: left top; }
+  .video-poster :global(img) { object-fit: cover; object-position: center; }
   .video-loading { position: absolute; inset: 0; display: grid; place-items: center; background: rgb(5 7 5 / 16%); opacity: 0; transition: opacity 150ms ease; }
   .video-loading-ring { display: grid; width: 64px; height: 64px; place-items: center; border: 1px solid #ffffff26; border-radius: 50%; background: rgb(5 7 5 / 76%); box-shadow: 0 8px 24px #0003; }
   .video-loading-ring::after { content: ''; width: 25px; height: 25px; border: 2px solid #ffffff26; border-top-color: var(--color-lime); border-radius: 50%; animation: video-loading-spin 900ms linear infinite; animation-play-state: paused; }
