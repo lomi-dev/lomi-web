@@ -17,7 +17,7 @@ The original SVG geometry is unchanged. The transparent wordmark uses the brand'
 
 Final workspace source: `src/assets/clouds.png` (1536 × 1024).
 
-The work-in-progress page displays the original photograph with a static CSS grayscale filter and Soft Chalk (`#F7F8F3`) overlay to match the lomi v1.3 light palette. The source image remains unchanged.
+The landing page displays the original photograph behind its hero with a static CSS grayscale filter, Soft Chalk (`#F7F8F3`) overlay, and a fade into the page canvas. The source image remains unchanged.
 
 Created using the built-in `image_gen` tool. The two user-supplied landing-page images were visual direction references, not copied into the website. Astro exports responsive AVIF and WebP versions with PNG fallbacks at build time.
 
@@ -27,9 +27,18 @@ Exact generation prompt:
 
 ## Application screenshots
 
-Both screenshots come from the supplied local `lomi` repository. They are real native application captures, not reconstructed interfaces. Their capture procedure is documented in that repository's `docs/screenshots.md`.
+The landing outline uses `src/assets/workbench-light.png`, copied unchanged from
+`../lomi/docs/images/workbench-light.png` (2880 × 1800). This is the real native
+application capture used by the desktop README: project explorer, TypeScript
+editor, and a terminal showing passing tests. Astro generates responsive AVIF
+and WebP variants. Its descriptive alt text is editable in the CMS.
 
-The current work-in-progress page does not display application screenshots. Capture new screenshots from a Lomi build before adding them to the site.
+The older `workbench.png` and `source-control.png` captures remain unused. No
+interface was reconstructed or generated. Review or recapture the preview for
+the final launch release; the existing capture represents the layout outline.
+
+`public/social-card.png` is a 1200 × 630 browser capture of the landing hero,
+replacing the previous work-in-progress message in social previews.
 
 ## Typography
 

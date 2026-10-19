@@ -6,3 +6,7 @@ dist/
 .env.*
 !.env.example
 artifacts/
+cms/.next/
+cms/*.db
+cms/*.db-*
+cms/*.tsbuildinfo

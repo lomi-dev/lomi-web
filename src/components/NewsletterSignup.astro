@@ -24,6 +24,7 @@ const isConfigured = Boolean(endpoint);
         maxlength="254"
         required
         disabled
+        aria-describedby="newsletter-status newsletter-note"
       />
       <button type="submit" disabled>Subscribe</button>
     </div>
@@ -31,7 +32,7 @@ const isConfigured = Boolean(endpoint);
       {!isConfigured && 'Newsletter signup is temporarily unavailable.'}
     </p>
   </form>
-  <p class="newsletter-note">Occasional notes on what we’re building. Unsubscribe anytime.</p>
+  <p class="newsletter-note" id="newsletter-note">Occasional notes on what we’re building. Unsubscribe anytime.</p>
 </section>
 
 <noscript><p class="newsletter-noscript">Enable JavaScript to subscribe to the newsletter.</p></noscript>
@@ -110,7 +111,7 @@ const isConfigured = Boolean(endpoint);
     background: #fff;
     color: var(--color-ink);
     font: inherit;
-    font-size: 14px;
+    font-size: 16px;
   }
   .newsletter input::placeholder { color: #68716a; }
   .newsletter button {
@@ -126,7 +127,7 @@ const isConfigured = Boolean(endpoint);
     cursor: pointer;
   }
   .newsletter button:active { background: var(--color-lime-pressed); }
-  .newsletter button:disabled { cursor: wait; opacity: .65; }
+  .newsletter button:disabled { cursor: not-allowed; opacity: .65; }
   .newsletter input:disabled { background: #f2f3ef; }
   .newsletter input:focus-visible, .newsletter button:focus-visible { outline-offset: 3px; }
   .newsletter-status { min-height: 16px; margin-top: 5px; font-size: 12px; line-height: 1.5; }

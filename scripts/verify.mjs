@@ -70,22 +70,87 @@ await page.route(/^https:\/\/api\.github\.com\/repos\/lomi-dev\/lomi\/releases\?
 try {
   const response = await page.goto(url, { waitUntil: 'networkidle' });
   expect(response.status()).toBe(200);
-  await expect(page).toHaveTitle('lomi: Work in progress');
+  await expect(page).toHaveTitle(/\S/);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Follow the progress on GitHub' })).toHaveAttribute('href', 'https://github.com/lomi-dev/lomi');
+  await expect(page.locator('#download a[href="https://github.com/lomi-dev/lomi"]')).toBeVisible();
   await expect(page.getByRole('region', { name: 'Newsletter signup' })).toBeVisible();
-  await expect(page.locator('nav, footer')).toHaveCount(0);
+  await expect(page.getByRole('navigation', { name: 'Primary navigation', exact: true })).toBeVisible();
+  await expect(page.getByRole('contentinfo')).toBeVisible();
+  for (const section of ['workflow', 'features', 'roadmap', 'faq', 'download', 'newsletter']) {
+    await expect(page.locator(`#${section}`)).toBeVisible();
+    await expect(page.locator(`#${section}`).getByRole('heading', { level: 2 })).toBeVisible();
+  }
+  const anchors = await page.evaluate(() => {
+    const ids = [...document.querySelectorAll('[id]')].map((element) => element.id);
+    return {
+      duplicates: ids.filter((id, index) => ids.indexOf(id) !== index),
+      missingTargets: [...document.querySelectorAll('a[href^="#"]')]
+        .map((link) => link.getAttribute('href'))
+        .filter((href) => href.length < 2 || !document.getElementById(decodeURIComponent(href.slice(1)))),
+    };
+  });
+  expect(anchors.duplicates, 'Unique element IDs').toEqual([]);
+  expect(anchors.missingTargets, 'Internal anchor destinations').toEqual([]);
   await expect(page.locator('#download-dialog')).not.toBeVisible();
 
   for (const width of [320, 390, 768, 1024, 1440, 1920]) {
     await page.setViewportSize({ width, height: 900 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth), `Layout at ${width}px`).toBe(width);
-    expect(await page.evaluate(() => document.documentElement.scrollHeight), `Single screen at ${width}px`).toBe(900);
   }
   await page.setViewportSize({ width: 844, height: 390 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(844);
-  await page.getByRole('link', { name: 'Follow the progress on GitHub' }).scrollIntoViewIfNeeded();
-  await expect(page.getByRole('link', { name: 'Follow the progress on GitHub' })).toBeInViewport();
+  await page.locator('#download').scrollIntoViewIfNeeded();
+  await expect(page.locator('#download')).toBeInViewport();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  const mobileMenu = page.locator('#mobile-navigation');
+  const mobileSummary = mobileMenu.locator('summary');
+  await expect(mobileSummary).toBeVisible();
+  await expect(mobileMenu).not.toHaveAttribute('open');
+  const navigationLinks = await mobileMenu.locator('a').evaluateAll((links) => links.map((link) => ({
+    href: link.getAttribute('href'),
+    label: link.textContent.trim(),
+  })));
+  expect(navigationLinks.length, 'Mobile navigation links').toBeGreaterThan(0);
+  const desktopLinks = await page.getByRole('navigation', { name: 'Primary navigation', exact: true })
+    .locator('a').evaluateAll((links) => links.map((link) => ({ href: link.getAttribute('href'), label: link.textContent.trim() })));
+  expect(navigationLinks.slice(0, desktopLinks.length), 'Consistent desktop and mobile navigation').toEqual(desktopLinks);
+  for (const [index, link] of navigationLinks.entries()) {
+    expect(link.label, 'Nonempty navigation label').toMatch(/\S/);
+    expect(link.href, 'Navigation destination').toMatch(/^(#.+|https:\/\/)/);
+    if (!link.href.startsWith('#')) continue;
+    await mobileSummary.click();
+    await expect(mobileMenu).toHaveAttribute('open', '');
+    const navigationLink = mobileMenu.getByRole('link').nth(index);
+    await expect(navigationLink).toHaveAttribute('href', link.href);
+    await expect(navigationLink).toBeVisible();
+    await navigationLink.click();
+    await expect(page).toHaveURL(new URL(link.href, url).href);
+    await expect(mobileMenu).not.toHaveAttribute('open');
+    await expect(page.locator(link.href)).toBeInViewport();
+  }
+  await mobileSummary.focus();
+  await page.keyboard.press('Enter');
+  await expect(mobileMenu).toHaveAttribute('open', '');
+  await page.keyboard.press('Escape');
+  await expect(mobileMenu).not.toHaveAttribute('open');
+  await expect(mobileSummary).toBeFocused();
+
+  const faqItems = page.locator('#faq details');
+  expect(await faqItems.count()).toBeGreaterThan(0);
+  for (const item of await faqItems.all()) {
+    const summary = item.locator('summary');
+    await expect(item.locator('p')).not.toBeVisible();
+    await summary.focus();
+    await page.keyboard.press('Enter');
+    await expect(item).toHaveAttribute('open', '');
+    await expect(item.locator('p')).toBeVisible();
+    await expect(item.locator('p')).not.toBeEmpty();
+    await page.keyboard.press('Space');
+    await expect(item).not.toHaveAttribute('open');
+    await expect(item.locator('p')).not.toBeVisible();
+  }
 
   for (const width of [390, 1440]) {
     await page.setViewportSize({ width, height: 900 });
@@ -102,6 +167,7 @@ try {
     let authorization;
     let cookie;
     const endpoint = await page.locator('#newsletter-form').getAttribute('data-endpoint');
+    expect(new URL(endpoint).pathname).toBe('/v1/newsletter/subscribe');
     await page.route(endpoint, async (route) => {
       requestBody = route.request().postDataJSON();
       authorization = route.request().headers().authorization;
@@ -110,7 +176,7 @@ try {
     });
     await email.fill('reader@example.com');
     await subscribe.click();
-    await expect(page.getByRole('status')).toHaveText('Check your inbox to confirm your subscription.');
+    await expect(page.locator('#newsletter-status')).toHaveText('You’re on the list. Thanks for joining!');
     expect(requestBody).toEqual({ email: 'reader@example.com' });
     expect(authorization).toBeUndefined();
     expect(cookie).toBeUndefined();
@@ -125,23 +191,35 @@ try {
       await page.route(endpoint, (route) => route.fulfill({ ...result, contentType: 'application/json' }));
       await email.fill('reader@example.com');
       await subscribe.click();
-      await expect(page.getByRole('status')).toHaveText('Something went wrong. Please try again.');
+      await expect(page.locator('#newsletter-status')).toHaveText('Something went wrong. Please try again.');
       await expect(subscribe).toBeEnabled();
       await page.unroute(endpoint);
     }
   } else {
     await expect(email).toBeDisabled();
-    await expect(page.getByRole('status')).toHaveText('Newsletter signup is temporarily unavailable.');
+    await expect(page.locator('#newsletter-status')).toHaveText('Newsletter signup is temporarily unavailable.');
   }
 
-  const downloadTrigger = page.getByRole('button', { name: 'Download the prerelease' });
+  const downloadTriggers = page.locator('[data-download-open]');
+  const downloadTrigger = page.locator('#download [data-download-open]');
   const downloadDialog = page.getByRole('dialog', { name: 'Choose your download' });
   const osSelect = page.getByLabel('Operating system');
   const typeSelect = page.getByLabel('Package type');
   const downloadAction = page.getByRole('link', { name: 'Download prerelease' });
   const osIconWrap = page.locator('[data-download-os-icon]');
 
-  await expect(downloadTrigger).toBeVisible();
+  await expect(page.locator('dialog')).toHaveCount(1);
+  expect(await downloadTriggers.count()).toBeGreaterThanOrEqual(2);
+  for (const trigger of await downloadTriggers.all()) {
+    await expect(trigger).toBeVisible();
+    await expect(trigger).toHaveAttribute('aria-controls', 'download-dialog');
+    await trigger.click();
+    await expect(downloadDialog).toBeVisible();
+    await expect(osSelect).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(downloadDialog).not.toBeVisible();
+    await expect(trigger).toBeFocused();
+  }
   await downloadTrigger.click();
   await expect(downloadDialog).toBeVisible();
   await expect(osSelect).toHaveValue('linux');
@@ -212,18 +290,44 @@ try {
 
   const staticContext = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
   const staticPage = await staticContext.newPage();
+  await staticPage.route(releaseUrl, (route) => route.fulfill({ status: 200, contentType: 'text/html', body: '<h1>GitHub releases</h1>' }));
   await staticPage.goto(url);
+  await expect(staticPage.getByRole('heading', { level: 1 })).toHaveCount(1);
   await expect(staticPage.getByRole('heading', { level: 1 })).toBeVisible();
-  await expect(staticPage.getByRole('link', { name: 'Follow the progress on GitHub' })).toBeVisible();
-  await expect(staticPage.getByRole('link', { name: 'Browse releases on GitHub' })).toHaveAttribute('href', releaseUrl);
+  for (const section of ['workflow', 'features', 'roadmap', 'faq', 'download', 'newsletter']) {
+    await expect(staticPage.locator(`#${section}`).getByRole('heading', { level: 2 })).toBeVisible();
+  }
+  const staticHeroDownload = staticPage.locator('.hero [data-download-open]');
+  await expect(staticHeroDownload).toBeVisible();
+  await expect(staticHeroDownload).toHaveAttribute('href', releaseUrl);
+  await staticHeroDownload.click();
+  await expect(staticPage).toHaveURL(releaseUrl);
+  await staticPage.goto(url);
+  const staticReleaseLink = staticPage.locator('#download').getByRole('link', { name: 'Browse releases on GitHub' });
+  await expect(staticReleaseLink).toBeVisible();
+  await expect(staticReleaseLink).toHaveAttribute('href', releaseUrl);
   await expect(staticPage.getByRole('button', { name: 'Subscribe' })).toBeDisabled();
   await expect(staticPage.locator('.newsletter-noscript')).toBeVisible();
+  const staticMenu = staticPage.locator('#mobile-navigation');
+  await staticMenu.locator('summary').click();
+  await expect(staticMenu.getByRole('navigation')).toBeVisible();
+  const staticNavigationLink = staticMenu.locator('a[href^="#"]').first();
+  const staticDestination = await staticNavigationLink.getAttribute('href');
+  await staticNavigationLink.click();
+  await expect(staticPage.locator(staticDestination)).toBeInViewport();
+  const staticFaq = staticPage.locator('#faq details').first();
+  await staticFaq.locator('summary').focus();
+  await staticPage.keyboard.press('Enter');
+  await expect(staticFaq.locator('p')).toBeVisible();
+  await staticPage.keyboard.press('Space');
+  await expect(staticFaq.locator('p')).not.toBeVisible();
+  await staticPage.goto(url);
   await staticPage.keyboard.press('Tab');
   await expect(staticPage.getByRole('link', { name: 'Skip to content' })).toBeFocused();
   await staticPage.keyboard.press('Enter');
   await expect(staticPage.locator('#main')).toBeFocused();
   await staticContext.close();
-  console.log('Passed: 6 viewport widths, short landscape layout, GitHub link, newsletter form, preview download defaults and all 7 package links, release API fallback, dialog keyboard/focus behavior, no-JS releases link, and mobile/desktop/dialog accessibility.');
+  console.log('Passed: complete landing sections and anchors, 6 viewport widths and landscape, mobile navigation and FAQ keyboard behavior, newsletter form, all 7 download packages, release fallback, every download trigger and focus restoration, no-JS reading and release links, and mobile/desktop/dialog accessibility.');
 } finally {
   await browser.close();
 }

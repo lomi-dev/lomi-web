@@ -2,9 +2,11 @@
 interface Props {
   apiUrl: string;
   releaseUrl: string;
+  label?: string;
+  note?: string;
 }
 
-const { apiUrl, releaseUrl } = Astro.props;
+const { apiUrl, releaseUrl, label = 'Download the prerelease', note = 'Early access for macOS, Windows, and Linux' } = Astro.props;
 ---
 
 <div class="download-cta" data-download-cta hidden>
@@ -15,9 +17,9 @@ const { apiUrl, releaseUrl } = Astro.props;
     aria-controls="download-dialog"
     data-download-open
   >
-    Download the prerelease
+    {label}
   </button>
-  <p>Early access for macOS, Windows, and Linux</p>
+  <p>{note}</p>
 </div>
 <noscript>
   <a class="download-trigger download-noscript" href={releaseUrl}>Browse releases on GitHub</a>
@@ -78,7 +80,7 @@ const { apiUrl, releaseUrl } = Astro.props;
 
 <script>
   const dialog = document.querySelector<HTMLDialogElement>('#download-dialog');
-  const openButton = document.querySelector<HTMLButtonElement>('[data-download-open]');
+  const openButtons = document.querySelectorAll<HTMLElement>('[data-download-open]');
   const cta = document.querySelector<HTMLElement>('[data-download-cta]');
   const closeButtons = document.querySelectorAll<HTMLButtonElement>('[data-download-close]');
   const osSelect = document.querySelector<HTMLSelectElement>('[data-download-os]');
@@ -258,7 +260,8 @@ const { apiUrl, releaseUrl } = Astro.props;
     }
   }
 
-  openButton?.addEventListener('click', () => {
+  openButtons.forEach((openButton) => openButton.addEventListener('click', (event) => {
+    event.preventDefault();
     if (!dialog || dialog.open) return;
     returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : openButton;
     typeInteracted = false;
@@ -272,7 +275,7 @@ const { apiUrl, releaseUrl } = Astro.props;
     }
     updateAction();
     void fetchLatestRelease(requestId);
-  });
+  }));
 
   osSelect?.addEventListener('change', () => {
     typeInteracted = false;
