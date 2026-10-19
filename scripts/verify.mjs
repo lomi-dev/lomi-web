@@ -1,5 +1,6 @@
 import { chromium, firefox, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import sharp from 'sharp';
 import { mkdir, writeFile } from 'node:fs/promises';
 
 const url = process.env.VERIFY_URL || 'http://127.0.0.1:4322';
@@ -574,75 +575,192 @@ async function expectAnchorBelowHeader(targetPage, destination) {
 async function verifyAdaptiveHeader(targetPage) {
   const originalViewport = targetPage.viewportSize();
   const header = targetPage.locator('.site-header');
-  const palette = () => header.evaluate((element) => ({
-    theme: element.dataset.theme,
-    tint: getComputedStyle(element, '::before').backgroundColor,
-  }));
+  const controlSelector = '.wordmark, .product-menu > summary, .navigation-link, .header-source, .mobile-navigation > summary';
+  const controls = () => header.locator(controlSelector).evaluateAll((elements) => elements
+    .filter((element) => element.getClientRects().length && getComputedStyle(element).visibility !== 'hidden')
+    .map((element) => ({ contrast: element.dataset.contrast, label: element.textContent.trim() || element.getAttribute('aria-label') })));
   const settle = () => header.evaluate(async (element) => {
     await Promise.all(element.getAnimations({ subtree: true })
       .filter((animation) => animation.effect.getComputedTiming().iterations !== Infinity)
       .map((animation) => animation.finished.catch(() => {})));
   });
+  const frames = () => targetPage.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   const scrollSurface = (selector) => targetPage.locator(selector).evaluate((element) => {
     const bounds = element.getBoundingClientRect();
     const bar = document.querySelector('.site-header').getBoundingClientRect();
     scrollTo({ top: scrollY + bounds.top + Math.min(120, bounds.height / 2) - bar.height / 2, behavior: 'instant' });
   });
-  const expectSectionTint = async (selector) => {
-    await expect.poll(() => header.evaluate((element, selector) => {
-      let surface = document.querySelector(selector), color;
-      while (surface) {
-        color = getComputedStyle(surface).backgroundColor.match(/[\d.]+/g).map(Number);
-        if (color.length === 3 || color[3] >= .95) break;
-        surface = surface.parentElement;
-      }
-      const tint = getComputedStyle(element, '::before').backgroundColor.match(/[\d.]+/g).map(Number);
-      return color && color.slice(0, 3).every((channel, index) => Math.abs(channel - tint[index]) <= 1);
-    }, selector), { message: `Fog tint matches the actual ${selector} background` }).toBe(true);
-  };
-  const expectTheme = async (theme) => {
-    await expect(header).toHaveAttribute('data-theme', theme);
+  const expectControls = async (contrast) => {
+    await expect.poll(async () => (await controls()).map((control) => control.contrast), {
+      message: `Each visible navigation control uses ${contrast} foreground on this surface`,
+    }).toEqual((await controls()).map(() => contrast));
+    expect((await controls()).length).toBeGreaterThan(1);
     await settle();
-    expect(await header.evaluate((element) => {
-      const rgba = (color) => color.match(/[\d.]+/g).map(Number);
-      const luminance = (rgb) => rgb.map((channel) => {
-        const value = channel / 255;
-        return value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4;
-      }).reduce((sum, channel, index) => sum + channel * [.2126, .7152, .0722][index], 0);
-      const foreground = luminance(rgba(getComputedStyle(element.querySelector('.navigation-link')).color).slice(0, 3));
-      const tint = rgba(getComputedStyle(element, '::before').backgroundColor);
-      const alpha = tint[3] ?? 1;
-      // A translucent bar must stay readable across white photo gutters and dark section edges.
-      const oppositeSurface = element.dataset.theme === 'dark' ? 255 : 0;
-      const background = luminance(tint.slice(0, 3).map((channel) => channel * alpha + oppositeSurface * (1 - alpha)));
-      return (Math.max(foreground, background) + .05) / (Math.min(foreground, background) + .05);
-    }), 'Adaptive navigation text remains readable through the translucent fog at contrasting edges').toBeGreaterThanOrEqual(4.5);
   };
+  const screenshotPixels = async () => {
+    const { data, info } = await sharp(await targetPage.screenshot()).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+    const pixel = (x, y) => {
+      const offset = (Math.floor(y) * info.width + Math.floor(x)) * info.channels;
+      return [...data.subarray(offset, offset + 3)];
+    };
+    const mean = (x, y, width = 12, height = 12) => {
+      const sums = [0, 0, 0];
+      for (let row = 0; row < height; row++) for (let column = 0; column < width; column++) {
+        pixel(x + column, y + row).forEach((channel, index) => { sums[index] += channel; });
+      }
+      return sums.map((sum) => sum / (width * height));
+    };
+    const edgeEnergy = (x, y, width = 16, height = 12) => {
+      let sum = 0;
+      for (let row = 0; row < height; row++) for (let column = 0; column < width - 1; column++) {
+        const left = pixel(x + column, y + row), right = pixel(x + column + 1, y + row);
+        sum += Math.abs(left[0] - right[0]);
+      }
+      return sum / ((width - 1) * height);
+    };
+    return { mean, edgeEnergy };
+  };
+  const distance = (left, right) => Math.hypot(...left.map((channel, index) => channel - right[index]));
   for (const width of [1440, 390]) {
     await targetPage.setViewportSize({ width, height: 900 });
     await targetPage.mouse.move(0, 0);
+    await targetPage.evaluate(() => scrollTo({ top: 64, behavior: 'instant' }));
+    let innerOpacity;
+    try {
+      await header.evaluate((element) => {
+        const field = document.createElement('div');
+        field.id = 'verify-local-header-field';
+        field.setAttribute('aria-hidden', 'true');
+        field.style.cssText = `position:fixed;inset:0 0 auto;height:${element.clientHeight + 160}px;display:grid;grid-template-columns:1fr 1fr;z-index:${Number(getComputedStyle(element).zIndex) - 1}`;
+        for (const color of ['rgb(16,43,70)', 'rgb(241,221,194)']) {
+          const column = document.createElement('div');
+          column.style.cssText = `position:relative;background:${color}`;
+          field.append(column);
+        }
+        const stripes = document.createElement('div');
+        stripes.style.cssText = 'position:absolute;top:0;bottom:0;left:calc(42% - 16px);width:32px;background:repeating-linear-gradient(90deg,#000 0 4px,#fff 4px 8px)';
+        field.append(stripes);
+        document.body.append(field);
+        window.dispatchEvent(new Event('scroll'));
+      });
+      for (const swapped of [false, true]) {
+        if (swapped) await targetPage.evaluate(() => {
+          const field = document.querySelector('#verify-local-header-field');
+          field.children[0].style.backgroundColor = 'rgb(241,221,194)';
+          field.children[1].style.backgroundColor = 'rgb(16,43,70)';
+          window.dispatchEvent(new Event('scroll'));
+        });
+        await expect.poll(() => header.locator(controlSelector).evaluateAll((elements, swapped) => {
+          const checked = elements.filter((element) => element.getClientRects().length && getComputedStyle(element).visibility !== 'hidden')
+            .map((element) => {
+              const bounds = element.getBoundingClientRect(), x = bounds.left + bounds.width / 2;
+              return { x, actual: element.dataset.contrast };
+            }).filter(({ x }) => Math.abs(x - innerWidth / 2) > 72 && Math.abs(x - innerWidth * .42) > 84);
+          return {
+            left: checked.filter(({ x }) => x < innerWidth / 2).length,
+            right: checked.filter(({ x }) => x > innerWidth / 2).length,
+            mismatches: checked.filter(({ x, actual }) => actual !== ((x < innerWidth / 2) !== swapped ? 'light' : 'dark')).length,
+          };
+        }, swapped), { message: 'Opposite sides of the navigation adapt independently to their local backgrounds' }).toMatchObject({ mismatches: 0 });
+        const counts = await header.locator(controlSelector).evaluateAll((elements) => elements
+          .filter((element) => element.getClientRects().length && getComputedStyle(element).visibility !== 'hidden')
+          .map((element) => element.getBoundingClientRect().left + element.getBoundingClientRect().width / 2)
+          .filter((x) => Math.abs(x - innerWidth / 2) > 72 && Math.abs(x - innerWidth * .42) > 84)
+          .reduce((counts, x) => { counts[x < innerWidth / 2 ? 0 : 1]++; return counts; }, [0, 0]));
+        expect(counts.every((count) => count > 0), 'The fixture exercises controls on both colored halves').toBe(true);
+        await settle();
+        innerOpacity = await header.locator('.header-inner').evaluate((element) => {
+          const original = element.style.opacity;
+          element.style.opacity = '0';
+          return original;
+        });
+        const pixels = await screenshotPixels();
+        const barHeight = (await header.boundingBox()).height;
+        const left = pixels.mean(width * .08, barHeight / 2 - 6);
+        const right = pixels.mean(width * .92 - 12, barHeight / 2 - 6);
+        const navy = [16, 43, 70], cream = [241, 221, 194];
+        expect(distance(left, right), 'Different underlying colors remain visible simultaneously through the fog').toBeGreaterThan(100);
+        expect(distance(left, swapped ? cream : navy), 'Left fog follows the local color without an opaque global tint').toBeLessThan(40);
+        expect(distance(right, swapped ? navy : cream), 'Right fog follows the local color without an opaque global tint').toBeLessThan(40);
+        const rawDetail = pixels.edgeEnergy(width * .42 - 8, barHeight + 48);
+        const fogDetail = pixels.edgeEnergy(width * .42 - 8, barHeight / 2 - 6);
+        expect(rawDetail, 'The uncovered fixture contains sharp text-scale detail').toBeGreaterThan(20);
+        expect(fogDetail, 'Native fog softens detail underneath the navigation').toBeLessThan(rawDetail * .35);
+        await header.locator('.header-inner').evaluate((element, value) => { element.style.opacity = value; }, innerOpacity);
+        innerOpacity = undefined;
+      }
+    } finally {
+      if (innerOpacity !== undefined) await header.locator('.header-inner').evaluate((element, value) => { element.style.opacity = value; }, innerOpacity);
+      await targetPage.evaluate(() => {
+        document.querySelector('#verify-local-header-field')?.remove();
+        window.dispatchEvent(new Event('scroll'));
+      });
+    }
     await targetPage.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
-    await expectTheme('light');
+    await expectControls('dark');
     await scrollSurface('#features');
-    await expectTheme('dark');
-    await expectSectionTint('#features');
-    const dark = await palette();
+    await expectControls('light');
     await scrollSurface('#roadmap');
-    await expectTheme('light');
-    await expectSectionTint('#roadmap');
-    expect((await palette()).tint, 'Fog tint follows the light section after the dark section').not.toBe(dark.tint);
+    await expectControls('dark');
     await scrollSurface('[data-video-open]');
-    await expectTheme('dark');
+    if (width >= 768) {
+      await expect.poll(() => header.locator(controlSelector).evaluateAll((elements) => {
+        const image = document.querySelector('[data-video-open]').getBoundingClientRect();
+        const contrasts = elements.filter((element) => element.getClientRects().length).map((element) => {
+          const bounds = element.getBoundingClientRect(), x = bounds.left + bounds.width / 2;
+          return { x, contrast: element.dataset.contrast };
+        }).filter(({ x }) => x > image.left + 72 && x < image.right - 72).map(({ contrast }) => contrast);
+        return { present: contrasts.length > 0, correct: contrasts.every((contrast) => contrast === 'light') };
+      }), { message: 'Controls directly above the dark product capture use light foreground' }).toEqual({ present: true, correct: true });
+    }
+    for (const selector of ['#features', '.deck-frame']) {
+      await targetPage.locator(selector).evaluate((element) => {
+        const bounds = element.getBoundingClientRect();
+        const bar = document.querySelector('.site-header').getBoundingClientRect();
+        scrollTo({ top: scrollY + bounds.top + 1 - bar.height / 2, behavior: 'instant' });
+      });
+      await frames();
+      await settle();
+      const labels = await header.locator(width < 768 ? '.mobile-navigation > summary' : '.navigation-link').evaluateAll((elements) => elements
+        .filter((element) => element.getClientRects().length).map((element) => {
+          const bounds = element.getBoundingClientRect();
+          return { x: bounds.left + bounds.width / 2, y: bounds.top + bounds.height / 2,
+            color: getComputedStyle(element).color.match(/[\d.]+/g).slice(0, 3).map(Number), label: element.textContent.trim() };
+        }));
+      expect(labels.length, 'The boundary probe exercises visible navigation text').toBeGreaterThan(0);
+      const originalOpacity = await header.locator('.header-inner').evaluate((element) => {
+        const original = element.style.opacity;
+        element.style.opacity = '0';
+        return original;
+      });
+      try {
+        const pixels = await screenshotPixels();
+        const luminance = (rgb) => rgb.map((channel) => {
+          const value = channel / 255;
+          return value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4;
+        }).reduce((sum, channel, index) => sum + channel * [.2126, .7152, .0722][index], 0);
+        for (const label of labels) {
+          const foreground = luminance(label.color);
+          const background = luminance(pixels.mean(label.x - 4, label.y - 2, 9, 5));
+          const ratio = (Math.max(foreground, background) + .05) / (Math.min(foreground, background) + .05);
+          expect(ratio, `Rendered ${label.label} contrast at the ${selector} blur boundary at ${width}px`).toBeGreaterThanOrEqual(4.5);
+        }
+      } finally {
+        await header.locator('.header-inner').evaluate((element, value) => { element.style.opacity = value; }, originalOpacity);
+      }
+    }
     await scrollSurface('.site-footer');
-    const footerTheme = await targetPage.locator('.site-footer').evaluate((footer) => {
+    const footerContrast = await targetPage.locator('.site-footer').evaluate((footer) => {
       const rgb = getComputedStyle(footer).backgroundColor.match(/[\d.]+/g).slice(0, 3).map(Number);
-      return rgb.reduce((sum, channel, index) => sum + channel / 255 * [.2126, .7152, .0722][index], 0) > .5 ? 'light' : 'dark';
+      const luminance = rgb.map((channel) => {
+        const value = channel / 255;
+        return value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4;
+      }).reduce((sum, channel, index) => sum + channel * [.2126, .7152, .0722][index], 0);
+      return (luminance + .05) / .05 >= 1.05 / (luminance + .05) ? 'dark' : 'light';
     });
-    await expectTheme(footerTheme);
-    await expectSectionTint('.site-footer');
+    await expectControls(footerContrast);
     await targetPage.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
-    await expectTheme('light');
-
+    await expectControls('dark');
     const mobile = width < 768;
     const open = async () => {
       if (mobile) {
@@ -651,7 +769,6 @@ async function verifyAdaptiveHeader(targetPage) {
       }
       await targetPage.locator(mobile ? '#mobile-product > summary' : '#product-menu > summary').focus();
       await targetPage.keyboard.press('Enter');
-      await expect(targetPage.locator(mobile ? '#mobile-product' : '#product-menu')).toHaveAttribute('open', '');
       await settle();
     };
     const close = async () => {
@@ -659,38 +776,38 @@ async function verifyAdaptiveHeader(targetPage) {
       if (mobile) await targetPage.keyboard.press('Escape');
     };
     await open();
-    const lightMenu = await palette();
+    const panelStyle = () => targetPage.locator(mobile ? '.mobile-panel' : '.product-panel').evaluate((panel) => ({
+      background: getComputedStyle(panel).backgroundColor,
+      title: getComputedStyle(panel.querySelector('.product-link-title')).color,
+      description: getComputedStyle(panel.querySelector('.product-link-description')).color,
+    }));
+    const originalPanelStyle = await panelStyle();
     await scrollSurface('#features');
-    await targetPage.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-    expect(await palette(), 'An open menu freezes the light palette while the page scrolls').toEqual(lightMenu);
-    await close();
-    await expectTheme('dark');
-    await open();
-    const darkMenu = await palette();
+    await expectControls('light');
+    expect(await panelStyle(), 'Open dropdown panels retain their readable route palette while bar controls adapt').toEqual(originalPanelStyle);
     const accessibility = await new AxeBuilder({ page: targetPage }).include('.site-header').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
-    expect(accessibility.violations, `Dark adaptive menu accessibility at ${width}px`).toEqual([]);
+    expect(accessibility.violations, `Dropdown readability while local navigation follows the page at ${width}px`).toEqual([]);
     await scrollSurface('#roadmap');
-    await targetPage.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-    expect(await palette(), 'An open menu freezes the dark palette while the page scrolls').toEqual(darkMenu);
+    await expectControls('dark');
     await close();
-    await expectTheme('light');
+    await expectControls('dark');
     if (!mobile) {
       await targetPage.locator('.header-action[data-download-open]').click();
       await expect(targetPage.locator('#download-dialog')).toBeVisible();
-      const modalPalette = await palette();
+      const modalForegrounds = await controls();
       await scrollSurface('#features');
-      await targetPage.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-      expect(await palette(), 'An open native modal freezes the navigation palette').toEqual(modalPalette);
+      await frames();
+      expect(await controls(), 'An open native modal freezes local navigation foregrounds').toEqual(modalForegrounds);
       await targetPage.keyboard.press('Escape');
       await expect(targetPage.locator('#download-dialog')).not.toBeVisible();
-      await expectTheme('dark');
+      await expectControls('light');
     }
     await targetPage.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
-    await expectTheme('light');
+    await expectControls('dark');
   }
   await targetPage.setViewportSize(originalViewport);
   await targetPage.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
-  await expectTheme('light');
+  await expectControls('dark');
 }
 
 async function verifyFixedHeader(targetPage, javaScriptEnabled = true) {

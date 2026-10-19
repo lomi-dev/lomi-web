@@ -149,39 +149,46 @@ const productGroups: { label: string; links: { label: string; description: strin
   type SurfaceColor = [number, number, number];
   const surfaceColor = (surface: Element): SurfaceColor => {
     // Product captures have a dark interface inside their white image frames.
-    if (surface.matches('.deck-frame, .deck-detail')) return [19, 23, 20];
-    if (surface.matches('.hero')) return [255, 255, 255];
+    if (surface.closest('.deck-frame, .deck-detail')) return [19, 23, 20];
     for (let element: Element | null = surface; element; element = element.parentElement) {
       const channels = getComputedStyle(element).backgroundColor.match(/[\d.]+/g)?.map(Number);
       if (channels && channels.length >= 3 && (channels[3] ?? 1) >= .95) {
         return channels.slice(0, 3) as SurfaceColor;
       }
+      if (element.matches('.hero')) return [255, 255, 255];
     }
     return [247, 248, 243];
   };
+  const contrastTargets = header?.querySelectorAll<HTMLElement>('.wordmark, .product-fallback, .navigation-link, .product-menu > summary, .header-source, .mobile-navigation > summary') ?? [];
+  const frostedBackdrop = CSS.supports('backdrop-filter', 'blur(1px)') || CSS.supports('-webkit-backdrop-filter', 'blur(1px)');
   const syncHeaderSurface = () => {
     if (!header) return;
     header.toggleAttribute('data-scrolled', window.scrollY > 24);
-    // Keep an open menu or dialog stable while the page underneath can move.
-    if (product?.open || mobile?.open || document.querySelector('dialog[open]')) return;
-    const underlying = document.elementsFromPoint(window.innerWidth / 2, header.clientHeight / 2)
-      .find((element) => !header.contains(element));
-    if (!underlying) return;
-    // Section backgrounds determine the palette, rather than individual links,
-    // code blocks or the footer's animated wordmark passing under the bar.
-    const surface = underlying.closest('.deck-frame, .deck-detail, .hero, main > section, .site-footer, .devlog-surface') ?? underlying;
-    const rgb = surfaceColor(surface);
-    const linear = rgb.map((channel) => {
-      const value = channel / 255;
-      return value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4;
+    // Background colors come entirely from the native backdrop blur. Only
+    // each individual control's foreground needs a local contrast adjustment.
+    if (!frostedBackdrop || document.querySelector('dialog[open]')) return;
+    contrastTargets.forEach((target) => {
+      const bounds = target.getBoundingClientRect();
+      if (!bounds.width || !bounds.height) return;
+      const rgb: SurfaceColor = [0, 0, 0];
+      // Include neighboring surfaces to account for the blur at image edges.
+      const weights = [1, 3, 3, 1];
+      for (let row = 0; row < 4; row++) for (let column = 0; column < 4; column++) {
+        const x = Math.max(0, Math.min(innerWidth - 1, bounds.left + bounds.width / 2 + (column * 2 - 3) * 14));
+        const y = Math.max(0, bounds.top + bounds.height / 2 + (row * 2 - 3) * 14);
+        const underlying = document.elementsFromPoint(x, y).find((element) => !header.contains(element));
+        const color = underlying ? surfaceColor(underlying) : [247, 248, 243];
+        const weight = weights[row] * weights[column] / 64;
+        color.forEach((channel, index) => { rgb[index] += channel * weight; });
+      }
+      const linear = rgb.map((channel) => {
+        const value = (channel * .94 + 255 * .06) / 255;
+        return value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4;
+      });
+      const luminance = .2126 * linear[0] + .7152 * linear[1] + .0722 * linear[2];
+      const contrast = luminance > .179 ? 'dark' : 'light';
+      if (target.dataset.contrast !== contrast) target.dataset.contrast = contrast;
     });
-    const luminance = .2126 * linear[0] + .7152 * linear[1] + .0722 * linear[2];
-    const theme = luminance > .179 ? 'light' : 'dark';
-    // A strong matching tint also protects contrast across image gutters and
-    // the boundary between two sections, while the blurred backdrop shows through.
-    const tint = `rgb(${rgb.join(' ')} / 80%)`;
-    if (header.dataset.theme !== theme) header.dataset.theme = theme;
-    if (header.style.getPropertyValue('--header-surface') !== tint) header.style.setProperty('--header-surface', tint);
   };
   let surfaceFrame = 0;
   const scheduleHeaderSurface = () => {
@@ -200,7 +207,11 @@ const productGroups: { label: string; links: { label: string; description: strin
     const active = document.activeElement;
     const focused = active === document.body || active === document.documentElement ? lastHeaderFocus : active;
     const focusWasInHiddenNavigation = desktop.matches ? mobile?.contains(focused) : header?.querySelector('.desktop-navigation')?.contains(focused) || header?.querySelector('.header-actions')?.contains(focused);
-    closeAll();
+    // A resize callback can arrive after the newly visible menu was opened.
+    // Close only the navigation that this breakpoint hides.
+    clearTimers();
+    if (desktop.matches) closeMobile();
+    else closeProduct();
     if (focusWasInHiddenNavigation) (desktop.matches ? productSummary : mobileSummary)?.focus();
   });
 </script>
@@ -219,9 +230,13 @@ const productGroups: { label: string; links: { label: string; description: strin
     position: fixed; top: 0; inset-inline: 0; z-index: 20;
     color: var(--header-text);
   }
-  .site-header::before { content: ''; position: absolute; z-index: 0; inset: 0; pointer-events: none; background: var(--header-surface); -webkit-backdrop-filter: blur(48px); backdrop-filter: blur(48px); opacity: 0; transition: opacity 180ms ease, background-color 150ms ease; }
+  .site-header::before { content: ''; position: absolute; z-index: 0; inset: 0; pointer-events: none; background: rgb(255 255 255 / 6%); -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px); opacity: 0; transition: opacity 180ms ease; }
   .site-header[data-scrolled]::before, .site-header:not([data-navigation-ready])::before, .site-header:has(.product-menu[open], .mobile-navigation[open])::before { opacity: 1; }
+  .site-header:not([data-navigation-ready])::before { background: var(--header-surface); }
   .site-header[data-theme='light'] { --header-surface: rgb(255 255 255 / 72%); --header-panel: #fff; --header-line: #dfe5d8; --header-text: #202c18; --header-muted: #3f4b36; --header-subtle: #5c6b4e; --header-hover: #eef3e8; --header-icon: #4b6c16; --header-focus: var(--color-focus); }
+  .site-header [data-contrast] { transition: background-color 150ms ease; }
+  .site-header [data-contrast='light'] { --header-text: #fff; --header-muted: #fff; --header-line: rgb(255 255 255 / 30%); --header-hover: rgb(255 255 255 / 12%); --header-focus: var(--color-lime); color: var(--header-text); }
+  .site-header [data-contrast='dark'] { --header-text: #000; --header-muted: #000; --header-line: rgb(11 14 11 / 25%); --header-hover: rgb(11 14 11 / 7%); --header-focus: var(--color-focus); color: var(--header-text); }
   .navigation-backdrop { position: fixed; inset: 0; z-index: -1; visibility: hidden; opacity: 0; background: rgb(5 10 5 / 26%); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); transition: opacity 180ms ease, visibility 180ms; }
   .site-header[data-theme='light'] .navigation-backdrop { background: rgb(30 43 21 / 10%); }
   .site-header[data-navigation-ready]:has(.product-menu[open], .mobile-navigation[open]) .navigation-backdrop { visibility: visible; opacity: 1; }
