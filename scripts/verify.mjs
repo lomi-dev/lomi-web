@@ -153,17 +153,16 @@ async function mockVideoRequests(targetPage) {
   return requests;
 }
 
-async function expectPlayInVisibleImage(targetPage) {
+async function expectPlayCenteredOnImage(targetPage) {
   await expect.poll(() => targetPage.locator('[data-video-play]').evaluate((play) => {
     const trigger = play.closest('[data-video-open]').getBoundingClientRect();
     const bounds = play.getBoundingClientRect();
-    const top = Math.max(0, trigger.top), bottom = Math.min(innerHeight, trigger.bottom);
     let opacity = 1;
     for (let element = play; element; element = element.parentElement) opacity *= Number(getComputedStyle(element).opacity);
-    return bottom > top && opacity > .9 && bounds.top >= top - 1 && bounds.bottom <= bottom + 1
-      && Math.abs((bounds.top + bounds.bottom) / 2 - (top + bottom) / 2) < 8
-      && Math.abs((bounds.left + bounds.right) / 2 - (trigger.left + trigger.right) / 2) < 8;
-  }), { message: 'Play remains visible and centered in the visible image portion' }).toBe(true);
+    return opacity > .9
+      && Math.abs((bounds.top + bounds.bottom) / 2 - (trigger.top + trigger.bottom) / 2) < 1
+      && Math.abs((bounds.left + bounds.right) / 2 - (trigger.left + trigger.right) / 2) < 1;
+  }), { message: 'Play stays centered on the full image regardless of viewport clipping' }).toBe(true);
 }
 
 async function settleVideoMotion(dialog) {
@@ -184,7 +183,7 @@ async function verifyVideoDialog(targetPage, requests, touch = false) {
   await expect(targetPage.locator('#video-dialog iframe')).toHaveCount(0);
   expect(requests, 'YouTube receives no requests before activation').toEqual([]);
   await trigger.evaluate((element) => element.scrollIntoView({ block: 'center', behavior: 'instant' }));
-  if (touch) await expectPlayInVisibleImage(targetPage);
+  if (touch) await expectPlayCenteredOnImage(targetPage);
   else {
     await trigger.focus();
     await expect(trigger).toBeFocused();
@@ -192,7 +191,7 @@ async function verifyVideoDialog(targetPage, requests, touch = false) {
       element.scrollIntoView({ block: 'center', behavior: 'instant' });
       element.focus({ preventScroll: true });
     });
-    await expectPlayInVisibleImage(targetPage);
+    await expectPlayCenteredOnImage(targetPage);
   }
   const initial = await targetPage.evaluate(() => ({ x: scrollX, y: scrollY, root: document.documentElement.style.overflow, body: document.body.style.overflow }));
   const expectOpen = async () => {
@@ -565,7 +564,7 @@ try {
     expect(visibleHeight / image.height, 'A meaningful part of the screenshot appears initially').toBeGreaterThan(.1);
     expect(visibleHeight / image.height, 'The initial viewport reveals part of the full screenshot').toBeLessThan(.65);
     await page.mouse.move(image.x + image.width / 2, Math.max(0, image.y) + visibleHeight / 2);
-    await expectPlayInVisibleImage(page);
+    await expectPlayCenteredOnImage(page);
   }
   await page.setViewportSize({ width: 1440, height: 900 });
 

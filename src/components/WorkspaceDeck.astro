@@ -10,7 +10,7 @@ interface Props {
 const { caption, alt } = Astro.props;
 ---
 
-<lomi-workspace-deck class="deck-root">
+<div class="deck-root">
   <figure class="deck-figure" id="workspace">
     <a class="deck-frame" href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" data-video-open aria-label="Watch the Lomi video" aria-haspopup="dialog" aria-controls="video-dialog">
       <Picture
@@ -30,68 +30,7 @@ const { caption, alt } = Astro.props;
     </a>
     <figcaption class="deck-caption">{caption}</figcaption>
   </figure>
-</lomi-workspace-deck>
-
-<script>
-  class LomiWorkspaceDeck extends HTMLElement {
-    private link: HTMLAnchorElement | null = null;
-    private hovered = false;
-    private frame = 0;
-    private coarsePointer = matchMedia('(hover: none)');
-
-    connectedCallback() {
-      this.link = this.querySelector('[data-video-open]');
-      this.link?.addEventListener('pointerenter', this.enter);
-      this.link?.addEventListener('pointerleave', this.leave);
-      this.link?.addEventListener('focus', this.schedule);
-      this.link?.addEventListener('blur', this.leave);
-      window.addEventListener('scroll', this.viewportChanged, { passive: true });
-      window.addEventListener('resize', this.viewportChanged, { passive: true });
-      this.coarsePointer.addEventListener('change', this.schedule);
-      this.schedule();
-    }
-
-    disconnectedCallback() {
-      this.link?.removeEventListener('pointerenter', this.enter);
-      this.link?.removeEventListener('pointerleave', this.leave);
-      this.link?.removeEventListener('focus', this.schedule);
-      this.link?.removeEventListener('blur', this.leave);
-      window.removeEventListener('scroll', this.viewportChanged);
-      window.removeEventListener('resize', this.viewportChanged);
-      this.coarsePointer.removeEventListener('change', this.schedule);
-      if (this.frame) cancelAnimationFrame(this.frame);
-      this.frame = 0;
-      this.hovered = false;
-    }
-
-    private enter = () => {
-      this.hovered = true;
-      this.schedule();
-    };
-
-    private leave = () => { this.hovered = false; };
-
-    private viewportChanged = () => {
-      if (this.hovered || document.activeElement === this.link || this.coarsePointer.matches) this.schedule();
-    };
-
-    private schedule = () => {
-      if (this.frame) return;
-      this.frame = requestAnimationFrame(() => {
-        this.frame = 0;
-        if (!this.link) return;
-        const bounds = this.link.getBoundingClientRect();
-        const top = Math.max(0, bounds.top);
-        const bottom = Math.min(innerHeight, bounds.bottom);
-        if (bottom <= top) return;
-        const center = Math.max(32, Math.min(bounds.height - 32, (top + bottom) / 2 - bounds.top));
-        this.link.style.setProperty('--play-y', `${center}px`);
-      });
-    };
-  }
-
-  if (!customElements.get('lomi-workspace-deck')) customElements.define('lomi-workspace-deck', LomiWorkspaceDeck);
-</script>
+</div>
 
 <style>
   .deck-root { display: block; width: 100%; min-width: 0; }
@@ -100,7 +39,7 @@ const { caption, alt } = Astro.props;
   .deck-frame :global(picture) { display: block; }
   .deck-frame :global(.deck-image) { display: block; width: 100%; height: auto; }
   .deck-overlay { position: absolute; inset: 0; background: #050a07; opacity: 0; transition: opacity 180ms ease; }
-  .deck-play { position: absolute; left: 50%; top: var(--play-y, 50%); display: grid; width: 64px; height: 64px; place-items: center; transform: translate(-50%, -50%) scale(.92); border: 1px solid #e6ffb3; border-radius: 50%; background: linear-gradient(180deg, #dcff91, #bce950); color: #16200e; box-shadow: 0 0 0 10px #c8ff3d12, 0 8px 30px #0005; opacity: 0; transition: opacity 180ms ease, transform 220ms var(--ease-out); }
+  .deck-play { position: absolute; left: 50%; top: 50%; display: grid; width: 64px; height: 64px; place-items: center; transform: translate(-50%, -50%) scale(.92); border: 1px solid #e6ffb3; border-radius: 50%; background: linear-gradient(180deg, #dcff91, #bce950); color: #16200e; box-shadow: 0 0 0 10px #c8ff3d12, 0 8px 30px #0005; opacity: 0; transition: opacity 180ms ease, transform 220ms var(--ease-out); }
   .deck-play::before { content: ''; position: absolute; inset: -10px; border: 1px solid #dfff9e30; border-radius: inherit; }
   .deck-play svg { margin-left: 2px; }
   .deck-frame:focus-visible .deck-overlay { opacity: .22; }

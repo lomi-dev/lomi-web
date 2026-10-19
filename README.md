@@ -134,7 +134,8 @@ local `/devlog/` route. On Devlog, section links return to the homepage.
 
 The hero shows the top of the desktop workspace on the first screen. Scrolling
 reveals the complete capture. Hovering or focusing it shows a play control in
-the center of the visible image; touch devices show the control immediately.
+the center of the complete image, with no position changes on scroll. Touch
+devices show the control immediately.
 The native video dialog loads YouTube only after activation and removes the
 player as soon as closing starts. Its center-scale entrance and exit follow
 Magic UI's `from-center` example, with a dimmed, blurred backdrop. Reduced
