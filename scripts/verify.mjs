@@ -728,7 +728,7 @@ async function verifyAdaptiveHeader(targetPage) {
       await setDarkSurface(true);
       await expectControls('light');
       await setDarkSurface(false);
-      await scrollSurface('#roadmap');
+      await scrollSurface('.hero');
       await expectControls('dark');
       await scrollSurface('[data-video-open]');
       if (width >= 768) {
@@ -821,7 +821,7 @@ async function verifyAdaptiveHeader(targetPage) {
       await open();
       await expectControls('dark');
       await setDarkSurface(false);
-      await scrollSurface('#roadmap');
+      await scrollSurface('.hero');
       await expectControls('dark');
       await close();
       await expectControls('dark');

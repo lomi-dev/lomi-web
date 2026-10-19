@@ -1,0 +1,152 @@
+---
+import Icon from './Icon';
+import { site } from '../data/site';
+import type { Landing } from '../../content/landing-schema';
+
+interface Props { content: Landing['roadmap'] }
+const { content } = Astro.props;
+const statusLabels = { available: 'Current preview', next: 'Proposed next', later: 'Exploring' };
+---
+
+<section id="roadmap" class="roadmap-story" aria-labelledby="roadmap-title" data-scroll-surface data-roadmap-mode="static">
+  <div class="roadmap-viewport" data-roadmap-viewport>
+    <div class="roadmap-masthead roadmap-shell">
+      <div class="section-marker"><span>01</span><p>{content.eyebrow}</p></div>
+      <span class="roadmap-direction" aria-hidden="true">Built in the open <span>↗</span></span>
+    </div>
+
+    <div class="roadmap-stage" data-roadmap-stage>
+      <div class="roadmap-scene-track" data-roadmap-track>
+        <div class="roadmap-intro">
+          <h2 id="roadmap-title">{content.title}</h2>
+          <p class="roadmap-intro-description">{content.description}</p>
+          <span class="roadmap-scroll-hint" aria-hidden="true">Scroll to explore <span>→</span></span>
+        </div>
+        <div class="roadmap-spine" aria-hidden="true"><span></span></div>
+        <ol class="roadmap-milestones">
+          {content.items.map((item, index) => <li class="roadmap-milestone" data-roadmap-milestone data-status={item.status} id={`roadmap-stage-${index + 1}`}>
+            <div class="milestone-stem" aria-hidden="true"><span></span></div>
+            <span class="milestone-coordinate" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
+            <div class="milestone-copy" data-roadmap-copy>
+              <div class="milestone-kicker"><span class="milestone-status-dot" aria-hidden="true"></span><span>{statusLabels[item.status]}</span></div>
+              <p class="milestone-phase">{item.phase}</p>
+              <h3>{item.title}</h3>
+              <p class="milestone-description">{item.description}</p>
+              <ul>{item.points.map((point) => <li><Icon name={item.status === 'available' ? 'check' : 'plus'} width={14} height={14} /><span>{point.label}</span></li>)}</ul>
+            </div>
+          </li>)}
+        </ol>
+      </div>
+    </div>
+
+    <div class="roadmap-bottom roadmap-shell">
+      <nav class="roadmap-controls" aria-label="Roadmap stages">
+        {content.items.map((item, index) => <button type="button" data-roadmap-jump={index} aria-controls={`roadmap-stage-${index + 1}`} aria-label={`Explore ${item.phase}`}><span class="roadmap-control-index">{String(index + 1).padStart(2, '0')}</span><span class="roadmap-control-label">{item.phase}</span></button>)}
+      </nav>
+      <a class="roadmap-discuss" href={`${site.github}/issues`}>{content.linkLabel}<Icon name="diagonal" width={16} height={16} /></a>
+    </div>
+  </div>
+</section>
+
+<script>
+  import { initRoadmap } from './roadmap-timeline';
+  document.querySelectorAll<HTMLElement>('.roadmap-story').forEach(initRoadmap);
+</script>
+
+<style>
+  .roadmap-story {
+    --scroll-surface-color: #111610;
+    --roadmap-background: #111610;
+    --roadmap-foreground: #f3f6ed;
+    --roadmap-muted: #adb7a5;
+    --roadmap-accent: var(--color-lime);
+    --roadmap-gutter: clamp(24px, 5.2vw, 112px);
+    --roadmap-intro-width: min(600px, 48vw);
+    --roadmap-column-width: clamp(340px, 29vw, 430px);
+    --roadmap-gap: clamp(56px, 6vw, 104px);
+    position: relative;
+    padding-block: 56px 72px;
+    background: var(--roadmap-background);
+    color: var(--roadmap-foreground);
+    overflow-wrap: anywhere;
+  }
+  .roadmap-shell { width: calc(100% - var(--roadmap-gutter) * 2); max-width: 1640px; margin-inline: auto; }
+  .roadmap-masthead { display: flex; align-items: baseline; justify-content: space-between; gap: 24px; }
+  .section-marker { flex: 1; margin: 0; padding-top: 0; border: 0; color: var(--roadmap-muted); }
+  .section-marker > span { color: var(--roadmap-accent); }
+  .roadmap-direction { display: flex; align-items: center; gap: 24px; color: var(--roadmap-muted); font: 10px/1.8 var(--font-mono); white-space: nowrap; }
+  .roadmap-direction > span { color: var(--roadmap-accent); font-size: 18px; }
+  .roadmap-stage { margin-top: 64px; }
+  .roadmap-scene-track { width: calc(100% - var(--roadmap-gutter) * 2); max-width: 1280px; margin-inline: auto; }
+  .roadmap-intro { max-width: 760px; padding-bottom: 64px; }
+  h2 { max-width: 660px; font-size: clamp(44px, 5.2vw, 76px); line-height: 1.04; letter-spacing: -.06em; text-wrap: balance; }
+  .roadmap-intro-description { max-width: 420px; margin-top: 26px; color: var(--roadmap-muted); font-size: 14px; line-height: 1.8; }
+  .roadmap-scroll-hint { display: none; }
+  .roadmap-spine { display: none; }
+  .roadmap-milestones { list-style: none; padding: 0; margin: 0; }
+  .roadmap-milestone { position: relative; padding: 0 0 52px 40px; border-left: 1px solid #596849; }
+  .roadmap-milestone:last-child { padding-bottom: 0; border-color: transparent; }
+  .milestone-stem { position: absolute; top: 0; left: -5px; width: 9px; height: 9px; border: 1px solid var(--roadmap-accent); border-radius: 50%; background: var(--roadmap-background); }
+  [data-status='available'] .milestone-stem { background: var(--roadmap-accent); }
+  .milestone-coordinate { display: none; }
+  .milestone-copy { max-width: 640px; }
+  .milestone-kicker { display: flex; align-items: center; gap: 8px; margin-bottom: 18px; color: var(--roadmap-muted); font: 9px/1.6 var(--font-mono); text-transform: uppercase; letter-spacing: .07em; }
+  .milestone-status-dot { width: 5px; height: 5px; border: 1px solid #a9b69b; border-radius: 50%; }
+  [data-status='available'] .milestone-status-dot { border-color: var(--roadmap-accent); background: var(--roadmap-accent); }
+  .milestone-phase { margin-bottom: 20px; font-size: clamp(28px, 3vw, 42px); line-height: 1.08; letter-spacing: -.045em; }
+  h3 { font-size: 19px; font-weight: 500; line-height: 1.3; letter-spacing: -.025em; }
+  .milestone-description { margin-top: 9px; color: var(--roadmap-muted); font-size: 13px; line-height: 1.7; }
+  .milestone-copy ul { list-style: none; display: grid; gap: 8px; margin: 19px 0 0; padding: 0; }
+  .milestone-copy li { display: flex; align-items: flex-start; gap: 9px; color: #c7d0be; font-size: 11px; line-height: 1.65; }
+  .milestone-copy li svg { margin-top: 2px; color: var(--roadmap-accent); }
+  .roadmap-bottom { display: flex; justify-content: flex-end; align-items: center; gap: 24px; margin-top: 48px; border-top: 1px solid #35402e; padding-top: 18px; }
+  .roadmap-controls { display: none; }
+  .roadmap-discuss { display: inline-flex; align-items: center; justify-content: space-between; gap: 24px; min-height: 44px; font-size: 12px; }
+  .roadmap-discuss svg { color: var(--roadmap-accent); transition: transform 180ms var(--ease-out); }
+  .roadmap-story :focus-visible { outline: 2px solid var(--roadmap-accent); outline-offset: 5px; }
+
+  .roadmap-story[data-roadmap-mode='horizontal'] { height: calc(100svh - var(--site-header-height) + var(--roadmap-distance)); padding: 0; }
+  [data-roadmap-mode='horizontal'] .roadmap-viewport { position: sticky; top: var(--site-header-height); height: calc(100svh - var(--site-header-height)); display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; padding-block: 28px 20px; }
+  [data-roadmap-mode='horizontal'] .roadmap-stage { position: relative; min-width: 0; width: 100%; min-height: 0; margin-top: 18px; overflow: clip; }
+  [data-roadmap-mode='horizontal'] .roadmap-scene-track { position: relative; display: flex; align-items: stretch; gap: var(--roadmap-gap); width: max-content; max-width: none; height: 100%; padding-inline: var(--roadmap-gutter) max(var(--roadmap-gutter), calc(50vw - var(--roadmap-column-width) / 2)); margin: 0; will-change: transform; }
+  [data-roadmap-mode='horizontal'] .roadmap-intro { display: flex; flex: 0 0 var(--roadmap-intro-width); flex-direction: column; justify-content: center; align-items: flex-start; padding: 0 24px 26px 0; }
+  [data-roadmap-mode='horizontal'] h2 { font-size: clamp(52px, 5.2vw, 80px); }
+  [data-roadmap-mode='horizontal'] .roadmap-intro-description { max-width: 360px; font-size: 13px; }
+  [data-roadmap-mode='horizontal'] .roadmap-scroll-hint { display: flex; align-items: center; gap: 40px; margin-top: 42px; color: var(--roadmap-muted); font: 10px/1.6 var(--font-mono); }
+  .roadmap-scroll-hint > span { color: var(--roadmap-accent); font-family: var(--font-sans); font-size: 22px; }
+  [data-roadmap-mode='horizontal'] .roadmap-spine { position: absolute; display: block; top: 50%; left: calc(var(--roadmap-gutter) + var(--roadmap-intro-width) + var(--roadmap-gap) - 48px); right: max(var(--roadmap-gutter), calc(50vw - var(--roadmap-column-width) / 2)); height: 1px; background: #4c5b3d; }
+  .roadmap-spine > span { position: absolute; inset: 0; background: var(--roadmap-accent); transform: scaleX(var(--roadmap-draw, 0)); transform-origin: left; }
+  [data-roadmap-mode='horizontal'] .roadmap-milestones { display: flex; gap: var(--roadmap-gap); height: 100%; }
+  [data-roadmap-mode='horizontal'] .roadmap-milestone { flex: 0 0 var(--roadmap-column-width); width: var(--roadmap-column-width); height: 100%; padding: 0; border: 0; }
+  [data-roadmap-mode='horizontal'] .milestone-stem { left: 0; top: 5%; width: 1px; height: 45%; border: 0; border-radius: 0; background: var(--roadmap-accent); transform: scaleY(var(--milestone-reveal, 1)); transform-origin: bottom; }
+  [data-roadmap-mode='horizontal'] .milestone-stem > span { position: absolute; left: -3px; top: -3px; width: 7px; height: 7px; border-radius: 50%; background: var(--roadmap-accent); }
+  [data-roadmap-mode='horizontal'] .roadmap-milestone:nth-child(even) .milestone-stem { top: 50%; height: 45%; transform-origin: top; }
+  [data-roadmap-mode='horizontal'] .roadmap-milestone:nth-child(even) .milestone-stem > span { top: auto; bottom: -3px; }
+  [data-roadmap-mode='horizontal'] .milestone-coordinate { position: absolute; display: block; left: 14px; top: calc(50% + 12px); color: #7b8a6d; font: 10px/1.5 var(--font-mono); }
+  [data-roadmap-mode='horizontal'] .roadmap-milestone:nth-child(even) .milestone-coordinate { top: auto; bottom: calc(50% + 12px); }
+  [data-roadmap-mode='horizontal'] .milestone-copy { position: absolute; left: 26px; right: 12px; top: 5%; max-width: none; transform: translateY(calc((1 - var(--milestone-reveal, 1)) * 18px)); clip-path: inset(0 0 calc((1 - var(--milestone-reveal, 1)) * 100%) 0); }
+  [data-roadmap-mode='horizontal'] .roadmap-milestone:nth-child(even) .milestone-copy { top: calc(50% + 28px); }
+  [data-roadmap-mode='horizontal'] .milestone-phase { font-size: clamp(29px, 2.5vw, 40px); margin-bottom: 17px; }
+  [data-roadmap-mode='horizontal'] .milestone-kicker { margin-bottom: 12px; }
+  [data-roadmap-mode='horizontal'] .milestone-copy ul { margin-top: 15px; gap: 6px; }
+  [data-roadmap-mode='horizontal'] .roadmap-bottom { margin-top: 18px; padding-top: 14px; min-width: 0; }
+  [data-roadmap-mode='horizontal'] .roadmap-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-right: auto; }
+  .roadmap-controls button { display: inline-flex; align-items: center; gap: 9px; min-height: 44px; padding: 0 10px; border: 0; background: transparent; color: #b1bba8; font: 10px/1.5 var(--font-mono); cursor: pointer; text-align: left; }
+  .roadmap-control-index { color: #87947c; font-variant-numeric: tabular-nums; }
+  .roadmap-controls [aria-current='step'], .roadmap-controls [aria-current='step'] .roadmap-control-index { color: var(--roadmap-accent); }
+  @media (hover: hover) { .roadmap-controls button:hover { color: var(--roadmap-foreground); } .roadmap-discuss:hover svg { transform: translate(2px, -2px); } }
+  @media (max-width: 767px) {
+    .roadmap-story { --roadmap-gutter: 24px; padding-block: 32px 44px; }
+    .roadmap-direction { display: none; }
+    .roadmap-stage { margin-top: 46px; }
+    h2 { font-size: clamp(40px, 8.5vw, 62px); }
+    .roadmap-intro { padding-bottom: 48px; }
+    .roadmap-intro-description { font-size: 13px; margin-top: 22px; }
+    .roadmap-milestone { padding-left: 26px; }
+    .milestone-phase { font-size: 30px; }
+    .milestone-kicker { margin-bottom: 12px; }
+    .roadmap-bottom { margin-top: 34px; }
+    .roadmap-discuss { justify-content: space-between; width: 100%; }
+  }
+  @media (prefers-reduced-motion: reduce) { .roadmap-discuss svg { transition: none; } }
+</style>

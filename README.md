@@ -24,7 +24,8 @@ The page includes:
 - A separate `/devlog/` page with a Work in progress placeholder.
 - A large hero preview with a centered video control and an animated native
   YouTube dialog.
-- A three-column timeline separating available features from proposed work.
+- A dark horizontal roadmap with a lime axis, alternating milestones, and
+  native scroll progress. Small windows and reduced motion use a vertical list.
 - A lime footer that fills exactly one viewport in both dimensions.
 - A download picker available from the hero and navigation, without a separate
   download section.
@@ -44,7 +45,7 @@ placeholder images; replace them with approved product captures before launch.
 The retired workflow, features, principles, FAQ, download, and newsletter content
 remains in Payload for future use but does not render on the landing page.
 Navigation omits links to retired sections and sends old download anchors to
-the release page.
+the release page. See [roadmap behavior and verification](docs/roadmap.md).
 
 The [design analysis](docs/design-analysis.md) documents all six reference sites,
 Appllama, Coda, the four articles about generic AI content, and the decisions
@@ -122,6 +123,8 @@ deployment provider is configured by this task.
 - `content/load-landing.ts`: optional published-content fetch during rendering.
 - `cms/src/globals/Landing.ts`: matching editor fields and access rules.
 - `src/pages/index.astro`: section order and composition.
+- `src/components/Roadmap.astro`: CMS-driven timeline and responsive layout.
+- `src/components/roadmap-timeline.ts`: native scroll progress and stage navigation.
 - `src/pages/devlog.astro`: the standalone Devlog placeholder.
 - `src/components/Header.astro`: Product groups, responsive disclosure, and routing.
 - `src/styles/global.css`: responsive layout and brand tokens.
