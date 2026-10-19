@@ -571,6 +571,128 @@ async function expectAnchorBelowHeader(targetPage, destination) {
   }), { message: `${destination} content clears the fixed header` }).toBe(true);
 }
 
+async function verifyAdaptiveHeader(targetPage) {
+  const originalViewport = targetPage.viewportSize();
+  const header = targetPage.locator('.site-header');
+  const palette = () => header.evaluate((element) => ({
+    theme: element.dataset.theme,
+    tint: getComputedStyle(element, '::before').backgroundColor,
+  }));
+  const settle = () => header.evaluate(async (element) => {
+    await Promise.all(element.getAnimations({ subtree: true })
+      .filter((animation) => animation.effect.getComputedTiming().iterations !== Infinity)
+      .map((animation) => animation.finished.catch(() => {})));
+  });
+  const scrollSurface = (selector) => targetPage.locator(selector).evaluate((element) => {
+    const bounds = element.getBoundingClientRect();
+    const bar = document.querySelector('.site-header').getBoundingClientRect();
+    scrollTo({ top: scrollY + bounds.top + Math.min(120, bounds.height / 2) - bar.height / 2, behavior: 'instant' });
+  });
+  const expectSectionTint = async (selector) => {
+    await expect.poll(() => header.evaluate((element, selector) => {
+      let surface = document.querySelector(selector), color;
+      while (surface) {
+        color = getComputedStyle(surface).backgroundColor.match(/[\d.]+/g).map(Number);
+        if (color.length === 3 || color[3] >= .95) break;
+        surface = surface.parentElement;
+      }
+      const tint = getComputedStyle(element, '::before').backgroundColor.match(/[\d.]+/g).map(Number);
+      return color && color.slice(0, 3).every((channel, index) => Math.abs(channel - tint[index]) <= 1);
+    }, selector), { message: `Fog tint matches the actual ${selector} background` }).toBe(true);
+  };
+  const expectTheme = async (theme) => {
+    await expect(header).toHaveAttribute('data-theme', theme);
+    await settle();
+    expect(await header.evaluate((element) => {
+      const rgba = (color) => color.match(/[\d.]+/g).map(Number);
+      const luminance = (rgb) => rgb.map((channel) => {
+        const value = channel / 255;
+        return value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4;
+      }).reduce((sum, channel, index) => sum + channel * [.2126, .7152, .0722][index], 0);
+      const foreground = luminance(rgba(getComputedStyle(element.querySelector('.navigation-link')).color).slice(0, 3));
+      const tint = rgba(getComputedStyle(element, '::before').backgroundColor);
+      const alpha = tint[3] ?? 1;
+      // A translucent bar must stay readable across white photo gutters and dark section edges.
+      const oppositeSurface = element.dataset.theme === 'dark' ? 255 : 0;
+      const background = luminance(tint.slice(0, 3).map((channel) => channel * alpha + oppositeSurface * (1 - alpha)));
+      return (Math.max(foreground, background) + .05) / (Math.min(foreground, background) + .05);
+    }), 'Adaptive navigation text remains readable through the translucent fog at contrasting edges').toBeGreaterThanOrEqual(4.5);
+  };
+  for (const width of [1440, 390]) {
+    await targetPage.setViewportSize({ width, height: 900 });
+    await targetPage.mouse.move(0, 0);
+    await targetPage.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
+    await expectTheme('light');
+    await scrollSurface('#features');
+    await expectTheme('dark');
+    await expectSectionTint('#features');
+    const dark = await palette();
+    await scrollSurface('#roadmap');
+    await expectTheme('light');
+    await expectSectionTint('#roadmap');
+    expect((await palette()).tint, 'Fog tint follows the light section after the dark section').not.toBe(dark.tint);
+    await scrollSurface('[data-video-open]');
+    await expectTheme('dark');
+    await scrollSurface('.site-footer');
+    const footerTheme = await targetPage.locator('.site-footer').evaluate((footer) => {
+      const rgb = getComputedStyle(footer).backgroundColor.match(/[\d.]+/g).slice(0, 3).map(Number);
+      return rgb.reduce((sum, channel, index) => sum + channel / 255 * [.2126, .7152, .0722][index], 0) > .5 ? 'light' : 'dark';
+    });
+    await expectTheme(footerTheme);
+    await expectSectionTint('.site-footer');
+    await targetPage.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
+    await expectTheme('light');
+
+    const mobile = width < 768;
+    const open = async () => {
+      if (mobile) {
+        await targetPage.locator('#mobile-navigation > summary').focus();
+        await targetPage.keyboard.press('Enter');
+      }
+      await targetPage.locator(mobile ? '#mobile-product > summary' : '#product-menu > summary').focus();
+      await targetPage.keyboard.press('Enter');
+      await expect(targetPage.locator(mobile ? '#mobile-product' : '#product-menu')).toHaveAttribute('open', '');
+      await settle();
+    };
+    const close = async () => {
+      await targetPage.keyboard.press('Escape');
+      if (mobile) await targetPage.keyboard.press('Escape');
+    };
+    await open();
+    const lightMenu = await palette();
+    await scrollSurface('#features');
+    await targetPage.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    expect(await palette(), 'An open menu freezes the light palette while the page scrolls').toEqual(lightMenu);
+    await close();
+    await expectTheme('dark');
+    await open();
+    const darkMenu = await palette();
+    const accessibility = await new AxeBuilder({ page: targetPage }).include('.site-header').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
+    expect(accessibility.violations, `Dark adaptive menu accessibility at ${width}px`).toEqual([]);
+    await scrollSurface('#roadmap');
+    await targetPage.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    expect(await palette(), 'An open menu freezes the dark palette while the page scrolls').toEqual(darkMenu);
+    await close();
+    await expectTheme('light');
+    if (!mobile) {
+      await targetPage.locator('.header-action[data-download-open]').click();
+      await expect(targetPage.locator('#download-dialog')).toBeVisible();
+      const modalPalette = await palette();
+      await scrollSurface('#features');
+      await targetPage.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      expect(await palette(), 'An open native modal freezes the navigation palette').toEqual(modalPalette);
+      await targetPage.keyboard.press('Escape');
+      await expect(targetPage.locator('#download-dialog')).not.toBeVisible();
+      await expectTheme('dark');
+    }
+    await targetPage.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
+    await expectTheme('light');
+  }
+  await targetPage.setViewportSize(originalViewport);
+  await targetPage.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
+  await expectTheme('light');
+}
+
 async function verifyFixedHeader(targetPage, javaScriptEnabled = true) {
   const originalViewport = targetPage.viewportSize();
   const header = targetPage.locator('.site-header');
@@ -808,6 +930,7 @@ try {
 
 
   await verifyFixedHeader(page);
+  await verifyAdaptiveHeader(page);
   const productMenu = page.locator('#product-menu');
   const productSummary = productMenu.locator(':scope > summary');
   await expect(productMenu.locator('.product-link')).toHaveCount(6);
