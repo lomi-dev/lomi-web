@@ -38,9 +38,21 @@ describe('published landing content', () => {
     await assert.rejects(loadLanding('https://cms.example.test'));
   });
 
-  it('rejects executable and protocol-relative links from the CMS', () => {
-    for (const href of ['javascript:alert(1)', 'data:text/html,test', '//example.com']) {
-      assert.equal(landingSchema.safeParse({ ...seed, navigation: { ...seed.navigation, links: [{ label: 'Unsafe', href }] } }).success, false);
+  it('accepts the Devlog route, HTTPS links, and section anchors', () => {
+    for (const href of ['/devlog', '/devlog/', 'https://docs.lomi.dev', '#roadmap']) {
+      assert.equal(landingSchema.safeParse({ ...seed, navigation: { ...seed.navigation, links: [{ label: 'Link', href }] } }).success, true, href);
+    }
+  });
+
+  it('rejects executable, credentialed, malformed, and unknown internal links from the CMS', () => {
+    for (const href of [
+      'javascript:alert(1)', 'data:text/html,test', '//example.com',
+      'http://example.com', 'https://user:password@example.com',
+      'https:example.com', 'https:///example.com', 'https://example.com\\@evil.test',
+      'https://exam\nple.com', '/unknown', '/devlog/../admin',
+      '/devlog?draft=true', '/devlog//', '/%64evlog',
+    ]) {
+      assert.equal(landingSchema.safeParse({ ...seed, navigation: { ...seed.navigation, links: [{ label: 'Unsafe', href }] } }).success, false, href);
     }
   });
 

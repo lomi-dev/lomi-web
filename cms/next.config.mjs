@@ -1,7 +1,8 @@
 import { withPayload } from '@payloadcms/next/withPayload'
+import path from 'node:path'
 
 export default withPayload({
   agentRules: false,
-  // Keep this app isolated from the Astro app and its dependency tree.
-  turbopack: { root: import.meta.dirname },
+  // The CMS and Astro share the pure link policy in ../content/.
+  turbopack: { root: path.resolve(import.meta.dirname, '..') },
 })

@@ -5,6 +5,7 @@ import path from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
 import { getPayload } from 'payload'
+import type { Landing } from '../src/payload-types'
 
 const directory = await mkdtemp(path.join(tmpdir(), 'lomi-cms-test-'))
 process.env.PAYLOAD_SECRET = randomBytes(32).toString('hex')
@@ -37,7 +38,19 @@ try {
   await assert.rejects(payload.updateGlobal({ slug: 'landing', data: { hero: { title: 'Unauthorized' } }, overrideAccess: false }))
   await assert.rejects(payload.findGlobalVersions({ slug: 'landing', overrideAccess: false }))
   await assert.rejects(payload.create({ collection: 'users', data: { email: 'public@example.com', password: 'public-registration-disabled' }, overrideAccess: false }))
-  await assert.rejects(payload.updateGlobal({ slug: 'landing', data: { navigation: { links: [{ label: 'Unsafe', href: 'javascript:alert(1)' }] } } }))
+  for (const href of ['/devlog', '/devlog/', 'https://docs.lomi.dev', '#roadmap']) {
+    const updated: Landing = await payload.updateGlobal({ slug: 'landing', data: { navigation: { links: [{ label: 'Link', href }] } } })
+    assert.equal(updated.navigation.links[0].href, href)
+  }
+  for (const href of [
+    'javascript:alert(1)', 'data:text/html,test', '//example.com',
+    'http://example.com', 'https://user:password@example.com',
+    'https:example.com', 'https:///example.com', 'https://example.com\\@evil.test',
+    'https://exam\nple.com', '/unknown', '/devlog/../admin',
+    '/devlog?draft=true', '/devlog//', '/%64evlog',
+  ]) {
+    await assert.rejects(payload.updateGlobal({ slug: 'landing', data: { navigation: { links: [{ label: 'Unsafe', href }] } } }), /href/i, href)
+  }
   await assert.rejects(payload.updateGlobal({ slug: 'landing', data: { hero: { title: '   ' } } }))
   await assert.rejects(payload.updateGlobal({ slug: 'landing', data: { hero: { title: 'x'.repeat(2001) } } }))
   await assert.rejects(payload.updateGlobal({ slug: 'landing', data: { navigation: { links: Array.from({ length: 7 }, () => ({ label: 'Link', href: '#features' })) } } }))

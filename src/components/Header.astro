@@ -1,55 +1,174 @@
 ---
 import Icon from './Icon';
+import type { IconName } from './Icon';
 import logo from '../assets/lomi-wordmark.svg?raw';
 import { site } from '../data/site';
 import type { Landing } from '../../content/landing-schema';
 interface Props { content: Landing['navigation'] }
 const { content } = Astro.props;
+const isHome = Astro.url.pathname === '/';
+const homeHref = (href: string) => href.startsWith('#') && !isHome ? `/${href}` : href;
+const downloadAttributes = isHome ? { 'data-download-open': true, 'aria-haspopup': 'dialog' as const, 'aria-controls': 'download-dialog' } : {};
+const productGroups: { label: string; links: { label: string; description: string; href: string; icon: IconName }[] }[] = [
+  { label: 'Inside lomi', links: [
+    { label: 'The workspace', description: 'Terminal, editor, browser and Git. Together.', href: '#workspace', icon: 'panels' },
+    { label: 'Built-in tools', description: 'A closer look at what’s in your workspace.', href: '#features', icon: 'code' },
+  ] },
+  { label: 'How it works', links: [
+    { label: 'Your workflow', description: 'Open a project. Pick up where you left off.', href: '#workflow', icon: 'terminal' },
+    { label: 'Built in the open', description: 'Local workspaces. Source you can inspect.', href: '#principles', icon: 'git' },
+  ] },
+  { label: 'Start here', links: [
+    { label: 'Questions & answers', description: 'Platforms, agents and everyday use.', href: '#faq', icon: 'plus' },
+    { label: 'Get lomi', description: 'Find a build for your desktop.', href: '#download', icon: 'download' },
+  ] },
+];
 ---
 
 <header class="site-header">
+  <div class="navigation-backdrop" aria-hidden="true"></div>
   <div class="header-inner shell">
-    <a class="wordmark" href="#top" aria-label="lomi home"><Fragment set:html={logo} /></a>
+    <a class="wordmark" href={isHome ? '#top' : '/'} aria-label="lomi home"><Fragment set:html={logo} /></a>
     <nav class="desktop-navigation" aria-label="Primary navigation">
-      {content.links.map((link) => <a href={link.href}>{link.label}</a>)}
+      <details class="product-menu" id="product-menu">
+        <summary>Product<svg class="menu-chevron" width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m4 6 4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" /></svg></summary>
+        <div class="product-panel">
+          {productGroups.map((group) => <div class="product-group"><p class="product-group-label">{group.label}</p>{group.links.map((link) => <a class="product-link" href={homeHref(link.href)}><span class="product-icon"><Icon name={link.icon} width={21} height={21} /></span><span><span class="product-link-title">{link.label}<Icon name="arrow" width={15} height={15} /></span><span class="product-link-description">{link.description}</span></span></a>)}</div>)}
+        </div>
+      </details>
+      {content.links.map((link) => <a class="navigation-link" href={homeHref(link.href)} aria-current={link.href.replace(/\/$/, '') === Astro.url.pathname.replace(/\/$/, '') ? 'page' : undefined}>{link.label}</a>)}
     </nav>
     <div class="header-actions">
       <a class="header-source" href={site.github} aria-label="lomi source on GitHub"><Icon name="github" width={18} height={18} /></a>
-      <a class="header-action" href={site.releases} data-download-open aria-haspopup="dialog" aria-controls="download-dialog">{content.actionLabel}<Icon name="diagonal" width={14} height={14} /></a>
+      <a class="header-action" href={isHome ? site.releases : '/#download'} {...downloadAttributes}>{content.actionLabel}<Icon name="diagonal" width={14} height={14} /></a>
     </div>
     <details class="mobile-navigation" id="mobile-navigation">
       <summary><span>Menu</span><span class="menu-symbol" aria-hidden="true"></span></summary>
-      <nav aria-label="Mobile navigation">
-        {content.links.map((link) => <a href={link.href}>{link.label}<Icon name="arrow" width={16} height={16} /></a>)}
-        <a href={site.github}>GitHub<Icon name="diagonal" width={16} height={16} /></a>
-        <a class="mobile-download" href={site.releases} data-download-open aria-haspopup="dialog" aria-controls="download-dialog">{content.actionLabel}<Icon name="download" width={16} height={16} /></a>
+      <nav class="mobile-panel" aria-label="Mobile navigation">
+        <details class="mobile-product" id="mobile-product">
+          <summary><span class="mobile-product-enter">Product<Icon name="arrow" width={17} height={17} /></span><span class="mobile-product-back"><Icon name="arrow" width={16} height={16} />Back</span></summary>
+          <div class="mobile-product-panel">
+            {productGroups.map((group) => <div class="product-group"><p class="product-group-label">{group.label}</p>{group.links.map((link) => <a class="product-link" href={homeHref(link.href)}><span class="product-icon"><Icon name={link.icon} width={20} height={20} /></span><span><span class="product-link-title">{link.label}</span><span class="product-link-description">{link.description}</span></span></a>)}</div>)}
+          </div>
+        </details>
+        {content.links.map((link) => <a class="mobile-root-link" href={homeHref(link.href)} aria-current={link.href.replace(/\/$/, '') === Astro.url.pathname.replace(/\/$/, '') ? 'page' : undefined}>{link.label}<Icon name="arrow" width={16} height={16} /></a>)}
+        <div class="mobile-utilities"><a href={site.github}>GitHub<Icon name="diagonal" width={15} height={15} /></a><a class="mobile-download" href={isHome ? site.releases : '/#download'} {...downloadAttributes}>{content.actionLabel}<Icon name="download" width={15} height={15} /></a></div>
       </nav>
     </details>
   </div>
 </header>
 
 <script>
-  const menu = document.querySelector<HTMLDetailsElement>('#mobile-navigation');
-  menu?.querySelectorAll('a').forEach((link) => link.addEventListener('click', () => { menu.open = false; }));
-  menu?.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') {
-      menu.open = false;
-      menu.querySelector('summary')?.focus();
+  const header = document.querySelector<HTMLElement>('.site-header');
+  const product = document.querySelector<HTMLDetailsElement>('#product-menu');
+  const mobile = document.querySelector<HTMLDetailsElement>('#mobile-navigation');
+  const mobileProduct = document.querySelector<HTMLDetailsElement>('#mobile-product');
+  const productSummary = product?.querySelector<HTMLElement>(':scope > summary');
+  const mobileSummary = mobile?.querySelector<HTMLElement>(':scope > summary');
+  const mobileProductSummary = mobileProduct?.querySelector<HTMLElement>(':scope > summary');
+  const finePointer = matchMedia('(hover: hover) and (pointer: fine)');
+  const desktop = matchMedia('(min-width: 768px)');
+  let openTimer: ReturnType<typeof setTimeout> | undefined;
+  let closeTimer: ReturnType<typeof setTimeout> | undefined;
+  const clearTimers = () => { clearTimeout(openTimer); clearTimeout(closeTimer); };
+  const closeProduct = () => { clearTimers(); if (product) product.open = false; };
+  const closeMobile = () => { if (mobile) mobile.open = false; if (mobileProduct) mobileProduct.open = false; };
+  const closeAll = () => { closeProduct(); closeMobile(); };
+
+  productSummary?.addEventListener('pointerenter', () => {
+    if (!finePointer.matches || !desktop.matches) return;
+    clearTimers();
+    openTimer = setTimeout(() => { if (product) product.open = true; }, 100);
+  });
+  product?.addEventListener('pointerenter', () => { clearTimeout(closeTimer); });
+  product?.addEventListener('pointerleave', () => {
+    clearTimeout(openTimer);
+    if (!finePointer.matches || product.contains(document.activeElement)) return;
+    closeTimer = setTimeout(closeProduct, 180);
+  });
+  productSummary?.addEventListener('pointerdown', () => { clearTimers(); });
+  product?.addEventListener('focusout', (event) => {
+    if (event.relatedTarget instanceof Node && !product.contains(event.relatedTarget)) closeProduct();
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return;
+    clearTimers();
+    if (product?.open) { event.preventDefault(); closeProduct(); productSummary?.focus(); }
+    else if (mobileProduct?.open) { event.preventDefault(); mobileProduct.open = false; mobileProductSummary?.focus(); }
+    else if (mobile?.open) { event.preventDefault(); closeMobile(); mobileSummary?.focus(); }
+  });
+  document.addEventListener('pointerdown', (event) => {
+    if (!(event.target instanceof Node)) return;
+    const clickedControl = event.target instanceof Element && event.target.closest('a[href], button, input, select, textarea, summary, [contenteditable="true"], [tabindex]:not([tabindex="-1"])');
+    if (product?.open && !product.contains(event.target)) {
+      const focusWasInside = product.contains(document.activeElement);
+      closeProduct();
+      if (focusWasInside) {
+        if (!clickedControl) event.preventDefault();
+        productSummary?.focus();
+      }
+    }
+    if (mobile?.open && !mobile.contains(event.target)) {
+      const focusWasInside = mobile.contains(document.activeElement);
+      closeMobile();
+      if (focusWasInside) {
+        if (!clickedControl) event.preventDefault();
+        mobileSummary?.focus();
+      }
     }
   });
-  document.addEventListener('click', (event) => {
-    if (menu?.open && event.target instanceof Node && !menu.contains(event.target)) menu.open = false;
+  mobile?.addEventListener('focusout', (event) => {
+    if (event.relatedTarget instanceof Node && !mobile.contains(event.relatedTarget)) closeMobile();
+  });
+  mobile?.addEventListener('toggle', () => { if (!mobile.open && mobileProduct) mobileProduct.open = false; });
+  header?.querySelectorAll('a').forEach((link) => link.addEventListener('click', () => {
+    const wasInDisclosure = product?.contains(link) || mobile?.contains(link);
+    closeAll();
+    // Put keyboard and screen-reader users at the chosen section after closing.
+    if (wasInDisclosure && link.getAttribute('href')?.startsWith('#')) {
+      const target = document.getElementById(link.hash.slice(1));
+      if (target) {
+        const hadTabindex = target.hasAttribute('tabindex');
+        if (!hadTabindex) target.setAttribute('tabindex', '-1');
+        target.focus({ preventScroll: true });
+        if (!hadTabindex) target.addEventListener('blur', () => target.removeAttribute('tabindex'), { once: true });
+      }
+    }
+  }));
+  if (header) header.dataset.navigationReady = '';
+  desktop.addEventListener('change', () => {
+    const focused = document.activeElement;
+    const focusWasInHiddenNavigation = desktop.matches ? mobile?.contains(focused) : header?.querySelector('.desktop-navigation')?.contains(focused) || header?.querySelector('.header-actions')?.contains(focused);
+    closeAll();
+    if (focusWasInHiddenNavigation) (desktop.matches ? productSummary : mobileSummary)?.focus();
   });
 </script>
 
 <style>
   .site-header { position: absolute; top: 24px; inset-inline: 0; z-index: 20; color: #f3f6ed; }
-  .header-inner { display: flex; align-items: center; width: min(1120px, calc(100% - 64px)); min-height: 72px; padding: 11px 14px 11px 25px; gap: 24px; border: 1px solid #b8cca82b; border-radius: 999px; background: rgb(15 20 14 / 86%); box-shadow: inset 0 1px 0 #e9ffdc0a, 0 12px 35px #0002; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+  .navigation-backdrop { position: fixed; inset: 0; z-index: -1; visibility: hidden; opacity: 0; background: rgb(5 10 5 / 26%); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); transition: opacity 180ms ease, visibility 180ms; }
+  .site-header[data-navigation-ready]:has(.product-menu[open], .mobile-navigation[open]) .navigation-backdrop { visibility: visible; opacity: 1; }
+  .header-inner { position: relative; display: flex; align-items: center; width: min(1120px, calc(100% - 64px)); min-height: 72px; padding: 11px 14px 11px 25px; gap: 24px; border: 1px solid #b8cca82b; border-radius: 999px; background: rgb(15 20 14 / 94%); box-shadow: inset 0 1px 0 #e9ffdc0a, 0 12px 35px #0002; -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); }
+  .header-inner:has(.product-menu[open]) { border-radius: 28px 28px 0 0; border-bottom-color: transparent; }
   .wordmark { display: inline-flex; align-items: center; min-height: 44px; }
   .wordmark :global(svg) { display: block; width: 82px; height: auto; }
   .desktop-navigation { display: flex; align-items: center; justify-content: center; gap: 4px; margin-inline: auto; }
-  .desktop-navigation a { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding-inline: 16px; border-radius: 999px; font-size: 13px; color: #c0ccb4; transition: color 150ms ease, background-color 150ms ease; }
-  .desktop-navigation a:hover { color: #fff; background: #e1f9cd0c; }
+  .navigation-link, .product-menu > summary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding-inline: 16px; border-radius: 999px; font-size: 13px; color: #c0ccb4; transition: color 150ms ease, background-color 150ms ease; }
+  summary { list-style: none; cursor: pointer; }
+  summary::-webkit-details-marker { display: none; }
+  .navigation-link:hover, .navigation-link[aria-current], .product-menu[open] > summary, .product-menu > summary:hover { color: #fff; background: #e1f9cd0c; }
+  .menu-chevron { transition: transform 180ms var(--ease-out); }
+  .product-menu[open] .menu-chevron { transform: rotate(180deg); }
+  .product-panel { position: absolute; top: calc(100% - 1px); left: -1px; right: -1px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; padding: 25px 26px 26px; max-height: calc(100svh - 130px); overflow: auto; border: 1px solid #b8cca82b; border-top: 0; border-radius: 0 0 28px 28px; background: #10150f; box-shadow: 0 25px 35px #0002; }
+  .product-group-label { margin-bottom: 9px; padding: 0 12px 13px; border-bottom: 1px solid #b8cca824; font-family: var(--font-mono); font-size: 9px; letter-spacing: .035em; color: #a7b69a; }
+  .product-link { display: flex; align-items: flex-start; gap: 13px; padding: 17px 12px; border-radius: 10px; transition: background-color 150ms; }
+  .product-link:hover { background: #d5f5b809; }
+  .product-icon { display: inline-flex; color: #c8ff3d; padding-top: 1px; }
+  .product-link > span:last-child { flex: 1; min-width: 0; }
+  .product-link-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 14px; font-weight: 480; line-height: 1.5; color: #f3f6ed; }
+  .product-link-title :global(svg) { opacity: 0; transform: translateX(-4px); transition: opacity 150ms, transform 150ms var(--ease-out); }
+  .product-link:hover .product-link-title :global(svg), .product-link:focus-visible .product-link-title :global(svg) { opacity: 1; transform: none; }
+  .product-link-description { display: block; margin-top: 5px; font-size: 11px; line-height: 1.7; color: #aebca3; }
   .header-actions { display: flex; align-items: center; gap: 10px; }
   .header-source { display: inline-flex; align-items: center; justify-content: center; width: 44px; min-height: 44px; border: 1px solid #bbcca32b; border-radius: 50%; color: #d2dfc4; transition: border-color 150ms ease, background-color 150ms ease; }
   .header-source:hover { border-color: #b4ce9570; background: #b4ce950f; }
@@ -57,21 +176,38 @@ const { content } = Astro.props;
   .header-action:hover { background: #dcff83; }
   .site-header :focus-visible { outline-color: var(--color-lime); }
   .mobile-navigation { display: none; }
-  @media (max-width: 1000px) { .header-inner { gap: 15px; padding-left: 22px; } .desktop-navigation { gap: 0; } .desktop-navigation a { padding-inline: 12px; font-size: 12px; } .header-actions { gap: 8px; } .header-action { gap: 12px; padding-inline: 15px; font-size: 11px; } }
+  .product-menu[open] .product-panel, .mobile-navigation[open] > .mobile-panel { animation: panel-enter 180ms var(--ease-out); }
+  @keyframes panel-enter { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+  @media (max-width: 1000px) { .header-inner { gap: 15px; padding-left: 22px; } .desktop-navigation { gap: 0; } .navigation-link, .product-menu > summary { padding-inline: 12px; font-size: 12px; } .header-actions { gap: 8px; } .header-action { gap: 12px; padding-inline: 15px; font-size: 11px; } .product-panel { gap: 12px; padding-inline: 15px; } .product-link { gap: 10px; padding-inline: 9px; } .product-link-title { font-size: 13px; } }
   @media (max-width: 767px) {
     .site-header { top: 16px; }
     .header-inner { width: calc(100% - 32px); min-height: 64px; justify-content: space-between; padding: 8px 12px 8px 21px; }
+    .header-inner:has(.mobile-navigation[open]) { border-radius: 26px 26px 0 0; border-bottom-color: transparent; }
     .wordmark :global(svg) { width: 79px; }
     .desktop-navigation, .header-actions { display: none; }
     .mobile-navigation { display: block; }
-    .mobile-navigation > summary { display: inline-flex; align-items: center; gap: 13px; min-height: 44px; padding-inline: 13px; border-radius: 999px; background: #d9f4bc0b; list-style: none; cursor: pointer; font-size: 12px; color: #e0ead5; }
+    .mobile-navigation > summary { display: inline-flex; align-items: center; gap: 13px; min-height: 44px; padding-inline: 13px; border-radius: 999px; background: #d9f4bc0b; font-size: 12px; color: #e0ead5; }
     .menu-symbol { position: relative; width: 16px; height: 8px; border-block: 1px solid currentColor; }
     .mobile-navigation[open] .menu-symbol { height: 16px; border-block-color: transparent; }
     .mobile-navigation[open] .menu-symbol::before, .mobile-navigation[open] .menu-symbol::after { content: ''; position: absolute; inset-inline: 0; top: 7px; height: 1px; background: currentColor; transform: rotate(45deg); }
     .mobile-navigation[open] .menu-symbol::after { transform: rotate(-45deg); }
-    summary::-webkit-details-marker { display: none; }
-    .mobile-navigation nav { position: absolute; top: calc(100% + 10px); left: 16px; right: 16px; max-height: calc(100svh - 112px); overflow: auto; padding: 12px 22px 16px; border: 1px solid #536343; border-radius: 23px; color: #e0ead5; background: #11180f; box-shadow: 0 20px 50px #0008; }
-    .mobile-navigation nav a { display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 49px; border-bottom: 1px solid #3e4a3459; font-size: 14px; }
-    .mobile-navigation nav a:last-child { border: 0; color: var(--color-lime); }
+    .mobile-panel { position: absolute; top: calc(100% - 1px); left: -1px; right: -1px; max-height: calc(100svh - 97px); overflow: auto; padding: 8px 22px 16px; border: 1px solid #b8cca82b; border-top: 0; border-radius: 0 0 26px 26px; color: #e0ead5; background: #10150f; box-shadow: 0 25px 35px #0002; }
+    .mobile-root-link, .mobile-product > summary { display: flex; align-items: center; justify-content: space-between; min-height: 53px; border-bottom: 1px solid #3e4a3459; font-size: 16px; }
+    .mobile-root-link[aria-current] { color: var(--color-lime); }
+    .mobile-product > summary > span { width: 100%; align-items: center; justify-content: space-between; gap: 10px; }
+    .mobile-product-enter { display: flex; }
+    .mobile-product-back { display: none; }
+    .mobile-product-back :global(svg) { transform: rotate(180deg); }
+    .mobile-product[open] > summary { border-bottom: 0; font-size: 12px; color: #c8ff3d; min-height: 45px; }
+    .mobile-product[open] .mobile-product-back { display: flex; justify-content: flex-start; }
+    .mobile-product[open] .mobile-product-enter { display: none; }
+    .mobile-panel:has(.mobile-product[open]) > .mobile-root-link, .mobile-panel:has(.mobile-product[open]) > .mobile-utilities { display: none; }
+    .mobile-utilities { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding-top: 15px; }
+    .mobile-utilities > a { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font-size: 11px; }
+    .mobile-utilities .mobile-download { color: #c8ff3d; }
+    .product-group-label { margin: 0; padding: 12px 0 9px; font-size: 8px; }
+    .product-link { padding: 15px 0; gap: 13px; }
+    .product-link-title { font-size: 14px; }
+    .product-link-description { font-size: 11px; }
   }
 </style>

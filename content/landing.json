@@ -6,20 +6,16 @@
   "navigation": {
     "links": [
       {
-        "label": "Workspace",
-        "href": "#workflow"
-      },
-      {
-        "label": "Features",
-        "href": "#features"
-      },
-      {
         "label": "Roadmap",
         "href": "#roadmap"
       },
       {
-        "label": "FAQ",
-        "href": "#faq"
+        "label": "Devlog",
+        "href": "/devlog/"
+      },
+      {
+        "label": "Docs",
+        "href": "https://docs.lomi.dev"
       }
     ],
     "actionLabel": "Download lomi"

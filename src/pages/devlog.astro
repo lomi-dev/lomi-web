@@ -1,0 +1,50 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Icon from '../components/Icon';
+import { site } from '../data/site';
+import { loadLanding } from '../../content/load-landing';
+
+const content = await loadLanding(import.meta.env.CMS_URL);
+---
+
+<Layout title="Devlog — lomi" description="Notes from building lomi. Work in progress.">
+  <div class="devlog-surface">
+    <Header content={content.navigation} />
+    <main id="main" class="devlog-page" tabindex="-1">
+      <div class="devlog-content">
+        <p class="devlog-label"><span aria-hidden="true">/</span> Devlog</p>
+        <h1>Work in<br /> progress<span aria-hidden="true">_</span></h1>
+        <p class="devlog-description">Notes from building lomi.<br />We’ll have more to share here soon.</p>
+        <a class="devlog-home" href="/"><Icon name="arrow" width={17} height={17} />Back to lomi</a>
+      </div>
+    </main>
+    <footer class="devlog-footer"><span>lomi / devlog</span><a href={site.github}>Follow the source<Icon name="diagonal" width={14} height={14} /></a></footer>
+  </div>
+</Layout>
+
+<style>
+  .devlog-surface { min-height: 100svh; display: flex; flex-direction: column; background: #10150f; color: #f3f6ed; }
+  .devlog-page { display: flex; flex: 1; align-items: center; width: min(1120px, calc(100% - 64px)); margin-inline: auto; padding: 178px 26px 94px; }
+  .devlog-content { width: 100%; }
+  .devlog-label { display: flex; align-items: center; gap: 16px; margin-bottom: 30px; font-family: var(--font-mono); font-size: 11px; color: #b4c4a8; }
+  .devlog-label > span { color: var(--color-lime); }
+  h1 { margin: 0; font-size: clamp(68px, 9.4vw, 138px); font-weight: 450; letter-spacing: -.065em; line-height: .99; }
+  h1 > span { color: var(--color-lime); }
+  .devlog-description { margin-top: 34px; color: #b4c4a8; font-size: 15px; line-height: 1.85; }
+  .devlog-home { display: inline-flex; align-items: center; gap: 13px; min-height: 44px; margin-top: 29px; font-size: 13px; color: var(--color-lime); }
+  .devlog-home :global(svg) { transform: rotate(180deg); }
+  .devlog-home:hover { text-decoration: underline; text-underline-offset: 5px; }
+  .devlog-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; width: min(1068px, calc(100% - 116px)); margin-inline: auto; padding-block: 20px; border-top: 1px solid #b8cca824; font-family: var(--font-mono); font-size: 9px; color: #a7b69a; }
+  .devlog-footer a { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; }
+  .devlog-footer a:hover { color: #f3f6ed; }
+  .devlog-surface :focus-visible { outline-color: var(--color-lime); }
+  @media (max-width: 767px) {
+    .devlog-page { width: calc(100% - 40px); padding: 150px 0 65px; }
+    h1 { font-size: clamp(61px, 14vw, 105px); }
+    .devlog-label { margin-bottom: 27px; font-size: 10px; }
+    .devlog-description { font-size: 13px; margin-top: 28px; }
+    .devlog-home { margin-top: 23px; }
+    .devlog-footer { width: calc(100% - 40px); font-size: 8px; padding-block: 12px; }
+  }
+</style>

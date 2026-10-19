@@ -1,8 +1,10 @@
 # Lomi content admin
 
-An isolated Payload CMS app for the launch landing page. The Astro site has its
+A separate Payload CMS app for the launch landing page. The Astro site has its
 own dependencies and build; run the following commands from `cms/` using Node
-22.16+ (Node 22 LTS) and Bun.
+22.16+ (Node 22 LTS) and Bun. The CMS build also needs `../content/links.ts`,
+the pure link policy shared with Astro. Deploy from a checkout containing both
+`cms/` and `content/`; the Turbopack root includes their common parent.
 
 ```sh
 bun install --frozen-lockfile
@@ -20,9 +22,9 @@ to the public. Configure `NEXT_PUBLIC_SERVER_URL` with the CMS's HTTPS origin
 when hosting it.
 
 The **Launch landing page** global contains all fields from
-`../content/landing.json`. Navigation and footer destinations accept HTTPS URLs
-or simple section anchors such as `#features`. Feature icons and roadmap statuses
-have fixed choices matching the site. Save drafts while editing, then publish
+`../content/landing.json`. Navigation and footer destinations accept HTTPS URLs,
+simple section anchors such as `#features`, or the local `/devlog/` route.
+Feature icons and roadmap statuses have fixed choices matching the site. Save drafts while editing, then publish
 when ready. The CMS retains up to 20 versions. Authenticated administrators can
 read drafts and history; public requests see only published content.
 

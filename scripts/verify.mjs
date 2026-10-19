@@ -192,6 +192,94 @@ async function verifyAgentLabels(targetPage) {
   await expect(cards.locator('button, a, [tabindex]')).toHaveCount(0);
 }
 
+async function verifyStaticBackdropDoesNotBlockPage(targetPage) {
+  await expect(targetPage.locator('.navigation-backdrop')).not.toBeVisible();
+  const pageLink = targetPage.locator('.site-footer .footer-takeoff');
+  await pageLink.evaluate((element) => element.scrollIntoView({ block: 'center', behavior: 'instant' }));
+  expect(await pageLink.evaluate((element) => {
+    const bounds = element.getBoundingClientRect();
+    const hit = document.elementFromPoint(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2);
+    return hit?.closest('a') === element && !hit.closest('.navigation-backdrop');
+  }), 'No-JavaScript navigation leaves page links unobstructed').toBe(true);
+  await pageLink.click();
+  await expect(targetPage).toHaveURL(new URL('/#top', url).href);
+}
+
+async function verifyDevlog(javaScriptEnabled) {
+  const devlogContext = await browser.newContext({ javaScriptEnabled });
+  const devlogPage = await devlogContext.newPage();
+  const devlogErrors = [];
+  devlogPage.on('pageerror', (error) => devlogErrors.push(error.message));
+  const activate = async (link) => {
+    if (javaScriptEnabled) await link.click();
+    else {
+      await expect(link).toBeVisible();
+      await link.focus();
+      await devlogPage.keyboard.press('Enter');
+    }
+  };
+  const devlogUrl = new URL('/devlog/', url).href;
+  for (const width of [1440, 390]) {
+    await devlogPage.setViewportSize({ width, height: 900 });
+    const mobile = width < 768;
+    const openRoot = async () => {
+      if (mobile) await activate(devlogPage.locator('#mobile-navigation > summary'));
+    };
+    const rootLinks = () => devlogPage.locator(mobile ? '#mobile-navigation .mobile-root-link' : '.desktop-navigation .navigation-link');
+    await devlogPage.goto(url);
+    if (!javaScriptEnabled && !mobile) {
+      await activate(devlogPage.locator('#product-menu > summary'));
+      await activate(devlogPage.locator('#product-menu a[href="#workspace"]'));
+      await expect(devlogPage.locator('#workspace')).toBeInViewport();
+      await verifyStaticBackdropDoesNotBlockPage(devlogPage);
+      await devlogPage.goto(url);
+    }
+    await openRoot();
+    await activate(rootLinks().and(devlogPage.locator('a[href="/devlog/"]')));
+    await expect(devlogPage).toHaveURL(devlogUrl);
+    await expect(devlogPage).toHaveTitle('Devlog — lomi');
+    await expect(devlogPage.getByRole('heading', { level: 1 })).toHaveCount(1);
+    await expect(devlogPage.getByRole('heading', { level: 1 })).toHaveAccessibleName('Work in progress');
+    await expect(devlogPage.locator('main article')).toHaveCount(0);
+    await expect(devlogPage.locator('.wordmark')).toHaveAttribute('href', '/');
+    await expect(devlogPage.getByRole('link', { name: 'Back to lomi' })).toHaveAttribute('href', '/');
+    expect(await devlogPage.evaluate(() => document.documentElement.scrollWidth), `Devlog at ${width}px`).toBe(width);
+    await expect(rootLinks().and(devlogPage.locator('a[href="/devlog/"]'))).toHaveAttribute('aria-current', 'page');
+    await expect(rootLinks().and(devlogPage.locator('a[href="/#roadmap"]'))).toHaveCount(1);
+    await expect(rootLinks().and(devlogPage.locator('a[href="https://docs.lomi.dev"]'))).toHaveCount(1);
+    await expect(devlogPage.locator('.site-header [data-download-open]')).toHaveCount(0);
+    if (javaScriptEnabled) {
+      const accessibility = await new AxeBuilder({ page: devlogPage }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
+      expect(accessibility.violations, `Devlog accessibility at ${width}px`).toEqual([]);
+    }
+    await openRoot();
+    const product = devlogPage.locator(mobile ? '#mobile-product' : '#product-menu');
+    await activate(product.locator(':scope > summary'));
+    expect(await product.locator('.product-link').evaluateAll((links) => links.map((link) => link.getAttribute('href'))))
+      .toEqual(['/#workspace', '/#features', '/#workflow', '/#principles', '/#faq', '/#download']);
+    await activate(product.locator('a[href="/#workspace"]'));
+    await expect(devlogPage).toHaveURL(new URL('/#workspace', url).href);
+    await expect(devlogPage.locator('#workspace')).toBeInViewport();
+    await devlogPage.goto(devlogUrl);
+    await openRoot();
+    await activate(rootLinks().and(devlogPage.locator('a[href="/#roadmap"]')));
+    await expect(devlogPage).toHaveURL(new URL('/#roadmap', url).href);
+    await expect(devlogPage.locator('#roadmap')).toBeInViewport();
+    await devlogPage.goto(devlogUrl);
+    await openRoot();
+    const download = devlogPage.locator(mobile ? '.mobile-download' : '.header-action');
+    await expect(download).toHaveAttribute('href', '/#download');
+    await activate(download);
+    await expect(devlogPage).toHaveURL(new URL('/#download', url).href);
+    await expect(devlogPage.locator('#download')).toBeInViewport();
+    await devlogPage.goto(devlogUrl);
+    await activate(devlogPage.getByRole('link', { name: 'Back to lomi' }));
+    await expect(devlogPage).toHaveURL(new URL('/', url).href);
+  }
+  expect(devlogErrors, `Devlog page errors with JavaScript ${javaScriptEnabled}`).toEqual([]);
+  await devlogContext.close();
+}
+
 async function verifyLongFooterColophon(targetPage) {
   const colophon = targetPage.locator('.site-footer .footer-credits > p');
   const original = await colophon.textContent();
@@ -219,14 +307,14 @@ try {
   await expect(page.getByRole('region', { name: 'Newsletter signup' })).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Primary navigation', exact: true })).toBeVisible();
   const desktopNavigation = page.getByRole('navigation', { name: 'Primary navigation', exact: true });
-  const desktopLinks = await desktopNavigation.locator('a').evaluateAll((links) => links.map((link) => {
+  const desktopLinks = await desktopNavigation.locator('a.navigation-link').evaluateAll((links) => links.map((link) => {
     const label = link.cloneNode(true);
     label.querySelectorAll('[aria-hidden="true"]').forEach((decoration) => decoration.remove());
     return { href: link.getAttribute('href'), label: link.getAttribute('aria-label') || label.textContent.trim() };
   }));
   expect(desktopLinks.length, 'Desktop navigation links').toBeGreaterThan(0);
   for (const [index, link] of desktopLinks.entries()) {
-    await expect(desktopNavigation.locator('a').nth(index)).toHaveAccessibleName(link.label);
+    await expect(desktopNavigation.locator('a.navigation-link').nth(index)).toHaveAccessibleName(link.label);
   }
   await expect(page.getByRole('contentinfo')).toBeVisible();
   for (const section of ['workflow', 'features', 'roadmap', 'faq', 'download', 'newsletter']) {
@@ -245,6 +333,81 @@ try {
   expect(anchors.duplicates, 'Unique element IDs').toEqual([]);
   expect(anchors.missingTargets, 'Internal anchor destinations').toEqual([]);
   await expect(page.locator('#download-dialog')).not.toBeVisible();
+
+  const productMenu = page.locator('#product-menu');
+  const productSummary = productMenu.locator(':scope > summary');
+  await expect(productMenu.locator('.product-link')).toHaveCount(6);
+  await expect(productMenu.locator('.product-group')).toHaveCount(3);
+  const productDestinations = await productMenu.locator('.product-link').evaluateAll((links) => links.map((link) => link.getAttribute('href')));
+  expect(productDestinations).toEqual(['#workspace', '#features', '#workflow', '#principles', '#faq', '#download']);
+  for (const link of await productMenu.locator('.product-link').all()) {
+    await expect(link.locator('.product-icon svg')).toHaveCount(1);
+    await expect(link.locator('.product-link-title')).toHaveText(/\S/);
+    await expect(link.locator('.product-link-description')).toHaveText(/\S/);
+  }
+  await page.locator('.wordmark').focus();
+  await productSummary.hover();
+  await expect(productMenu).toHaveAttribute('open', '');
+  await productMenu.locator('.product-link').first().hover();
+  await expect(productMenu).toHaveAttribute('open', '');
+  await page.mouse.move(0, 0);
+  await expect(productMenu).not.toHaveAttribute('open');
+  await productSummary.hover();
+  await expect(productMenu).toHaveAttribute('open', '');
+  await page.keyboard.press('Escape');
+  await expect(productMenu).not.toHaveAttribute('open');
+  await expect(productSummary).toBeFocused();
+  await page.mouse.move(0, 0);
+  await page.locator('.wordmark').focus();
+  const productSummaryBounds = await productSummary.boundingBox();
+  await page.mouse.move(productSummaryBounds.x + productSummaryBounds.width / 2, productSummaryBounds.y + productSummaryBounds.height / 2);
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(220);
+  await expect(productMenu, 'Escape cancels a pending hover opening').not.toHaveAttribute('open');
+
+  await productSummary.click();
+  await expect(productMenu).toHaveAttribute('open', '');
+  await productSummary.click();
+  await expect(productMenu).not.toHaveAttribute('open');
+  await page.mouse.move(0, 0);
+  await productSummary.focus();
+  await page.keyboard.press('Enter');
+  await expect(productMenu).toHaveAttribute('open', '');
+  await page.keyboard.press('Tab');
+  await expect(productMenu.locator('.product-link').first()).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(productMenu).not.toHaveAttribute('open');
+  await expect(productSummary).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(desktopNavigation.locator('.navigation-link').first(), 'Closed Product links leave the Tab order').toBeFocused();
+  await productSummary.focus();
+  await page.keyboard.press('Space');
+  await expect(productMenu).toHaveAttribute('open', '');
+  await desktopNavigation.locator('.navigation-link').first().focus();
+  await expect(productMenu).not.toHaveAttribute('open');
+  await productSummary.click();
+  await expect(productMenu).toHaveAttribute('open', '');
+  await page.mouse.click(8, 180);
+  await expect(productMenu).not.toHaveAttribute('open');
+  await expect(productSummary, 'Outside dismissal returns focus from closed Product').toBeFocused();
+  await productSummary.click();
+  const productA11y = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
+  expect(productA11y.violations, 'Accessibility with desktop Product open').toEqual([]);
+  await page.keyboard.press('Escape');
+  for (const destination of productDestinations) {
+    await productSummary.click();
+    await productMenu.locator(`a[href="${destination}"]`).click();
+    await expect(page).toHaveURL(new URL(destination, url).href);
+    await expect(productMenu).not.toHaveAttribute('open');
+    await expect(page.locator(destination)).toBeInViewport();
+    await expect(page.locator(destination), 'Closed navigation focuses the chosen section').toBeFocused();
+  }
+  await page.locator('.header-source').focus();
+  await page.setViewportSize({ width: 390, height: 900 });
+  await expect(page.locator('#mobile-navigation > summary'), 'Resizing restores focus from hidden desktop utilities').toBeFocused();
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(productSummary, 'Resizing restores focus from hidden mobile navigation').toBeFocused();
+  await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
 
   const hero = page.locator('.hero');
   const motionToggle = hero.locator('[data-motion-toggle]');
@@ -310,11 +473,13 @@ try {
     await page.waitForTimeout(200);
     return await tiltTransform() === before;
   }, { message: 'Paused pointer tilt settles', timeout: 5000 }).toBe(true);
-  const pausedTilt = await tiltTransform();
+  const pausedTilt = await codexBody.evaluate((element) => Array.from(new DOMMatrixReadOnly(getComputedStyle(element).transform).toFloat64Array()));
   await moveAcrossCodex(.3, .7);
   await moveAcrossCodex(.7, .3);
   await page.waitForTimeout(350);
-  expect(await tiltTransform(), 'Moving over a paused card does not tilt it').toBe(pausedTilt);
+  const afterPausedPointer = await codexBody.evaluate((element) => Array.from(new DOMMatrixReadOnly(getComputedStyle(element).transform).toFloat64Array()));
+  expect(Math.max(...afterPausedPointer.map((value, index) => Math.abs(value - pausedTilt[index]))),
+    'Moving over a paused card does not tilt it beyond subpixel spring settling').toBeLessThan(.001);
 
   await page.keyboard.press('Enter');
   await expect(hero).toHaveAttribute('data-motion', 'running');
@@ -459,36 +624,56 @@ try {
 
   await page.setViewportSize({ width: 390, height: 844 });
   const mobileMenu = page.locator('#mobile-navigation');
-  const mobileSummary = mobileMenu.locator('summary');
+  const mobileSummary = mobileMenu.locator(':scope > summary');
   await expect(mobileSummary).toBeVisible();
   await expect(mobileMenu).not.toHaveAttribute('open');
-  const navigationLinks = await mobileMenu.locator('a').evaluateAll((links) => links.map((link) => ({
-    href: link.getAttribute('href'),
-    label: link.textContent.trim(),
-  })));
-  expect(navigationLinks.length, 'Mobile navigation links').toBeGreaterThan(0);
-  expect(navigationLinks.slice(0, desktopLinks.length), 'Consistent desktop and mobile navigation').toEqual(desktopLinks);
-  for (const [index, link] of navigationLinks.entries()) {
-    expect(link.label, 'Nonempty navigation label').toMatch(/\S/);
-    expect(link.href, 'Navigation destination').toMatch(/^(#.+|https:\/\/)/);
-    if (!link.href.startsWith('#')) continue;
-    await mobileSummary.click();
-    await expect(mobileMenu).toHaveAttribute('open', '');
-    const navigationLink = mobileMenu.getByRole('link').nth(index);
-    await expect(navigationLink).toHaveAttribute('href', link.href);
-    await expect(navigationLink).toBeVisible();
-    await expect(navigationLink).toHaveAccessibleName(link.label);
-    await navigationLink.click();
-    await expect(page).toHaveURL(new URL(link.href, url).href);
-    await expect(mobileMenu).not.toHaveAttribute('open');
-    await expect(page.locator(link.href)).toBeInViewport();
-  }
-  await mobileSummary.focus();
+  const mobileProduct = mobileMenu.locator('#mobile-product');
+  const mobileProductSummary = mobileProduct.locator(':scope > summary');
+  const mobileRootLinks = mobileMenu.locator('.mobile-root-link');
+  expect(await mobileRootLinks.evaluateAll((links) => links.map((link) => ({
+    href: link.getAttribute('href'), label: link.textContent.trim(),
+  }))), 'Consistent direct desktop and mobile navigation').toEqual(desktopLinks);
+  await mobileSummary.click();
+  await mobileProductSummary.focus();
   await page.keyboard.press('Enter');
+  await expect(mobileProduct).toHaveAttribute('open', '');
+  await expect(mobileProductSummary).toHaveAccessibleName('Back');
+  for (const link of await mobileRootLinks.all()) await expect(link).not.toBeVisible();
+  await expect(mobileMenu.locator('.mobile-utilities')).not.toBeVisible();
+  const mobileMenuA11y = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
+  expect(mobileMenuA11y.violations, 'Accessibility with mobile Product drill-in open').toEqual([]);
+  await mobileProductSummary.click();
+  await expect(mobileProduct).not.toHaveAttribute('open');
+  await expect(mobileRootLinks.first()).toBeVisible();
+  await mobileProductSummary.click();
+  await page.keyboard.press('Escape');
+  await expect(mobileProduct).not.toHaveAttribute('open');
   await expect(mobileMenu).toHaveAttribute('open', '');
+  await expect(mobileProductSummary).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(mobileMenu).not.toHaveAttribute('open');
   await expect(mobileSummary).toBeFocused();
+  await mobileSummary.click();
+  await mobileProductSummary.click();
+  await mobileSummary.click();
+  await expect(mobileMenu).not.toHaveAttribute('open');
+  await expect(mobileProduct).not.toHaveAttribute('open');
+  for (const destination of productDestinations) {
+    await mobileSummary.click();
+    await mobileProductSummary.click();
+    const link = mobileProduct.locator(`a[href="${destination}"]`);
+    await expect(link).toBeVisible();
+    await link.click();
+    await expect(page).toHaveURL(new URL(destination, url).href);
+    await expect(mobileMenu).not.toHaveAttribute('open');
+    await expect(mobileProduct).not.toHaveAttribute('open');
+    await expect(page.locator(destination)).toBeInViewport();
+    await expect(page.locator(destination), 'Closed navigation focuses the chosen section').toBeFocused();
+  }
+  await mobileSummary.click();
+  await mobileMenu.locator('a.mobile-root-link[href="#roadmap"]').click();
+  await expect(page.locator('#roadmap')).toBeInViewport();
+  await expect(mobileMenu).not.toHaveAttribute('open');
 
   const faqItems = page.locator('#faq details');
   expect(await faqItems.count()).toBeGreaterThan(0);
@@ -700,12 +885,25 @@ try {
   await expect(staticPage.getByRole('button', { name: 'Subscribe' })).toBeDisabled();
   await expect(staticPage.locator('.newsletter-noscript')).toBeVisible();
   const staticMenu = staticPage.locator('#mobile-navigation');
-  await staticMenu.locator('summary').click();
+  await staticMenu.locator(':scope > summary').focus();
+  await staticPage.keyboard.press('Enter');
   await expect(staticMenu.getByRole('navigation')).toBeVisible();
-  const staticNavigationLink = staticMenu.locator('a[href^="#"]').first();
+  const staticMobileProduct = staticMenu.locator('#mobile-product');
+  await staticMobileProduct.locator(':scope > summary').focus();
+  await staticPage.keyboard.press('Enter');
+  await expect(staticMobileProduct).toHaveAttribute('open', '');
+  await expect(staticMobileProduct.locator('.product-link')).toHaveCount(6);
+  await expect(staticMenu.locator('.mobile-root-link').first()).not.toBeVisible();
+  await staticMobileProduct.locator(':scope > summary').focus();
+  await staticPage.keyboard.press('Enter');
+  await expect(staticMobileProduct).not.toHaveAttribute('open');
+
+  const staticNavigationLink = staticMenu.locator('a.mobile-root-link[href^="#"]').first();
   const staticDestination = await staticNavigationLink.getAttribute('href');
-  await staticNavigationLink.click();
+  await staticNavigationLink.focus();
+  await staticPage.keyboard.press('Enter');
   await expect(staticPage.locator(staticDestination)).toBeInViewport();
+  await verifyStaticBackdropDoesNotBlockPage(staticPage);
   const staticFaq = staticPage.locator('#faq details').first();
   await staticFaq.locator('summary').focus();
   await staticPage.keyboard.press('Enter');
@@ -721,6 +919,9 @@ try {
   await staticPage.keyboard.press('Enter');
   await expect(staticPage.locator('#main')).toBeFocused();
   await staticContext.close();
+  await verifyDevlog(true);
+  await verifyDevlog(false);
+
   const fallbackContext = await browser.newContext({ viewport: { width: 390, height: 844 } });
   await fallbackContext.addInitScript(() => {
     const getContext = HTMLCanvasElement.prototype.getContext;
@@ -741,7 +942,7 @@ try {
   await expect(fallbackPage.locator('.hero [data-download-open]')).toHaveAttribute('href', releaseUrl);
   expect(fallbackErrors, 'Canvas 2D unavailable fallback has no page errors').toEqual([]);
   await fallbackContext.close();
-  console.log('Passed: complete landing sections and anchors, 7 viewport widths including 200% equivalent reflow and landscape, canvas pixel motion/pause/resume/reduced/offscreen/resize and no-JS/unavailable-2D fallback, seven agent assets/readable labels, actual motion/tilt/pause/resume/live reduced-motion/no-JS, workspace views/keyboard/reduced motion/no-JS, exact viewport footer/keyboard access across 8 sizes plus long CMS copy at 320x400 with and without JS, mobile navigation and FAQ keyboard behavior, newsletter form, all 7 download packages, release fallback, every download trigger and focus restoration across desktop/mobile resizing, no-JS reading and release links, and mobile/desktop/dialog accessibility.');
+  console.log('Passed: complete landing sections and anchors, 7 viewport widths including 200% equivalent reflow and landscape, canvas pixel motion/pause/resume/reduced/offscreen/resize and no-JS/unavailable-2D fallback, seven agent assets/readable labels, actual motion/tilt/pause/resume/live reduced-motion/no-JS, workspace views/keyboard/reduced motion/no-JS, exact viewport footer/keyboard access across 8 sizes plus long CMS copy at 320x400 with and without JS, desktop Product/mobile drill-in and Devlog routes with/without JS, mobile navigation and FAQ keyboard behavior, newsletter form, all 7 download packages, release fallback, every download trigger and focus restoration across desktop/mobile resizing, no-JS reading and release links, and mobile/desktop/dialog accessibility.');
 } finally {
   await browser.close();
 }

@@ -19,7 +19,9 @@ The page includes:
 
 - A dark hero with geometric shape waves, seven floating agent marks, pointer
   depth, and a shared motion control.
-- A floating glass navigation bar with desktop and mobile download actions.
+- A floating glass navigation bar: Product opens a three-column dropdown,
+  followed by Roadmap, Devlog, and Docs. Mobile Product uses a Back drill-in.
+- A separate `/devlog/` page with a Work in progress placeholder.
 - A keyboard-accessible Build / Preview / Review selector below the hero, with
   real app captures and a direct link from the hero.
 - A workflow sequence, dark tools manifest, and local/source/customization details.
@@ -37,8 +39,8 @@ described in the FAQ. The screenshots are existing desktop README captures;
 review them against the launch release before publishing.
 
 The [design analysis](docs/design-analysis.md) documents all six reference sites,
-Appllama, the four articles about generic AI content, and the decisions behind
-this layout.
+Appllama, Coda, the four articles about generic AI content, and the decisions
+behind this layout.
 
 ## Hero motion and React Bits
 
@@ -105,10 +107,13 @@ deployment provider is configured by this task.
 ## Where to edit
 
 - `content/landing.json`: initial copy for every main page section.
-- `content/landing-schema.ts`: shared build-time content contract and safe links.
+- `content/landing-schema.ts`: shared build-time content contract.
+- `content/links.ts`: link policy shared by Astro and Payload.
 - `content/load-landing.ts`: optional published-content fetch during rendering.
 - `cms/src/globals/Landing.ts`: matching editor fields and access rules.
 - `src/pages/index.astro`: section order and composition.
+- `src/pages/devlog.astro`: the standalone Devlog placeholder.
+- `src/components/Header.astro`: Product groups, responsive disclosure, and routing.
 - `src/styles/global.css`: responsive layout and brand tokens.
 - `src/components/`: navigation, footer, features, original clouds, forms, icons.
 - `src/components/WorkspaceDeck.astro`: real product screenshots and local view selection.
@@ -118,7 +123,10 @@ deployment provider is configured by this task.
 Navigation, headings, descriptions, features, roadmap entries, FAQ, download CTA,
 newsletter introduction, footer links, and SEO copy can be edited in the CMS.
 The screenshots and cloud image remain versioned local assets in this outline.
-Form states, dialog instructions, and other functional labels live in components.
+Product groups, the Devlog placeholder, form states, dialog instructions, and
+other functional labels live in components. Navigation links and the download
+label remain editable in Payload. Links allow HTTPS, section anchors, and the
+local `/devlog/` route. On Devlog, section links return to the homepage.
 
 ## Download and newsletter behavior
 
@@ -152,7 +160,8 @@ PLAYWRIGHT_CHANNEL=chrome bun run verify
 ```
 
 Browser verification covers seven viewport widths, short landscape, section
-anchors, unique IDs, keyboard navigation, mobile menu, FAQ, newsletter states,
+anchors, unique IDs, keyboard navigation, Product dropdown and mobile drill-in,
+Devlog navigation with and without JavaScript, FAQ, newsletter states,
 all seven installer mappings, release failures, dialog focus, no-JavaScript
 fallbacks, workspace selection, reduced motion, and desktop/mobile/dialog
 accessibility with axe. Hero checks cover all seven local SVGs and labels,

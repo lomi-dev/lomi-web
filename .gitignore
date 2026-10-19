@@ -6,6 +6,7 @@ dist/
 .env.*
 !.env.example
 artifacts/
+.next/
 cms/.next/
 cms/*.db
 cms/*.db-*

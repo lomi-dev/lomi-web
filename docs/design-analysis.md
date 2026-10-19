@@ -154,6 +154,36 @@ Nazwy odnoszą się do klientów CLI, które Lomi rozpoznaje w `src/cli-agents.t
 aplikacji desktopowej. Nie oznaczają osadzenia desktopowego Cursor czy
 Antigravity. Opis ograniczeń platformowych pozostaje w FAQ.
 
+### Coda i rozwijana nawigacja
+
+[Strona źródłowa](https://www.coda.co/?ref=navbar.gallery)
+
+Sprawdzono działającą stronę 19 października 2026 w Chrome, przy 1440 × 1000
+i 390 × 844. To Coda zajmująca się płatnościami i dystrybucją, wskazana przez
+Navbar Gallery. Na desktopie najechanie na Products rozwija całą białą,
+zaokrągloną powierzchnię nawigacji. Trzy kolumny zawierają ikony, nazwy i krótkie
+opisy, a tło strony zostaje rozmyte. Na telefonie Product zastępuje główną listę
+widokiem szczegółowym z przyciskiem Back; logo i przycisk zamknięcia pozostają
+na miejscu. Referencja ukrywa też pasek przy przewijaniu w dół i przywraca go
+przy przewijaniu w górę.
+
+Lomi zachowuje zaakceptowaną ciemną kapsułę i jej położenie nad hero. Product
+rozwija z niej jeden szeroki panel z sześcioma odnośnikami w trzech grupach.
+Roadmap, Devlog i Docs pozostają bezpośrednimi linkami. Ikony i krótkie opisy
+pomagają wybrać sekcję. Na telefonie działa ten sam wzorzec Product → Back,
+a długi panel przewija się wewnątrz dostępnej wysokości okna.
+
+Obsługa Lomi obejmuje hover na precyzyjnym wskaźniku, kliknięcie, Enter i Space,
+Escape, kliknięcie poza menu oraz wyjście fokusem. Zamykanie przy opuszczeniu
+kursorem ma krótki margines czasu. Zamknięte linki znikają z kolejności Tab.
+Przy ograniczonym ruchu panel pojawia się bez animacji. Bez JavaScriptu
+pozostają natywne elementy details; pełnoekranowe przygaszenie włącza dopiero
+kontroler JS, więc nie zasłania sekcji po przejściu do kotwicy.
+
+Devlog jest osobną podstroną „Work in progress”, z aktywną pozycją nawigacji
+i powrotem do strony głównej. Nie zawiera przykładowych wpisów ani dat.
+Odnośniki sekcji z tej podstrony wskazują stronę główną z właściwą kotwicą.
+
 ## Wnioski z artykułów o AI slop
 
 [Biegun.Studio](https://biegun.studio/jak-sprawic-by-tresci-z-ai-nie-wygladaly-jak-ai-slop)
@@ -191,7 +221,7 @@ spójność decyzji z działaniem aplikacji i wartość informacji dla odwiedzaj
 | --- | --- | --- |
 | Hero | Siedem unoszących się znaków CLI wokół centralnego tekstu, na ciemnym tle z limonkowym akcentem | Od pierwszego widoku wiadomo, dla kogo jest terminalowe ADE |
 | Tło | Falujące pasma trójkątów, kół i kwadratów inspirowane Shape Waves, przygaszone pod tekstem | Techniczny motyw pozostaje widoczny, a nagłówek i działania są czytelne |
-| Nawigacja | Pływająca, półprzezroczysta kapsuła z limonkowym pobraniem | Nawigacja pasuje do zaokrąglonych kart narzędzi i wskazuje główne działanie |
+| Nawigacja | Zachowana ciemna kapsuła, rozwijany Product, bezpośrednie Roadmap / Devlog / Docs | Czytelny wybór sekcji i osobna przestrzeń na przyszłe wpisy |
 | Demonstracja | Build / Preview / Review z prawdziwymi zrzutami | Wybór pokazuje zmianę rodzaju pracy w tym samym środowisku |
 | Typografia | Geist dla treści, lokalny JetBrains Mono dla metadanych | Wyraźny podział między komunikatem a technicznym opisem |
 | Kolor | Firmowe Chalk, Ink i Lime; ciemny rozdział narzędzi | Akcent wskazuje działanie, a kontrast rozdziela części opowieści |

@@ -1,4 +1,5 @@
 import type { Field, GlobalConfig } from 'payload'
+import { isSafeHref } from '../../../content/links'
 
 const validateText = (value: string | null | undefined) =>
   typeof value === 'string' && value.trim().length >= 1 && value.trim().length <= 2000
@@ -15,15 +16,8 @@ const link = (): Field[] => [
   text('label'),
   {
     name: 'href', type: 'text', required: true, minLength: 1, maxLength: 2000,
-    validate: (value: string | null | undefined) => {
-      if (validateText(value) !== true || typeof value !== 'string') return 'Enter an HTTPS URL or a #section anchor.'
-      if (/^#[a-z][a-z0-9-]*$/.test(value)) return true
-      try {
-        const url = new URL(value)
-        if (value.startsWith('https://') && url.protocol === 'https:' && url.hostname && !url.username && !url.password) return true
-      } catch { /* Show the same concise error for invalid URLs. */ }
-      return 'Enter an HTTPS URL or a #section anchor.'
-    },
+    validate: (value: string | null | undefined) =>
+      isSafeHref(value) ? true : 'Enter an HTTPS URL, /devlog/, or a #section anchor.',
   },
 ]
 

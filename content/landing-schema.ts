@@ -1,15 +1,8 @@
 import { z } from 'zod';
+import { isSafeHref } from './links';
 
 const text = z.string().trim().min(1).max(2000);
-export const safeHref = text.refine((value) => {
-  if (/^#[a-z][a-z0-9-]*$/.test(value)) return true;
-  try {
-    const url = new URL(value);
-    return url.protocol === 'https:' && !url.username && !url.password;
-  } catch {
-    return false;
-  }
-}, 'Use an HTTPS URL or a section anchor.');
+export const safeHref = text.refine(isSafeHref, 'Use an HTTPS URL, /devlog/, or a section anchor.');
 const link = z.object({ label: text, href: safeHref });
 const item = z.object({ title: text, description: text });
 
