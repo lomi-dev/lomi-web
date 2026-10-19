@@ -103,7 +103,7 @@ try {
   } else {
     await expect(root).toHaveAttribute('data-roadmap-mode', 'horizontal');
     await expect(page.locator('main > #roadmap')).toHaveCount(1);
-    await expect(root.locator('.section-marker > span')).toHaveText('01');
+    await expect(root.locator('.roadmap-masthead, .section-marker')).toHaveCount(0);
     await expect(root.locator('h2')).toHaveCount(1);
     await expect(root).toHaveCSS('background-color', 'rgb(17, 22, 16)');
     expect(await root.getAttribute('data-scroll-surface')).not.toBeNull();

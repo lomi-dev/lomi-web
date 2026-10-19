@@ -1048,7 +1048,7 @@ try {
   }
   await expect(page.getByRole('contentinfo')).toBeVisible();
   await expect(page.locator('#roadmap').getByRole('heading', { level: 2 })).toBeVisible();
-  await expect(page.locator('#roadmap .section-marker > span')).toHaveText('01');
+  await expect(page.locator('#roadmap .roadmap-masthead, #roadmap .section-marker')).toHaveCount(0);
   expect(await page.locator('main > section').evaluateAll((sections) => sections.map((section) => section.classList.contains('hero') ? 'hero' : section.id))).toEqual(['hero', 'roadmap']);
   await expect(page.locator('#workflow, #features, #principles, #faq, #download, #newsletter, #newsletter-form, .newsletter-noscript, .download-cta')).toHaveCount(0);
   await expect(page.getByRole('textbox', { name: 'Email address' })).toHaveCount(0);

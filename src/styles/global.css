@@ -4,13 +4,9 @@
   font-family: 'Geist Variable'; font-style: normal; font-display: swap; font-weight: 100 900;
   src: url('@fontsource-variable/geist/files/geist-latin-wght-normal.woff2') format('woff2');
 }
-@font-face {
-  font-family: 'JetBrains Mono'; font-style: normal; font-display: swap; font-weight: 400;
-  src: url('/fonts/jetbrains-mono/JetBrainsMono-Regular.woff2') format('woff2');
-}
 @theme {
   --font-sans: 'Geist Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+  --font-mono: var(--font-sans);
   --color-ink: #0b0d0c;
   --color-chalk: #f7f8f3;
   --color-lime: #c8ff3d;
