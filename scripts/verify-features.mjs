@@ -68,7 +68,11 @@ async function layout(page) {
   const slide = dialog(page).locator('[data-feature-slide]:not([hidden])');
   const media = await slide.locator('[data-feature-modal-media]').boundingBox();
   const copy = await slide.locator('[data-feature-copy]').boundingBox();
-  expect(media.y + media.height, 'Feature media sits above the editorial copy').toBeLessThanOrEqual(copy.y + 1);
+  if (page.viewportSize().width >= 900) {
+    expect(media.x + media.width, 'Desktop media sits left of its copy').toBeLessThanOrEqual(copy.x + 1);
+  } else {
+    expect(media.y + media.height, 'Narrow modal stacks media above copy').toBeLessThanOrEqual(copy.y + 1);
+  }
 }
 
 async function axe(page, label) {
