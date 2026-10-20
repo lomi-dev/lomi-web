@@ -17,13 +17,16 @@ required to work on the layout.
 
 The page includes:
 
-- A white hero with centered copy, pill actions, and overlapping
-  image placeholders over an interactive field of terminal characters.
+- A white hero with centered copy, pill actions, and one wide
+  product preview over an interactive field of terminal characters.
 - A fixed navigation bar at the viewport's top edge: Product opens a three-column dropdown,
   followed by Roadmap, Newsletter, Devlog, and Docs. Mobile Product uses a Back drill-in.
 - A separate `/devlog/` page with a Work in progress placeholder.
-- A large hero preview with a centered video control and an animated native
-  YouTube dialog.
+- A site-wide consent banner and Cookie settings, with optional YouTube media
+  blocked until permission and a `/cookies/` information page. See
+  [consent behavior and verification](docs/cookies.md).
+- An inline YouTube player aligned with the feature gallery, with native
+  controls and a local placeholder before external media loads.
 - An asymmetric feature gallery with local placeholders and a native media
   dialog, including feature navigation, keyboard support, and readable fallbacks.
 - A dark horizontal roadmap with a lime axis, alternating milestones, and
@@ -89,11 +92,12 @@ placeholder media, Payload editing, responsive layout, and dialog controls.
 
 ## Hero background and motion
 
-The hero uses static HTML for its centered content and layered screenshots,
-without React hydration or CLI icon cards. The primary workbench capture and
-source-control detail share a responsive grid; the smaller detail overlaps on
-the right while leaving the video control and caption clear. The archived
-React Bits TiltedCard source and agent marks remain available locally.
+The hero uses static HTML for its centered content and a single local product
+placeholder aligned with the feature gallery, without React hydration or
+CLI icon cards.
+The inline player occupies the same surface; there is no separate phone,
+hover play overlay, or hero video dialog. The archived React Bits TiltedCard
+source and agent marks remain available locally.
 
 The background is an authored Canvas 2D interpretation of React Bits Shape Waves:
 small `> _ $ / ~ | { } +` characters evolve in broad bands. Moving the mouse
@@ -168,8 +172,8 @@ deployment provider is configured by this task.
 - `src/components/Header.astro`: Product groups, responsive disclosure, and routing.
 - `src/styles/global.css`: responsive layout and brand tokens.
 - `src/components/`: navigation, footer, features, original clouds, forms, icons.
-- `src/components/WorkspaceDeck.astro`: the hero's real product screenshot and video trigger.
-- `src/components/VideoDialog.astro`: the YouTube dialog and playback lifecycle.
+- `src/components/WorkspaceDeck.astro`: the hero's single product frame.
+- `src/components/HeroVideo.astro`: inline YouTube controls and playback lifecycle.
 - `src/data/site.ts`: fixed product/repository destinations.
 - `src/layouts/Layout.astro`: metadata and local fonts.
 
@@ -184,32 +188,26 @@ to the homepage.
 
 ## Video and download behavior
 
-The hero shows a large workbench capture below its copy, with an overlapping
-source-control detail. On mobile the primary image uses a closer crop. Scrolling
-reveals the complete composition. Hovering or focusing it shows a play control in
-the center of the complete image, with no position changes on scroll. Touch
-devices show the control immediately.
-The native video dialog loads YouTube only after activation and removes the
-player as soon as closing starts. Its center-scale entrance and exit follow
-Magic UI's `from-center` example, with a dimmed, blurred backdrop. Reduced
-motion uses a short fade. The surface contains only the video, with no close
-button. Backdrop clicks and Escape from the dialog dismiss it and restore focus
-to the screenshot. Shift+Tab from the player returns to the dialog.
+The hero shows one local landscape placeholder aligned with the feature gallery. The
+YouTube player is embedded in that same surface without opening a dialog or
+locking page scroll. Native controls handle playback, volume and fullscreen.
+The local poster remains visible while the API loads, then yields completely
+to the embed; no site controls cover the active player.
 
-The official YouTube IFrame API loads only after activation. It mutes the player
-before starting playback automatically; YouTube's native controls provide volume
-adjustment. The same workbench image used in the hero remains visible during
-loading with a centered spinner, which stays still under reduced motion.
-The first `PLAYING` event, followed by two animation frames, reveals the
-player. This is the closest documented playback signal; the cross-origin embed
-does not expose a first-painted-frame event. If autoplay is blocked, the player
-reports an error, or loading times out, the native controls become available for
-manual playback or YouTube's error message. Closing destroys the player and
-invalidates pending callbacks so reopening starts with a fresh muted session.
-Without JavaScript, the screenshot links to
-the same video on YouTube. Replace the placeholder video ID in both components
-before launch. Use `http://localhost:4322` for local video playback: YouTube
-rejects the numeric `127.0.0.1` referrer in the tested browser.
+YouTube loads automatically when a valid external-media preference is already
+saved. Otherwise clicking the poster opens the existing Cookie settings;
+no YouTube request is made before permission. The preview has no caption or
+action bar underneath. Revoking permission destroys the player, restores the
+local poster and invalidates pending callbacks. If the API cannot load, the
+poster links to YouTube. Without JavaScript the image also links directly
+to YouTube. Native playback errors remain within the embedded player.
+
+The official IFrame API mutes the player before any automatic playback. It
+starts once at least half the preview is visible, pauses when it leaves view
+or the tab is hidden, and leaves subsequent playback to the visitor. Reduced
+motion disables automatic playback and spinner motion. Replace the temporary
+video ID in `HeroVideo.astro` before launch. Use `http://localhost:4322` for
+local playback if YouTube rejects a numeric loopback referrer.
 
 The hero, navigation, and legacy CMS download links lead to `/download/`. The
 page shares the homepage's white canvas, Geist typography and lime action.
@@ -258,9 +256,9 @@ Browser verification covers seven viewport widths, short landscape, section
 anchors, unique IDs, keyboard navigation, Product dropdown and mobile drill-in,
 Devlog navigation with and without JavaScript, absence of retired sections,
 all seven installer mappings, release failures, download navigation, no-JavaScript
-fallbacks, the video dialog lifecycle, reduced motion, and desktop/mobile/dialog
+fallbacks, the inline video lifecycle, reduced motion, and desktop/mobile/dialog
 accessibility with axe. Hero checks cover the absence of CLI cards and React
-islands, layered image placement, live reduced motion,
+islands, single-preview layout, live reduced motion,
 actual background pixel changes and frozen states, canvas resizing, and static
 fallback without JavaScript or Canvas 2D.
 Footer dimensions, resizing, and keyboard access to every
@@ -291,6 +289,6 @@ ready. Nothing is published automatically from this branch.
 The site uses local Geist and JetBrains Mono fonts, a white opening composition,
 and Lomi's Lime accent. The page ships no hydrated React islands; the JSX
 components render static HTML and native elements provide interaction. YouTube is embedded only after
-the visitor activates the video. There are no site trackers, runtime Iconify
+external-media permission, including a remembered valid preference. There are no site trackers, runtime Iconify
 calls, or external font requests. Asset provenance is
 recorded in [docs/assets.md](docs/assets.md).

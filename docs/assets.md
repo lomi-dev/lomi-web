@@ -21,7 +21,7 @@ The social preview is a browser capture of the page with this logo.
 Final workspace source: `src/assets/clouds.png` (1536 × 1024).
 
 The original image and CloudBackdrop component are retained as unused assets.
-The current hero uses a white composition with desktop and mobile placeholders rather than the
+The current hero uses a white composition with one product placeholder rather than the
 previous photographic panorama. The source image remains unchanged.
 
 Created using the built-in `image_gen` tool. The two user-supplied landing-page images were visual direction references, not copied into the website. Astro exports responsive AVIF and WebP versions with PNG fallbacks at build time.
@@ -32,31 +32,25 @@ Exact generation prompt:
 
 ## Application screenshots
 
-The hero uses two local [Placehold](https://placehold.co/) images, optimized by
-Astro, while the final product captures are being prepared:
+The hero uses one local [Placehold](https://placehold.co/) image, optimized by
+Astro, while the final product capture is being prepared:
+`src/assets/placeholders/workspace.png` (1600 × 1000). Its width, 16px corners
+and subtle border match the feature gallery, without added window chrome, a
+colored outer card, a separate phone or a hover play button.
+Its alt text explicitly identifies the placeholder and uses the CMS description.
+Astro generates responsive AVIF and WebP variants.
 
-- `src/assets/placeholders/workspace.png`: 1600 × 1000 desktop view.
-- `src/assets/placeholders/mobile.png`: 430 × 932 portrait mobile view.
-
-The landscape desktop image has no added window header or view selector. A slim,
-generic phone frame holds the portrait image at its original aspect ratio.
-The phone overlaps the desktop's lower-right edge and remains clear of the play
-control, including on narrow screens. Both image slots explicitly identify
-themselves as placeholders in their alt text; the desktop also uses the CMS alt.
-They do not imply that the mobile client is publicly available. The composition
-is static, works without JavaScript and adds no device animation runtime.
-Astro generates responsive AVIF and WebP variants. The play control opens the user-selected YouTube video
-`dQw4w9WgXcQ`; its iframe is created on activation and removed on close.
-The same desktop placeholder acts as the loading poster inside the dialog. The
-[official YouTube IFrame API](https://developers.google.com/youtube/iframe_api_reference)
-starts playback after muting, retains the native controls, and signals when the
-poster can be replaced by the player. No custom controls cover the playing video.
-The native dialog's motion is inspired by [Magic UI's Hero Video Dialog](https://magicui.design/docs/components/hero-video-dialog),
-using the `from-center` scale and its stiffness-300, damping-30 spring response.
-It is implemented with the Web Animations API and the browser's native dialog;
-no additional React island or animation dependency is loaded.
-The dimmed backdrop remains available when a browser does not render backdrop
-blur.
+`HeroVideo.astro` embeds the selected YouTube video `dQw4w9WgXcQ` directly in
+this frame after external-media permission, including remembered permission.
+The local image remains while the official API loads; the native embed replaces
+it completely as soon as it mounts. YouTube's own controls remain unobscured.
+The [official YouTube IFrame API](https://developers.google.com/youtube/iframe_api_reference)
+mutes before automatic playback, which begins only when half the player is in
+view and reduced motion is off. Leaving view or hiding the tab pauses playback.
+Permission revocation removes the iframe and invalidates old callbacks. The
+local image links to YouTube without JavaScript. There is no action bar under
+the preview; media permission uses the existing Cookie settings.
+The previous mobile placeholder and unused dialog component remain archived.
 The native `browser.png` capture remains a local asset for future sections.
 
 Unchanged desktop captures copied from `../lomi/docs/images/` remain in

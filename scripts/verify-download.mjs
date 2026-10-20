@@ -36,6 +36,9 @@ const installerRequests = [];
 
 async function createPage({ javaScriptEnabled = true, os = 'Linux', mobile = false, clipboardDenied = false, delayedArchitecture = false, reducedMotion = 'no-preference' } = {}) {
   const context = await browser.newContext({ javaScriptEnabled, viewport: { width: 1440, height: 900 }, reducedMotion });
+  await context.addInitScript(() => {
+    try { localStorage.setItem('lomi.cookie-consent', JSON.stringify({ version: 1, externalMedia: true, savedAt: Date.now() })); } catch { /* Storage may be unavailable in fallback checks. */ }
+  });
   await context.addInitScript(({ os, mobile, clipboardDenied, delayedArchitecture }) => {
     Object.defineProperty(navigator, 'platform', { configurable: true, get: () => os === 'macOS' ? 'MacIntel' : os === 'Windows' ? 'Win32' : 'Linux x86_64' });
     Object.defineProperty(navigator, 'userAgentData', { configurable: true, value: { platform: os, mobile, ...(delayedArchitecture ? { getHighEntropyValues: () => new Promise((resolve) => { window.__resolveArchitecture = resolve; }) } : {}) } });

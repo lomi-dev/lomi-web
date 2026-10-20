@@ -12,6 +12,9 @@ await mkdir('artifacts', { recursive: true });
 
 async function open(options = {}, html, init) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, ...options });
+  await context.addInitScript(() => {
+    try { localStorage.setItem('lomi.cookie-consent', JSON.stringify({ version: 1, externalMedia: false, savedAt: Date.now() })); } catch { /* Storage may be unavailable in fallback checks. */ }
+  });
   if (init) await context.addInitScript(init);
   const page = await context.newPage();
   page.on('pageerror', (error) => { errors.push(error.message); console.error('Feature browser error:', error.message); });

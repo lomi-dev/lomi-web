@@ -1,5 +1,6 @@
 ---
 import Icon from './Icon';
+import CookieSettingsLink from './CookieSettingsLink.astro';
 import { site, footerSocials } from '../data/site';
 import logo from '../assets/lomi-wordmark.svg?raw';
 import type { Landing } from '../../content/landing-schema';
@@ -39,7 +40,7 @@ const { content } = Astro.props;
 
     <div class="footer-bottom">
       <div class="footer-credits">
-        <div class="footer-legal"><a href={`${site.github}/blob/main/LICENSE`}>{content.licenseLabel}</a><span>© {new Date().getUTCFullYear()} lomi</span></div>
+        <div class="footer-legal"><a href={`${site.github}/blob/main/LICENSE`}>{content.licenseLabel}</a><span>© {new Date().getUTCFullYear()} lomi</span><CookieSettingsLink /></div>
       </div>
       <a class="footer-takeoff" href="#top">{content.backToTopLabel}<span class="footer-takeoff-arrow" aria-hidden="true">↑</span></a>
     </div>

@@ -11,6 +11,9 @@ const browser = await browserType.launch({
 });
 const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
 await context.addInitScript(() => {
+  try { localStorage.setItem('lomi.cookie-consent', JSON.stringify({ version: 1, externalMedia: true, savedAt: Date.now() })); } catch { /* Storage may be unavailable in fallback checks. */ }
+});
+await context.addInitScript(() => {
   Object.defineProperty(navigator, 'platform', { configurable: true, get: () => 'Linux x86_64' });
   Object.defineProperty(navigator, 'userAgent', {
     configurable: true,
@@ -119,7 +122,7 @@ async function mockVideoRequests(targetPage) {
           }
           mute() { this.calls.push('mute'); }
           playVideo() { this.calls.push('playVideo'); }
-          stopVideo() { this.calls.push('stopVideo'); }
+          pauseVideo() { this.calls.push('pauseVideo'); }
           destroy() { this.calls.push('destroy'); this.iframe.remove(); }
           getIframe() { return this.iframe; }
         }};
@@ -132,249 +135,25 @@ async function mockVideoRequests(targetPage) {
   return requests;
 }
 
-async function expectPlayCenteredOnImage(targetPage) {
-  await expect.poll(() => targetPage.locator('[data-video-play]').evaluate((play) => {
-    const trigger = play.closest('[data-video-open]').getBoundingClientRect();
-    const bounds = play.getBoundingClientRect();
-    let opacity = 1;
-    for (let element = play; element; element = element.parentElement) opacity *= Number(getComputedStyle(element).opacity);
-    return opacity > .9
-      && Math.abs((bounds.top + bounds.bottom) / 2 - (trigger.top + trigger.bottom) / 2) < 1
-      && Math.abs((bounds.left + bounds.right) / 2 - (trigger.left + trigger.right) / 2) < 1;
-  }), { message: 'Play stays centered on the full image regardless of viewport clipping' }).toBe(true);
-}
-
-async function settleVideoMotion(dialog) {
-  await dialog.evaluate(async (element) => {
-    await Promise.all(element.getAnimations({ subtree: true })
-      .filter((animation) => animation.effect.getComputedTiming().iterations !== Infinity)
-      .map((animation) => animation.finished.catch(() => {})));
-  });
-}
-
-async function verifyVideoDialog(targetPage, requests, touch = false) {
-  const trigger = targetPage.locator('[data-video-open]');
-  const dialog = targetPage.getByRole('dialog', { name: 'Watch Lomi', exact: true });
-  const player = targetPage.locator('#video-dialog [data-video-player]');
-  const poster = player.locator('[data-video-poster]');
-  const mount = player.locator('[data-video-mount]');
-  let currentPlayer = -1;
-  const emit = async (name, data, index = currentPlayer) => targetPage.evaluate(({ name, data, index }) => {
-    const instance = window.__mockYouTube.players[index];
-    instance.events[name]?.({ target: instance, data });
-  }, { name, data, index });
-  const calls = (index = currentPlayer) => targetPage.evaluate((index) => window.__mockYouTube.players[index].calls, index);
-  await expect(trigger).toHaveCount(1);
-  await expect(trigger).toHaveAttribute('href', videoUrl);
-  await expect(trigger).toHaveAttribute('aria-controls', 'video-dialog');
-  await expect(targetPage.locator('#video-dialog iframe')).toHaveCount(0);
-  await expect(targetPage.locator('#video-dialog [data-video-close], #video-dialog .video-close, #video-dialog .video-toolbar, #video-dialog .video-fallback, #video-dialog h2, #video-dialog button, #video-dialog input[type="range"]')).toHaveCount(0);
-  await expect(poster.locator('img')).toHaveCount(1);
-  await expect.poll(() => poster.locator('img').evaluate((image) => image.naturalWidth)).toBeGreaterThan(0);
-  expect(requests, 'YouTube receives no requests before activation').toEqual([]);
-  await trigger.evaluate((element) => element.scrollIntoView({ block: 'center', behavior: 'instant' }));
-  if (!touch) {
-    await trigger.focus();
-    await targetPage.keyboard.press('Tab');
-    await targetPage.keyboard.press('Shift+Tab');
-    await expect(trigger).toBeFocused();
-    // Native keyboard focus can start smooth scrolling; finish it before recentering.
-    await targetPage.evaluate(() => new Promise((resolve) => {
-      let previous = scrollY, stableFrames = 0;
-      const check = () => {
-        stableFrames = scrollY === previous ? stableFrames + 1 : 0;
-        previous = scrollY;
-        if (stableFrames >= 4) resolve();
-        else requestAnimationFrame(check);
-      };
-      requestAnimationFrame(check);
-    }));
-    await trigger.evaluate((element) => {
-      element.scrollIntoView({ block: 'center', behavior: 'instant' });
-      element.focus({ preventScroll: true });
-    });
-  }
-  await expectPlayCenteredOnImage(targetPage);
-  const initial = await targetPage.evaluate(() => ({ x: scrollX, y: scrollY, root: document.documentElement.style.overflow, body: document.body.style.overflow }));
-  const expectOpen = async (start = true) => {
-    await expect(dialog).toBeVisible();
-    await settleVideoMotion(dialog);
-    await expect(dialog).toBeFocused();
-    const iframe = mount.locator('iframe');
-    await expect(iframe).toHaveCount(1);
-    const source = new URL(await iframe.getAttribute('src'));
-    expect(source.origin).toBe('https://www.youtube.com');
-    expect(source.pathname).toBe('/embed/dQw4w9WgXcQ');
-    expect(source.searchParams.get('autoplay'), 'Playback waits for the API to mute first').toBe('0');
-    expect(source.searchParams.get('controls')).toBe('1');
-    expect(source.searchParams.get('playsinline')).toBe('1');
-    expect(source.searchParams.get('enablejsapi')).toBe('1');
-    expect(source.searchParams.get('origin')).toBe(new URL(targetPage.url()).origin);
-    await expect(iframe).toHaveAttribute('title', 'Lomi video');
-    await expect(targetPage.frameLocator('#video-dialog iframe').locator('h1')).toHaveText('Mock video');
-    await expect(player).toHaveAttribute('data-video-status', 'loading');
-    await expect(poster).toHaveCSS('opacity', '1');
-    await expect(mount).toHaveAttribute('inert', '');
-    await expect(mount).toHaveCSS('opacity', '0');
-    await expect.poll(() => targetPage.evaluate(() => window.__mockYouTube?.players.length || 0)).toBeGreaterThan(currentPlayer + 1);
-    currentPlayer = await targetPage.evaluate(() => window.__mockYouTube.players.length - 1);
-    expect(await calls(), 'Iframe loading alone does not start playback').toEqual([]);
-    await emit('onReady');
-    expect(await calls(), 'The player is muted before any play request').toEqual(['mute', 'playVideo']);
-    await expect(player).toHaveAttribute('data-video-status', 'loading');
-    await expect(poster, 'The screenshot stays visible after readiness until playback starts').toHaveCSS('opacity', '1');
-    await expect(mount).toHaveAttribute('inert', '');
-    if (start) {
-      await emit('onStateChange', 1);
-      await expect(player).toHaveAttribute('data-video-status', 'playing');
-      await expect(poster).toHaveCSS('opacity', '0');
-      await expect(mount).toHaveCSS('opacity', '1');
-      await expect(mount).not.toHaveAttribute('inert');
-    }
-    expect(requests.some((request) => new URL(request).pathname === '/iframe_api')).toBe(true);
-    expect(await targetPage.evaluate(() => getComputedStyle(document.documentElement).overflowY)).toBe('hidden');
-    expect(await targetPage.evaluate(() => getComputedStyle(document.body).overflowY)).toBe('hidden');
-  };
-  const expectClosed = async () => {
-    await expect(mount.locator('iframe')).toHaveCount(0);
-    await expect(dialog).not.toBeVisible();
-    await expect(trigger).toBeFocused();
-    expect(await calls(), 'Closing unloads the API player').toContain('destroy');
-    expect(await targetPage.evaluate(() => ({ x: scrollX, y: scrollY, root: document.documentElement.style.overflow, body: document.body.style.overflow })), 'Closing video restores page scrolling and position').toEqual(initial);
-  };
-  const escape = async () => {
-    // Cross-origin iframe key events cannot reach the parent native dialog.
-    await dialog.focus();
-    await targetPage.keyboard.press('Escape');
-  };
-  if (!touch) await targetPage.locator('#video-dialog').evaluate((element) => {
-    const observer = new MutationObserver(() => {
-      if (element.open) {
-        element.dataset.verifyEnteringWidth = String(element.getBoundingClientRect().width);
-        observer.disconnect();
-      }
-    });
-    observer.observe(element, { attributes: true, attributeFilter: ['open'] });
-  });
-  if (touch) await trigger.tap();
-  else await targetPage.keyboard.press('Enter');
-  if (!touch) {
-    const enteringWidth = await dialog.evaluate((element) => {
-      const width = Number(element.dataset.verifyEnteringWidth);
-      delete element.dataset.verifyEnteringWidth;
-      return width;
-    });
-    await settleVideoMotion(dialog);
-    const enteredWidth = (await dialog.boundingBox()).width;
-    expect(enteringWidth, 'Video entry has visible geometry').toBeGreaterThan(0);
-    expect(enteringWidth, 'Video enters from a smaller centered frame').toBeLessThan(enteredWidth * .99);
-  }
-  await expectOpen();
-  if (!touch) {
-    await targetPage.mouse.move(2, 2);
-    await targetPage.mouse.wheel(0, 500);
-    await targetPage.waitForTimeout(100);
-    expect(await targetPage.evaluate(() => scrollY), 'The page stays locked behind the video').toBe(initial.y);
-    await trigger.evaluate((element) => element.focus({ preventScroll: true }));
-    await expect(dialog, 'The modal makes background controls inert').toBeFocused();
-    await targetPage.keyboard.press('Tab');
-    await expect(mount.locator('iframe'), 'Tab reaches native player controls').toBeFocused();
-    await targetPage.frameLocator('#video-dialog iframe').getByRole('button', { name: 'Play mock video' }).focus();
-    await targetPage.keyboard.press('Shift+Tab');
-    await expect(dialog, 'Shift+Tab returns from the first player control to the dialog for Escape').toBeFocused();
-    const volume = targetPage.frameLocator('#video-dialog iframe').getByRole('slider', { name: 'Volume' });
-    await volume.focus();
-    await targetPage.keyboard.press('ArrowRight');
-    await expect(volume).toHaveValue('1');
-    await dialog.focus();
-    const accessibility = await new AxeBuilder({ page: targetPage }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
-    expect(accessibility.violations, 'Video dialog accessibility').toEqual([]);
-  }
-  await escape();
-  await expectClosed();
-  if (!touch) {
-    await trigger.evaluate((element) => element.click());
-    await expect.poll(() => targetPage.evaluate(() => window.__mockYouTube.players.length)).toBeGreaterThan(currentPlayer + 1);
-    currentPlayer = await targetPage.evaluate(() => window.__mockYouTube.players.length - 1);
-    await escape();
-    await expectClosed();
-    await emit('onReady');
-    await emit('onStateChange', 1);
-    expect(await calls(), 'Closing before readiness prevents late mute or play calls').toEqual(['destroy']);
-    await expect(mount.locator('iframe')).toHaveCount(0);
-    for (const event of ['onAutoplayBlocked', 'onError']) {
-      await trigger.click();
-      await expectOpen(false);
-      await emit(event, event === 'onError' ? 100 : undefined);
-      await expect(player).toHaveAttribute('data-video-status', 'fallback');
-      await expect(poster).toHaveCSS('opacity', '0');
-      await expect(mount).not.toHaveAttribute('inert');
-      await expect(mount).toHaveCSS('opacity', '1');
-      await escape();
-      await expectClosed();
-    }
-    const stale = currentPlayer;
-    await trigger.click();
-    await expectOpen(false);
-    await emit('onReady', undefined, stale);
-    await emit('onStateChange', 1, stale);
-    await emit('onError', 100, stale);
-    await targetPage.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-    await expect(player, 'Callbacks from a closed player cannot reveal the new session').toHaveAttribute('data-video-status', 'loading');
-    await expect(poster).toHaveCSS('opacity', '1');
-    expect(await calls()).toEqual(['mute', 'playVideo']);
-    await emit('onStateChange', 1);
-    await expect(player).toHaveAttribute('data-video-status', 'playing');
-    const bounds = await dialog.boundingBox();
-    expect(bounds.x, 'Video modal leaves a clickable backdrop').toBeGreaterThan(2);
-    await targetPage.mouse.click(bounds.x / 2, bounds.y + bounds.height / 2);
-    await expectClosed();
-    await targetPage.emulateMedia({ reducedMotion: 'reduce' });
-    await targetPage.keyboard.press('Enter');
-    expect(await dialog.evaluate((element) => element.getAnimations().flatMap((animation) => animation.effect.getKeyframes())
-      .every((frame) => !frame.transform || frame.transform === 'none')), 'Reduced-motion video entrance avoids scaling').toBe(true);
-    await expectOpen();
-    await escape();
-    await expectClosed();
-    await targetPage.emulateMedia({ reducedMotion: 'no-preference' });
-    const pendingScroll = await trigger.evaluate((element) => {
-      const before = scrollY;
-      window.scrollTo({ top: before + 500, behavior: 'smooth' });
-      element.click();
-      return before;
-    });
-    await expectOpen();
-    await targetPage.waitForTimeout(350);
-    expect(await targetPage.evaluate(() => scrollY), 'Opening video cancels pending smooth page scrolling').toBe(pendingScroll);
-    await escape();
-    await expect(dialog).not.toBeVisible();
-    await expect(mount.locator('iframe')).toHaveCount(0);
-    await expect(trigger).toBeFocused();
-    expect(await targetPage.evaluate(() => scrollY), 'Closing after pending scrolling restores the activation position').toBe(pendingScroll);
-  } else {
-    await trigger.tap();
-    await expectOpen();
-    await targetPage.setViewportSize({ width: 844, height: 390 });
-    await escape();
-    await expect(dialog).not.toBeVisible();
-    await expect(mount.locator('iframe')).toHaveCount(0);
-    await expect(trigger).toBeFocused();
-    await expect(trigger, 'Portrait-to-landscape dismissal keeps the video opener visible').toBeInViewport();
-    await trigger.tap();
-    await expect(dialog).toBeVisible();
-    await targetPage.setViewportSize({ width: 320, height: 200 });
-    await settleVideoMotion(dialog);
-    await expect(dialog, 'The short-view modal remains available for Escape').toBeInViewport();
-    const playerBounds = await player.boundingBox();
-    expect(playerBounds.width, 'Short-view video player width').toBeGreaterThanOrEqual(200);
-    expect(playerBounds.height, 'Short-view video player height').toBeGreaterThanOrEqual(200);
-    await escape();
-    await expect(dialog).not.toBeVisible();
-    await expect(mount.locator('iframe')).toHaveCount(0);
-    await expect(trigger).toBeFocused();
-    await expect(trigger).toBeInViewport();
-    expect(await targetPage.evaluate(() => ({ root: document.documentElement.style.overflow, body: document.body.style.overflow }))).toEqual({ root: initial.root, body: initial.body });
-  }
+async function verifyInlineVideo(targetPage, requests) {
+  const root = targetPage.locator('[data-hero-video]');
+  const iframe = root.locator('iframe');
+  await expect(targetPage.locator('#video-dialog, [data-video-open], [data-video-play], .deck-detail, [data-video-notice], [data-video-allow], [data-video-retry]')).toHaveCount(0);
+  await expect(iframe).toHaveCount(1);
+  expect(requests.some((request) => request.includes('/iframe_api')), 'Remembered consent initializes the API without a hero click').toBe(true);
+  const source = new URL(await iframe.getAttribute('src'));
+  expect(source.hostname).toBe('www.youtube-nocookie.com');
+  expect(source.searchParams.get('controls')).toBe('1');
+  expect(source.searchParams.get('autoplay')).toBe('0');
+  await expect(iframe).toHaveAttribute('allowfullscreen', '');
+  await expect(root.locator('[data-video-poster]')).toHaveCSS('visibility', 'hidden');
+  await expect(root.locator('[data-video-mount]')).not.toHaveAttribute('inert');
+  await expect.poll(() => targetPage.evaluate(() => window.__mockYouTube?.players.length || 0)).toBe(1);
+  await root.locator('[data-video-player]').evaluate((element) => element.scrollIntoView({ block: 'center', behavior: 'instant' }));
+  await targetPage.evaluate(() => { const instance = window.__mockYouTube.players[0]; instance.events.onReady({ target: instance }); });
+  expect((await targetPage.evaluate(() => window.__mockYouTube.players[0].calls))[0], 'Mute precedes any autoplay').toBe('mute');
+  await expect(targetPage.frameLocator('[data-video-mount] iframe').getByRole('slider', { name: 'Volume' })).toBeVisible();
+  expect(await targetPage.evaluate(() => [document.documentElement.style.overflow, document.body.style.overflow]), 'Inline playback does not lock scrolling').not.toContain('hidden');
 }
 
 async function backgroundPixels(targetPage) {
@@ -464,7 +243,11 @@ async function pointerColorContrast(targetPage, center, duration = 0) {
 
 async function verifyBackgroundPointer() {
   const pointerContext = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  await pointerContext.addInitScript(() => {
+    try { localStorage.setItem('lomi.cookie-consent', JSON.stringify({ version: 1, externalMedia: true, savedAt: Date.now() })); } catch { /* Storage may be unavailable in fallback checks. */ }
+  });
   const pointerPage = await pointerContext.newPage();
+  await mockVideoRequests(pointerPage);
   const pointerErrors = [];
   pointerPage.on('pageerror', (error) => pointerErrors.push(error.message));
   await pointerPage.goto(url, { waitUntil: 'networkidle' });
@@ -518,24 +301,22 @@ async function verifyTerminalFallback(background) {
 }
 
 async function verifyHeroComposition(targetPage, width) {
+  await expect(targetPage.locator('#workspace img')).toHaveCount(1);
   expect(await targetPage.locator('.hero #workspace').evaluate((workspace) => {
-    const primary = workspace.querySelector('[data-video-open]').getBoundingClientRect();
-    const detail = workspace.querySelector('[data-workspace-detail]').getBoundingClientRect();
-    const protectedAreas = [document.querySelector('.hero h1'), document.querySelector('.hero-actions'),
-      workspace.querySelector('[data-video-play]'), workspace.querySelector('figcaption')]
-      .filter(Boolean).map((element) => element.getBoundingClientRect());
-    const clear = protectedAreas.every((area) => detail.right <= area.left || detail.left >= area.right
-      || detail.bottom <= area.top || detail.top >= area.bottom);
-    return detail.width > 0 && detail.width < primary.width && detail.left > primary.left
-      && detail.left >= 0 && detail.right <= document.documentElement.clientWidth + 1
-      && detail.left < primary.right && detail.top < primary.bottom && detail.bottom > primary.top && clear;
-  }), `Supporting screenshot overlaps the product without covering copy, play, or caption at ${width}px`).toBe(true);
+    const outer = workspace.getBoundingClientRect();
+    const player = workspace.querySelector('[data-video-player]').getBoundingClientRect();
+    const actions = document.querySelector('.hero-actions').getBoundingClientRect();
+    const gallery = document.querySelector('.gallery-shell').getBoundingClientRect();
+    return player.width > 0 && player.height >= 200 && Math.abs(player.left - gallery.left) < 1 && Math.abs(player.right - gallery.right) < 1
+      && Math.abs(player.top - outer.top) < 1 && Math.abs(player.bottom - outer.bottom) < 1 && outer.top >= actions.bottom
+      && outer.left >= 0 && outer.right <= document.documentElement.clientWidth + 1;
+  }), `One aligned player fits below hero copy at ${width}px`).toBe(true);
 }
 
 async function expectAnchorBelowHeader(targetPage, destination) {
   await expect.poll(() => targetPage.locator(destination).evaluate((target) => {
     const header = document.querySelector('.site-header').getBoundingClientRect();
-    const content = target.querySelector('h2, [data-video-open]') || target;
+    const content = target.querySelector('h2, [data-video-player]') || target;
     const bounds = content.getBoundingClientRect();
     const x = Math.max(1, Math.min(innerWidth - 1, bounds.left + bounds.width / 2));
     const y = Math.max(1, Math.min(innerHeight - 1, bounds.top + Math.min(16, bounds.height / 2)));
@@ -690,10 +471,10 @@ async function verifyAdaptiveHeader(targetPage) {
       await setDarkSurface(false);
       await scrollSurface('.hero');
       await expectControls('dark');
-      await scrollSurface('[data-video-open]');
+      await scrollSurface('[data-video-player]');
       if (width >= 768) {
         await expect.poll(() => header.locator(controlSelector).evaluateAll((elements) => {
-          const image = document.querySelector('[data-video-open]').getBoundingClientRect();
+          const image = document.querySelector('[data-video-player]').getBoundingClientRect();
           const contrasts = elements.filter((element) => element.getClientRects().length).map((element) => {
             const bounds = element.getBoundingClientRect(), x = bounds.left + bounds.width / 2;
             return { x, contrast: element.dataset.contrast };
@@ -701,7 +482,7 @@ async function verifyAdaptiveHeader(targetPage) {
           return { present: contrasts.length > 0, correct: contrasts.every((contrast) => contrast === 'light') };
         }), { message: 'Controls directly above the dark product capture use light foreground' }).toEqual({ present: true, correct: true });
       }
-      for (const selector of ['.deck-frame']) {
+      for (const selector of ['[data-video-player]']) {
         await targetPage.locator(selector).evaluate((element) => {
           const bounds = element.getBoundingClientRect();
           const bar = document.querySelector('.site-header').getBoundingClientRect();
@@ -893,7 +674,11 @@ async function verifyStaticBackdropDoesNotBlockPage(targetPage) {
 
 async function verifyDevlog(javaScriptEnabled) {
   const devlogContext = await browser.newContext({ javaScriptEnabled });
+  await devlogContext.addInitScript(() => {
+    try { localStorage.setItem('lomi.cookie-consent', JSON.stringify({ version: 1, externalMedia: true, savedAt: Date.now() })); } catch { /* Storage may be unavailable in fallback checks. */ }
+  });
   const devlogPage = await devlogContext.newPage();
+  await mockVideoRequests(devlogPage);
   await devlogPage.route(releaseUrl, (route) => route.fulfill({ status: 200, contentType: 'text/html', body: '<h1>GitHub releases</h1>' }));
   const devlogErrors = [];
   devlogPage.on('pageerror', (error) => devlogErrors.push(error.message));
@@ -1037,13 +822,12 @@ try {
     const copyBounds = await page.locator('.hero-content').boundingBox();
     expect(Math.abs(copyBounds.x + copyBounds.width / 2 - viewport.width / 2), 'The hero copy block is centered in the viewport').toBeLessThanOrEqual(1);
     await expect(page.locator('.hero a[href="/download/"]')).toBeInViewport();
-    const image = await page.locator('.hero #workspace [data-video-open] img').boundingBox();
+    const image = await page.locator('.hero #workspace [data-video-player]').boundingBox();
     const visibleHeight = Math.max(0, Math.min(viewport.height, image.y + image.height) - Math.max(0, image.y));
     expect(image.y, 'The screenshot follows the hero copy').toBeGreaterThan(0);
     expect(image.y + image.height, 'The full screenshot continues below the initial fold').toBeGreaterThan(viewport.height);
     expect(visibleHeight / image.height, 'A meaningful part of the screenshot appears initially').toBeGreaterThan(.1);
     await page.mouse.move(image.x + image.width / 2, Math.max(0, image.y) + visibleHeight / 2);
-    await expectPlayCenteredOnImage(page);
   }
   await page.setViewportSize({ width: 1440, height: 900 });
 
@@ -1166,20 +950,11 @@ try {
   await expect(background).toHaveAttribute('data-state', 'running');
 
   const workspace = page.locator('.hero #workspace');
-  await expect(workspace.getByRole('img')).toHaveCount(2);
-  const workspaceImage = workspace.locator('[data-video-open] img');
-  const workspaceDetail = workspace.locator('.deck-detail img');
-  await expect(workspaceDetail).toHaveCount(1);
-  await expect(workspaceDetail).toHaveAttribute('alt', /\S/);
-  await expect.poll(() => workspaceDetail.evaluate((image) => image.naturalWidth)).toBeGreaterThan(0);
-  expect(await workspaceDetail.getAttribute('src'), 'The supporting capture shows a distinct product view').not.toBe(await workspaceImage.getAttribute('src'));
-  await expect(workspaceImage).toHaveCount(1);
-  await expect(workspaceImage).toBeVisible();
-  await expect(workspaceImage).toHaveAttribute('alt', /\S/);
-  await expect.poll(() => workspaceImage.evaluate((image) => image.naturalWidth)).toBeGreaterThan(0);
-  if (await workspace.locator('figcaption').count()) await expect(workspace.locator('figcaption')).toHaveText(/\S/);
-  await expect(workspace.locator('[data-deck-view], .deck-controls, .deck-chrome')).toHaveCount(0);
-  await verifyVideoDialog(page, videoRequests);
+  const workspaceImage = workspace.locator('[data-video-player]');
+  await expect(workspace.locator('img')).toHaveCount(1);
+  await expect(workspace.locator('img')).toHaveAttribute('alt', /\S/);
+  await expect.poll(() => workspace.locator('img').evaluate((image) => image.naturalWidth)).toBeGreaterThan(0);
+  await verifyInlineVideo(page, videoRequests);
 
   for (const width of [320, 390, 640, 768, 1024, 1440, 1920]) {
     await page.setViewportSize({ width, height: 900 });
@@ -1284,7 +1059,7 @@ try {
     expect(results.violations, `Accessibility at ${width}px`).toEqual([]);
   }
   await expect(page.locator('#download-dialog, [data-download-open]')).toHaveCount(0);
-  await expect(page.locator('#video-dialog')).toHaveCount(1);
+  await expect(page.locator('#video-dialog')).toHaveCount(0);
   for (const link of await page.locator('a[href="/download/"]').all()) {
     await expect(link).not.toHaveAttribute('aria-controls');
   }
@@ -1293,7 +1068,11 @@ try {
   expect(errors).toEqual([]);
 
   const staticContext = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
+  await staticContext.addInitScript(() => {
+    try { localStorage.setItem('lomi.cookie-consent', JSON.stringify({ version: 1, externalMedia: true, savedAt: Date.now() })); } catch { /* Storage may be unavailable in fallback checks. */ }
+  });
   const staticPage = await staticContext.newPage();
+  await mockVideoRequests(staticPage);
   await staticPage.route(releaseUrl, (route) => route.fulfill({ status: 200, contentType: 'text/html', body: '<h1>GitHub releases</h1>' }));
   await staticPage.goto(url);
   await expect(staticPage.getByRole('heading', { level: 1 })).toHaveCount(1);
@@ -1315,21 +1094,18 @@ try {
   await expect(staticPage.locator('.hero .hero-eyebrow, .hero .hero-note, .hero [data-motion-toggle]')).toHaveCount(0);
   await expect(staticPage.locator('.hero .hero-explore')).toHaveAttribute('href', '#workspace');
   const staticWorkspace = staticPage.locator('.hero #workspace');
-  await expect(staticWorkspace.getByRole('img')).toHaveCount(2);
-  const staticImage = staticWorkspace.locator('[data-video-open] img');
-  const staticDetail = staticWorkspace.locator('.deck-detail img');
-  await expect(staticDetail).toHaveAttribute('alt', /\S/);
-  await expect.poll(() => staticDetail.evaluate((image) => image.naturalWidth)).toBeGreaterThan(0);
-  await expect(staticImage).toHaveCount(1);
+  await expect(staticWorkspace.locator('img')).toHaveCount(1);
+  const staticImage = staticWorkspace.locator('[data-video-poster] img');
   await expect(staticImage).toBeVisible();
   await expect(staticImage).toHaveAttribute('alt', /\S/);
   await expect.poll(() => staticImage.evaluate((element) => element.naturalWidth)).toBeGreaterThan(0);
-  if (await staticWorkspace.locator('figcaption').count()) await expect(staticWorkspace.locator('figcaption')).toHaveText(/\S/);
   await verifyHeroComposition(staticPage, 390);
-  await expect(staticPage.locator('#video-dialog iframe')).toHaveCount(0);
+  await expect(staticWorkspace.locator('iframe')).toHaveCount(0);
+  const fallbackLink = staticWorkspace.locator('[data-video-poster]');
+  await expect(fallbackLink).toHaveAttribute('href', videoUrl);
+  await fallbackLink.evaluate((element) => element.removeAttribute('target'));
   await staticPage.route(videoUrl, (route) => route.fulfill({ status: 200, contentType: 'text/html', body: '<h1>YouTube video destination</h1>' }));
-  await expect(staticPage.locator('[data-video-open]')).toHaveAttribute('href', videoUrl);
-  await staticPage.locator('[data-video-open]').click();
+  await fallbackLink.click();
   await expect(staticPage).toHaveURL(videoUrl);
   await staticPage.goto(url);
   const staticHeroDownload = staticPage.locator('.hero a[href="/download/"]');
@@ -1358,10 +1134,13 @@ try {
   await expect(staticPage.locator('#main')).toBeFocused();
   await staticContext.close();
   const touchContext = await browser.newContext({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 844 } });
+  await touchContext.addInitScript(() => {
+    try { localStorage.setItem('lomi.cookie-consent', JSON.stringify({ version: 1, externalMedia: true, savedAt: Date.now() })); } catch { /* Storage may be unavailable in fallback checks. */ }
+  });
   const touchPage = await touchContext.newPage();
   const touchVideoRequests = await mockVideoRequests(touchPage);
   await touchPage.goto(url, { waitUntil: 'networkidle' });
-  await verifyVideoDialog(touchPage, touchVideoRequests, true);
+  await verifyInlineVideo(touchPage, touchVideoRequests);
   await touchContext.close();
   await verifyBackgroundPointer();
   await verifyDevlog(true);
@@ -1369,12 +1148,16 @@ try {
 
   const fallbackContext = await browser.newContext({ viewport: { width: 390, height: 844 } });
   await fallbackContext.addInitScript(() => {
+    try { localStorage.setItem('lomi.cookie-consent', JSON.stringify({ version: 1, externalMedia: true, savedAt: Date.now() })); } catch { /* Storage may be unavailable in fallback checks. */ }
+  });
+  await fallbackContext.addInitScript(() => {
     const getContext = HTMLCanvasElement.prototype.getContext;
     HTMLCanvasElement.prototype.getContext = function (type, ...args) {
       return type === '2d' ? null : Reflect.apply(getContext, this, [type, ...args]);
     };
   });
   const fallbackPage = await fallbackContext.newPage();
+  await mockVideoRequests(fallbackPage);
   const fallbackErrors = [];
   fallbackPage.on('pageerror', (error) => fallbackErrors.push(error.message));
   await fallbackPage.goto(url, { waitUntil: 'networkidle' });
@@ -1388,7 +1171,7 @@ try {
   await expect(fallbackPage.locator('.hero a[href="/download/"]')).toHaveAttribute('href', downloadPath);
   expect(fallbackErrors, 'Canvas 2D unavailable fallback has no page errors').toEqual([]);
   await fallbackContext.close();
-  console.log('Passed: Hero/Features/Roadmap/Newsletter/Footer and remaining anchors, 7 viewport widths including 200% equivalent reflow and landscape, terminal-glyph canvas pointer trail/fade/touch gating and pixel motion/reduced/resume/offscreen/resize and no-JS/unavailable-2D fallback, no CLI cards or client islands, two-image hero composition and lazy video dialog/keyboard/backdrop/touch/scroll lock/no-JS, exact viewport footer/keyboard access across 8 sizes plus long CMS copy at 320x400 with and without JS, desktop Product/mobile drill-in and Devlog routes with/without JS, mobile navigation, retired sections absent and newsletter visible with/without JS, dedicated download route links including Product Download, no-JS reading and download links (installer coverage: verify:download), and mobile/desktop/dialog accessibility.');
+  console.log('Passed: Hero/Features/Roadmap/Newsletter/Footer and remaining anchors, 7 viewport widths including 200% equivalent reflow and landscape, terminal-glyph canvas pointer trail/fade/touch gating and pixel motion/reduced/resume/offscreen/resize and no-JS/unavailable-2D fallback, no CLI cards or client islands, single aligned inline player with remembered consent/native controls/touch/no-JS, exact viewport footer/keyboard access across 8 sizes plus long CMS copy at 320x400 with and without JS, desktop Product/mobile drill-in and Devlog routes with/without JS, mobile navigation, retired sections absent and newsletter visible with/without JS, dedicated download route links including Product Download, no-JS reading and download links (installer coverage: verify:download), and mobile/desktop accessibility.');
 } finally {
   await browser.close();
 }

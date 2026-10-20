@@ -21,15 +21,15 @@ const { content } = Astro.props;
       </div>
     </div>
   </div>
-  <div class="hero-product hero-shell">
+  <div class="hero-product">
     <WorkspaceDeck alt={content.previewAlt} />
   </div>
 </section>
 
 <style>
-  .hero { --scroll-surface-color: #ffffff; --hero-gutter: clamp(24px, 5.2vw, 112px); position: relative; isolation: isolate; overflow: hidden; min-height: 100svh; padding-bottom: 64px; background: linear-gradient(180deg, #ffffff 0%, #ffffff 65%, var(--color-chalk) 100%); color: var(--color-ink); }
+  .hero { --scroll-surface-color: #ffffff; --hero-gutter: clamp(24px, 5.2vw, 112px); position: relative; isolation: isolate; overflow: hidden; padding-bottom: 64px; background: linear-gradient(180deg, #ffffff 0%, #ffffff 65%, var(--color-chalk) 100%); color: var(--color-ink); }
   .hero-shell { width: min(1760px, calc(100% - var(--hero-gutter) * 2)); margin-inline: auto; }
-  .hero-opening { position: relative; padding: clamp(160px, 16svh, 194px) 0 112px; }
+  .hero-opening { position: relative; padding: clamp(160px, 16svh, 194px) 0 64px; }
   .hero-atmosphere { position: absolute; z-index: -1; inset: 0 0 auto; height: 950px; overflow: hidden; pointer-events: none; --shape-waves-background: #ffffff; --shape-waves-color: #9baa8b; --shape-waves-interaction-color: #6b922c; }
   .hero-atmosphere :global(lomi-shape-waves) { opacity: .95; }
   .hero-atmosphere::after { content: ''; position: absolute; z-index: 2; inset: 0; background: radial-gradient(ellipse 44% 46% at 50% 38%, #ffffffd9 0%, #ffffff9c 48%, #ffffff0d 100%), linear-gradient(0deg, #ffffff 0%, #ffffff00 24%, #ffffff00 88%, #ffffff66 100%); }
@@ -42,15 +42,15 @@ const { content } = Astro.props;
   .hero-download:active { transform: scale(.98); }
   .hero-explore { display: inline-flex; align-items: center; justify-content: center; gap: 13px; min-height: 52px; padding: 0 23px; border: 1px solid #d5dccd; border-radius: 999px; background: rgb(255 255 255 / 80%); color: #293423; font-size: 14px; transition: background-color 150ms ease, border-color 150ms ease; }
   .hero-explore > span { color: #5b6d4b; font-size: 18px; }
-  .hero-product { position: relative; z-index: 2; --color-text-secondary: #5f6b55; }
+  .hero-product { position: relative; z-index: 2; width: min(1440px, calc(100% - clamp(40px, 10.4vw, 192px))); margin-inline: auto; }
   .hero :focus-visible { outline-color: var(--color-focus); }
   @media (hover: hover) {
     .hero-download:hover { background: #dbff7d; }
     .hero-explore:hover { background: #f0f4e9; border-color: #b7c5a8; }
   }
   @media (max-width: 767px) {
-    .hero { --hero-gutter: 20px; padding-bottom: 38px; }
-    .hero-opening { padding: 132px 0 90px; }
+    .hero { --hero-gutter: 20px; padding-bottom: 40px; }
+    .hero-opening { padding: 132px 0 40px; }
     h1 { font-size: clamp(44px, 8.8vw, 62px); letter-spacing: -.06em; line-height: 1.06; }
     .hero-description { max-width: 450px; margin-top: 20px; font-size: 15px; line-height: 1.7; }
     .hero-actions { gap: 10px; margin-top: 24px; }

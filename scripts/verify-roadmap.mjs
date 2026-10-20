@@ -11,6 +11,9 @@ const desktop = { width: 1440, height: 900 };
 
 async function open(options = {}, html) {
   const context = await browser.newContext({ viewport: desktop, ...options });
+  await context.addInitScript(() => {
+    try { localStorage.setItem('lomi.cookie-consent', JSON.stringify({ version: 1, externalMedia: true, savedAt: Date.now() })); } catch { /* Storage may be unavailable in fallback checks. */ }
+  });
   const page = await context.newPage();
   page.on('pageerror', (error) => errors.push(error.message));
   await page.route('https://api.github.com/**', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }));

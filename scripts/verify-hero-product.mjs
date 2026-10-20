@@ -10,223 +10,260 @@ const errors = [];
 const widths = [320, 390, 640, 768, 1024, 1440, 1920];
 await mkdir('artifacts', { recursive: true });
 
-async function open(options = {}) {
+async function open({ consent = true, apiFailure = false, embedFailure = false, fastReadyTimeout = false, ...options } = {}) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, ...options });
+  if (consent) await context.addInitScript(() => {
+    try { localStorage.setItem('lomi.cookie-consent', JSON.stringify({ version: 1, externalMedia: true, savedAt: Date.now() })); } catch { /* Storage may be unavailable in fallback checks. */ }
+  });
+  if (fastReadyTimeout) await context.addInitScript(() => {
+    const setTimeout = window.setTimeout.bind(window);
+    window.setTimeout = (callback, delay, ...args) => setTimeout(callback, delay === 15000 ? 250 : delay, ...args);
+  });
   const page = await context.newPage();
-  const videoRequests = [];
+  const requests = [];
+  const mock = { apiFailure };
   page.on('pageerror', (error) => errors.push(error.message));
   await page.route('https://api.github.com/**', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }));
   await page.route(/^https:\/\/(?:[^/]+\.)?(?:youtube\.com|youtube-nocookie\.com|youtu\.be|ytimg\.com|googlevideo\.com)\//, async (route) => {
-    videoRequests.push(route.request().url());
+    requests.push(route.request().url());
     if (new URL(route.request().url()).pathname === '/iframe_api') {
-      await route.fulfill({ contentType: 'text/javascript', body: `
-        window.__heroVideo = { players: [] };
-        window.YT = { PlayerState: { PLAYING: 1 }, Player: class {
+      if (mock.apiFailure) return route.abort();
+      return route.fulfill({ contentType: 'text/javascript', body: `
+        window.__heroVideo ||= { players: [] };
+        window.YT = { Player: class {
           constructor(iframe, options) {
             this.iframe = iframe; this.events = options.events; this.calls = [];
             window.__heroVideo.players.push(this);
           }
           mute() { this.calls.push('mute'); }
           playVideo() { this.calls.push('playVideo'); }
-          stopVideo() { this.calls.push('stopVideo'); }
+          pauseVideo() { this.calls.push('pauseVideo'); }
           destroy() { this.calls.push('destroy'); this.iframe.remove(); }
         }};
         window.onYouTubeIframeAPIReady?.();
       ` });
-    } else {
-      await route.fulfill({ contentType: 'text/html', body: '<!doctype html><html lang="en"><head><title>Mock video</title></head><body><main><h1>Mock video</h1><button type="button">Play video</button></main></body></html>' });
     }
+    if (embedFailure && new URL(route.request().url()).pathname.startsWith('/embed/')) return route.abort();
+    return route.fulfill({ contentType: 'text/html', body: '<!doctype html><html lang="en"><head><title>Mock video</title></head><body><main><h1>Mock video</h1><button type="button">Play video</button><label>Volume<input aria-label="Volume" type="range" min="0" max="100" value="0"></label><button type="button">Fullscreen</button></main></body></html>' });
   });
   await page.goto(url, { waitUntil: 'networkidle' });
   await page.evaluate(() => document.fonts.ready);
-  return { context, page, videoRequests };
+  return { context, page, requests, mock };
 }
 
 async function composition(page) {
   const workspace = page.locator('.hero #workspace');
-  await expect(workspace.locator('[data-video-open]')).toHaveCount(1);
-  await expect(workspace.locator('[data-workspace-detail]')).toHaveCount(1);
-  await expect(workspace.locator('picture img')).toHaveCount(2);
-  await expect(workspace.locator('[data-workspace-detail] a, [data-workspace-detail] button')).toHaveCount(0);
-  for (const image of await workspace.locator('img').all()) {
-    expect(await image.evaluate(async (element) => {
-      await element.decode();
-      return element.complete && element.naturalWidth > 0 && element.naturalHeight > 0;
-    }), 'Both product images decode successfully').toBe(true);
-    expect(new URL(await image.getAttribute('src'), url).origin, 'Placeholder imagery remains local').toBe(new URL(url).origin);
-    await expect(image).toHaveAttribute('alt', /placeholder/i);
-  }
+  await expect(workspace).toHaveClass('workspace-showcase');
+  await expect(page.locator('#video-dialog, [data-video-open], [data-video-play], [data-workspace-detail], .deck-detail, [data-video-notice], [data-video-allow], [data-video-retry]')).toHaveCount(0);
+  await expect(workspace.locator('img')).toHaveCount(1);
+  const image = workspace.locator('[data-video-poster] img');
+  expect(await image.evaluate(async (element) => { await element.decode(); return element.complete && element.naturalWidth > 0; })).toBe(true);
+  expect(new URL(await image.getAttribute('src'), url).origin, 'Poster remains local').toBe(new URL(url).origin);
+  await expect(image).toHaveAttribute('alt', /placeholder/i);
   const geometry = await workspace.evaluate((element) => {
-    const rect = (item) => { const bounds = item.getBoundingClientRect(); return { left: bounds.left, right: bounds.right, top: bounds.top, bottom: bounds.bottom, width: bounds.width, height: bounds.height }; };
-    const desktop = element.querySelector('[data-video-open]');
-    const phone = element.querySelector('[data-workspace-detail]');
-    const desktopImage = desktop.querySelector('img'), phoneImage = phone.querySelector('img');
-    const protectedAreas = [document.querySelector('.hero h1'), document.querySelector('.hero-actions'),
-      element.querySelector('[data-video-play]'), element.querySelector('figcaption')].filter(Boolean).map(rect);
-    return { desktop: rect(desktop), phone: rect(phone), composition: rect(element.querySelector('.deck-composition')),
-      hero: rect(element.closest('.hero')), protectedAreas, desktopImage: rect(desktopImage), phoneImage: rect(phoneImage),
-      intrinsicDesktop: desktopImage.naturalWidth / desktopImage.naturalHeight,
-      intrinsicPhone: phoneImage.naturalWidth / phoneImage.naturalHeight,
-      clientWidth: document.documentElement.clientWidth, scrollWidth: document.documentElement.scrollWidth };
+    const rect = (item) => { const b = item.getBoundingClientRect(); return { left: b.left, right: b.right, top: b.top, bottom: b.bottom, width: b.width, height: b.height }; };
+    return { showcase: rect(element), player: rect(element.querySelector('[data-video-player]')), hero: rect(element.closest('.hero')),
+      gallery: rect(document.querySelector('.gallery-shell')), actions: rect(document.querySelector('.hero-actions')), clientWidth: document.documentElement.clientWidth, scrollWidth: document.documentElement.scrollWidth };
   });
-  const label = `${page.viewportSize().width}px`;
-  expect(geometry.intrinsicDesktop, `${label}: desktop placeholder is landscape`).toBeCloseTo(8 / 5, 2);
-  expect(geometry.intrinsicPhone, `${label}: phone placeholder is portrait`).toBeCloseTo(430 / 932, 2);
-  expect(geometry.desktop.width / geometry.desktop.height, `${label}: desktop remains landscape`).toBeCloseTo(8 / 5, 2);
-  expect(geometry.phoneImage.width / geometry.phoneImage.height, `${label}: phone screen keeps its portrait shape`).toBeCloseTo(430 / 932, 2);
-  expect(geometry.phone.width / geometry.phone.height, `${label}: phone body is portrait`).toBeLessThan(.6);
-  expect(geometry.desktop.width / geometry.composition.width, `${label}: landscape image leaves room for the phone`).toBeGreaterThan(.8);
-  expect(geometry.desktop.width / geometry.composition.width).toBeLessThan(.96);
-  expect(geometry.phone.width / geometry.composition.width, `${label}: phone stays subordinate`).toBeGreaterThan(.16);
-  expect(geometry.phone.width / geometry.composition.width).toBeLessThan(.35);
-  for (const [name, bounds] of [['desktop', geometry.desktop], ['phone', geometry.phone]]) {
-    expect(bounds.width, `${label}: ${name} has visible geometry`).toBeGreaterThan(0);
-    expect(bounds.left, `${label}: ${name} fits the left edge`).toBeGreaterThanOrEqual(-1);
-    expect(bounds.right, `${label}: ${name} fits the right edge`).toBeLessThanOrEqual(geometry.clientWidth + 1);
-    expect(bounds.top, `${label}: ${name} fits the composition top`).toBeGreaterThanOrEqual(geometry.composition.top - 1);
-    expect(bounds.bottom, `${label}: composition includes the complete ${name}`).toBeLessThanOrEqual(geometry.composition.bottom + 1);
-    expect(bounds.bottom, `${label}: hero does not crop the ${name}`).toBeLessThanOrEqual(geometry.hero.bottom + 1);
-  }
-  expect(geometry.scrollWidth, `${label}: no document overflow`).toBe(geometry.clientWidth);
-  expect(Math.min(geometry.desktop.right, geometry.phone.right) - Math.max(geometry.desktop.left, geometry.phone.left), `${label}: phone overlaps the desktop`).toBeGreaterThan(5);
-  expect(Math.min(geometry.desktop.bottom, geometry.phone.bottom) - Math.max(geometry.desktop.top, geometry.phone.top)).toBeGreaterThan(10);
-  for (const protectedArea of geometry.protectedAreas) {
-    expect(geometry.phone.right <= protectedArea.left || geometry.phone.left >= protectedArea.right
-      || geometry.phone.bottom <= protectedArea.top || geometry.phone.top >= protectedArea.bottom,
-    `${label}: phone leaves heading, actions, play and caption clear`).toBe(true);
-  }
-  const desktopImage = workspace.locator('[data-video-open] img');
-  const phoneImage = workspace.locator('[data-workspace-detail] img');
-  expect(await phoneImage.getAttribute('src'), 'Phone uses a distinct placeholder').not.toBe(await desktopImage.getAttribute('src'));
-  expect(await desktopImage.getAttribute('src'), 'Video loading poster retains the desktop placeholder').toBe(await page.locator('#video-dialog [data-video-poster] img').getAttribute('src'));
-  await expect(workspace.locator('[data-video-open]')).toHaveAttribute('href', videoUrl);
+  const { showcase, player, actions, hero, gallery } = geometry;
+  expect(player.height).toBeGreaterThanOrEqual(200);
+  expect(player.width).toBeGreaterThan(200);
+  expect(player.height).toBeCloseTo(Math.max(200, player.width * 5 / 8), 0);
+  expect(player.left, 'Hero and features share their content edges').toBeCloseTo(gallery.left, 0);
+  expect(player.right).toBeCloseTo(gallery.right, 0);
+  expect(player.top).toBeCloseTo(showcase.top, 0);
+  expect(player.bottom, 'No bar or empty space remains below the player').toBeCloseTo(showcase.bottom, 0);
+  expect(player.height).toBeCloseTo(showcase.height, 0);
+  expect(showcase.top).toBeGreaterThanOrEqual(actions.bottom);
+  expect(showcase.bottom).toBeLessThanOrEqual(hero.bottom + 1);
+  expect(showcase.left).toBeGreaterThanOrEqual(0);
+  expect(showcase.right).toBeLessThanOrEqual(geometry.clientWidth);
+  expect(geometry.scrollWidth).toBe(geometry.clientWidth);
   return geometry;
 }
 
-async function screenshotHero(page, width) {
-  // Capture from the document top: locator screenshots center tall elements and
-  // can otherwise paint the fixed header halfway down the exported hero.
-  await page.mouse.move(0, 0);
-  await page.evaluate(() => { document.activeElement?.blur(); scrollTo({ top: 0, behavior: 'instant' }); });
-  const bounds = await page.locator('.hero').boundingBox();
-  await page.screenshot({ path: `artifacts/hero-product-${browserType.name()}-${width}.png`, fullPage: true,
-    clip: { x: Math.max(0, bounds.x), y: Math.max(0, bounds.y), width: bounds.width, height: Math.ceil(bounds.height) }, animations: 'disabled' });
-}
-
+const root = (page) => page.locator('[data-hero-video]');
+const emit = (page, name, data, index = 0) => page.evaluate(({ name, data, index }) => {
+  const instance = window.__heroVideo.players[index];
+  instance.events[name]?.({ target: instance, data });
+}, { name, data, index });
+const calls = (page, index = 0) => page.evaluate((index) => window.__heroVideo.players[index].calls, index);
 async function center(page) {
-  await page.locator('[data-video-open]').evaluate((element) => element.scrollIntoView({ block: 'center', behavior: 'instant' }));
+  await page.locator('[data-video-player]').evaluate((element) => element.scrollIntoView({ block: 'center', behavior: 'instant' }));
+  await expect.poll(() => page.locator('[data-video-player]').evaluate((element) => {
+    const b = element.getBoundingClientRect();
+    return Math.max(0, Math.min(innerHeight, b.bottom) - Math.max(0, b.top)) / b.height;
+  })).toBeGreaterThanOrEqual(.5);
 }
-
-async function centeredPlay(page) {
-  await expect.poll(() => page.locator('[data-video-play]').evaluate((element) => {
-    const play = element.getBoundingClientRect(), image = element.closest('[data-video-open]').getBoundingClientRect();
-    let opacity = 1;
-    for (let parent = element; parent; parent = parent.parentElement) opacity *= Number(getComputedStyle(parent).opacity);
-    return opacity > .9 && Math.abs(play.left + play.width / 2 - image.left - image.width / 2) < 1
-      && Math.abs(play.top + play.height / 2 - image.top - image.height / 2) < 1;
-  }), { message: 'Play remains centered on the full desktop image after scrolling' }).toBe(true);
+async function mounted(page) {
+  const iframe = root(page).locator('iframe');
+  await expect(iframe).toHaveCount(1);
+  await expect(root(page).locator('[data-video-poster]')).toHaveCSS('visibility', 'hidden');
+  await expect(root(page).locator('[data-video-mount]')).not.toHaveAttribute('inert');
+  await expect(iframe).toHaveAttribute('title', 'Lomi product walkthrough');
+  await expect(iframe).toHaveAttribute('allowfullscreen', '');
+  const source = new URL(await iframe.getAttribute('src'));
+  expect(source.hostname).toBe('www.youtube-nocookie.com');
+  for (const [key, value] of Object.entries({ autoplay: '0', controls: '1', playsinline: '1', enablejsapi: '1' })) expect(source.searchParams.get(key)).toBe(value);
+  const frame = page.frameLocator('[data-video-mount] iframe');
+  await expect(frame.getByRole('button', { name: 'Play video' })).toBeVisible();
+  const volume = frame.getByRole('slider', { name: 'Volume' });
+  await volume.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(volume).toHaveValue('1');
+  await expect(frame.getByRole('button', { name: 'Fullscreen' })).toBeVisible();
+  expect(await page.evaluate(() => [document.documentElement.style.overflow, document.body.style.overflow]), 'Inline player does not lock document scrolling').not.toContain('hidden');
 }
-
-async function keyboardAndHover(page) {
-  const trigger = page.locator('[data-video-open]');
-  await center(page);
-  await trigger.focus();
-  await page.keyboard.press('Tab');
-  await page.keyboard.press('Shift+Tab');
-  await expect(trigger).toBeFocused();
-  await center(page);
-  await centeredPlay(page);
-  await trigger.hover();
-  await centeredPlay(page);
-  await page.evaluate(() => scrollBy({ top: 60, behavior: 'instant' }));
-  await centeredPlay(page);
-}
-
-async function video(page, requests, touch = false) {
-  const trigger = page.locator('[data-video-open]'), modal = page.locator('#video-dialog');
-  const player = modal.locator('[data-video-player]'), poster = modal.locator('[data-video-poster]'), mount = modal.locator('[data-video-mount]');
-  expect(requests, 'No YouTube traffic before activation').toEqual([]);
-  await expect(mount.locator('iframe')).toHaveCount(0);
-  await center(page);
-  if (!touch) await trigger.focus();
-  await centeredPlay(page);
-  const before = await page.evaluate(() => ({ x: scrollX, y: scrollY, root: document.documentElement.style.overflow, body: document.body.style.overflow }));
-  if (touch) await trigger.tap();
-  else await page.keyboard.press('Enter');
-  await expect(modal).toBeVisible();
-  await expect(player).toHaveAttribute('data-video-status', 'loading');
-  await expect(poster).toHaveCSS('opacity', '1');
-  await expect(mount).toHaveAttribute('inert', '');
-  await expect.poll(() => page.evaluate(() => window.__heroVideo?.players.length || 0)).toBe(1);
-  await page.evaluate(() => { const instance = window.__heroVideo.players[0]; instance.events.onReady({ target: instance }); });
-  expect(await page.evaluate(() => window.__heroVideo.players[0].calls), 'Readiness mutes before playback').toEqual(['mute', 'playVideo']);
-  await expect(player).toHaveAttribute('data-video-status', 'loading');
-  await expect(poster).toHaveCSS('opacity', '1');
-  await page.evaluate(() => { const instance = window.__heroVideo.players[0]; instance.events.onStateChange({ target: instance, data: 1 }); });
-  await expect(player).toHaveAttribute('data-video-status', 'playing');
-  await expect(mount).not.toHaveAttribute('inert');
-  await modal.focus();
-  await page.keyboard.press('Escape');
-  await expect(modal).not.toBeVisible();
-  await expect(trigger).toBeFocused();
-  await expect(mount.locator('iframe')).toHaveCount(0);
-  expect(await page.evaluate(() => window.__heroVideo.players[0].calls)).toContain('destroy');
-  await expect.poll(() => page.evaluate(() => ({ x: scrollX, y: scrollY, root: document.documentElement.style.overflow, body: document.body.style.overflow })), { message: 'Video close restores exact scroll position and styles' }).toEqual(before);
-}
-
 async function axe(page, label) {
   const result = await new AxeBuilder({ page }).include('.hero').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
   expect(result.violations, `${label}: hero accessibility`).toEqual([]);
 }
+async function revoke(page) {
+  await page.evaluate(() => {
+    const newValue = JSON.stringify({ version: 1, externalMedia: false, savedAt: Date.now() });
+    localStorage.setItem('lomi.cookie-consent', newValue);
+    dispatchEvent(new StorageEvent('storage', { key: 'lomi.cookie-consent', newValue, storageArea: localStorage }));
+  });
+}
 
 try {
-  const run = await open();
+  const run = await open({ consent: false });
+  await expect(root(run.page)).toHaveAttribute('data-video-status', 'consent');
+  expect(run.requests, 'No YouTube traffic without consent').toEqual([]);
   const geometries = [];
   for (const width of widths) {
     await run.page.setViewportSize({ width, height: width === 320 ? 568 : width < 768 ? 844 : 900 });
-    const geometry = await composition(run.page);
-    geometries.push({ viewportWidth: width, desktop: { width: geometry.desktop.width, height: geometry.desktop.height },
-      phone: { width: geometry.phone.width, height: geometry.phone.height }, phoneTopOffset: geometry.phone.top - geometry.desktop.top,
-      phoneExtension: geometry.phone.bottom - geometry.desktop.bottom, compositionHeight: geometry.composition.height });
-    await keyboardAndHover(run.page);
+    geometries.push({ viewportWidth: width, ...await composition(run.page) });
     if ([390, 1440].includes(width)) {
       await axe(run.page, `${width}px`);
-      await screenshotHero(run.page, width);
+      await run.page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
+      await run.page.locator('.hero').screenshot({ path: `artifacts/hero-product-${browserType.name()}-${width}.png`, animations: 'disabled' });
     }
   }
   await writeFile(`artifacts/hero-product-${browserType.name()}-geometry.json`, JSON.stringify(geometries, null, 2));
+  expect(run.requests).toEqual([]);
   await run.page.setViewportSize({ width: 1440, height: 900 });
-  await video(run.page, run.videoRequests);
-  await run.page.emulateMedia({ reducedMotion: 'reduce' });
-  await run.page.setViewportSize({ width: 320, height: 568 });
-  await composition(run.page);
-  await keyboardAndHover(run.page);
-  await expect(run.page.locator('[data-video-play]')).toHaveCSS('transition-duration', '0s');
-  await expect(run.page.locator('[data-video-overlay]')).toHaveCSS('transition-duration', '0s');
-  await axe(run.page, 'Reduced motion');
+  await run.page.locator('[data-cookie-reject]:visible').click();
+  await root(run.page).locator('[data-video-poster]').click();
+  await expect(run.page.locator('#cookie-preferences')).toBeVisible();
+  expect(run.requests, 'Opening global preferences does not grant media consent').toEqual([]);
+  await run.page.locator('#cookie-external-media').check();
+  await run.page.locator('[data-cookie-save]').click();
+  await expect(root(run.page).locator('iframe')).toBeFocused();
+  await mounted(run.page);
+  await center(run.page);
+  await emit(run.page, 'onReady');
+  await expect.poll(() => calls(run.page)).toEqual(['mute', 'playVideo']);
+  // YouTube can report PLAYING after an autoplay request has left view.
+  await run.page.locator('.site-footer').evaluate((element) => element.scrollIntoView({ block: 'start', behavior: 'instant' }));
+  await expect.poll(() => calls(run.page)).toContain('pauseVideo');
+  const offscreenPauses = (await calls(run.page)).filter((call) => call === 'pauseVideo').length;
+  await emit(run.page, 'onStateChange', 1);
+  await expect(root(run.page)).toHaveAttribute('data-video-status', 'paused');
+  expect((await calls(run.page)).filter((call) => call === 'pauseVideo')).toHaveLength(offscreenPauses + 1);
+  await center(run.page);
+  expect((await calls(run.page)).filter((call) => call === 'playVideo')).toHaveLength(1);
+  // A late PLAYING event must also remain paused after the tab is hidden.
+  await run.page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, value: true }); document.dispatchEvent(new Event('visibilitychange')); });
+  const hiddenPauses = (await calls(run.page)).filter((call) => call === 'pauseVideo').length;
+  expect(hiddenPauses).toBeGreaterThan(offscreenPauses + 1);
+  await emit(run.page, 'onStateChange', 1);
+  await expect(root(run.page)).toHaveAttribute('data-video-status', 'paused');
+  expect((await calls(run.page)).filter((call) => call === 'pauseVideo')).toHaveLength(hiddenPauses + 1);
+  await run.page.evaluate(() => { delete document.hidden; document.dispatchEvent(new Event('visibilitychange')); });
+  expect((await calls(run.page)).filter((call) => call === 'playVideo')).toHaveLength(1);
+  // Native manual playback is valid while some, but less than half, is visible.
+  await run.page.locator('[data-video-player]').evaluate((element) => {
+    const bounds = element.getBoundingClientRect();
+    scrollTo({ top: scrollY + bounds.top + bounds.height * .75, behavior: 'instant' });
+  });
+  await expect.poll(() => run.page.locator('[data-video-player]').evaluate((element) => {
+    const bounds = element.getBoundingClientRect();
+    return Math.max(0, Math.min(innerHeight, bounds.bottom) - Math.max(0, bounds.top)) / bounds.height;
+  })).toBeLessThan(.5);
+  // Wait for the IntersectionObserver notification that records partial visibility.
+  await run.page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  const partialPauses = (await calls(run.page)).filter((call) => call === 'pauseVideo').length;
+  await emit(run.page, 'onStateChange', 1);
+  await expect(root(run.page)).toHaveAttribute('data-video-status', 'playing');
+  expect((await calls(run.page)).filter((call) => call === 'pauseVideo')).toHaveLength(partialPauses);
+  await center(run.page);
+  await emit(run.page, 'onStateChange', 2);
+  await run.page.locator('.site-footer').evaluate((element) => element.scrollIntoView({ block: 'start', behavior: 'instant' }));
+  await center(run.page);
+  expect((await calls(run.page)).filter((call) => call === 'playVideo')).toHaveLength(1);
+  await emit(run.page, 'onError');
+  await expect(root(run.page)).toHaveAttribute('data-video-status', 'error');
+  await expect(root(run.page).locator('iframe')).toBeVisible();
+  await expect(root(run.page).locator('[data-video-poster]')).toHaveCSS('visibility', 'hidden');
+  await root(run.page).locator('iframe').focus();
+  await revoke(run.page);
+  await expect(root(run.page)).toHaveAttribute('data-video-status', 'consent');
+  await expect(root(run.page).locator('iframe')).toHaveCount(0);
+  await expect(run.page.locator('script[src="https://www.youtube.com/iframe_api"]')).toHaveCount(0);
+  await expect(root(run.page).locator('[data-video-poster]')).toBeVisible();
+  await expect(root(run.page).locator('[data-video-poster]')).toBeFocused();
+  expect(await calls(run.page)).toContain('destroy');
+  await emit(run.page, 'onReady');
+  await emit(run.page, 'onStateChange', 1);
+  await emit(run.page, 'onError');
+  await expect(root(run.page)).toHaveAttribute('data-video-status', 'consent');
   await run.context.close();
 
-  const touch = await open({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
-  await composition(touch.page);
-  await center(touch.page);
-  await centeredPlay(touch.page);
-  await touch.page.evaluate(() => scrollBy({ top: 60, behavior: 'instant' }));
-  await centeredPlay(touch.page);
-  await video(touch.page, touch.videoRequests, true);
-  await touch.context.close();
+  const remembered = await open();
+  await expect(root(remembered.page).locator('iframe')).not.toBeFocused();
+  await mounted(remembered.page);
+  expect(remembered.requests.some((request) => request.includes('/iframe_api'))).toBe(true);
+  await remembered.context.close();
+
+  const reduced = await open({ reducedMotion: 'reduce', viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  await composition(reduced.page);
+  await mounted(reduced.page);
+  await center(reduced.page);
+  await emit(reduced.page, 'onReady');
+  expect(await calls(reduced.page)).toEqual(['mute']);
+  await expect(root(reduced.page).locator('.video-loading')).toHaveCSS('animation-name', 'none');
+  await axe(reduced.page, 'Touch and reduced motion');
+  await reduced.context.close();
+
+  const failure = await open({ apiFailure: true });
+  await expect(root(failure.page)).toHaveAttribute('data-video-status', 'error');
+  await expect(root(failure.page).locator('[data-video-poster]')).toBeVisible();
+  await expect(root(failure.page).locator('iframe')).toHaveCount(0);
+  await expect(root(failure.page).locator('[data-video-poster]')).toHaveAttribute('href', videoUrl);
+  failure.mock.apiFailure = false;
+  await failure.page.reload({ waitUntil: 'networkidle' });
+  await expect(root(failure.page).locator('iframe')).not.toBeFocused();
+  await mounted(failure.page);
+  await failure.context.close();
+
+  // An available API does not prove the iframe itself has loaded successfully.
+  const stalled = await open({ embedFailure: true, fastReadyTimeout: true });
+  await expect(root(stalled.page)).toHaveAttribute('data-video-status', 'error');
+  await expect(root(stalled.page).locator('[data-video-notice], [data-video-allow], [data-video-retry]')).toHaveCount(0);
+  await expect(root(stalled.page).locator('iframe')).toBeVisible();
+  await expect(root(stalled.page).locator('[data-video-poster]')).toHaveCSS('visibility', 'hidden');
+  await emit(stalled.page, 'onReady');
+  await expect(root(stalled.page)).toHaveAttribute('data-video-status', 'ready');
+  await stalled.context.close();
 
   const staticRun = await open({ javaScriptEnabled: false });
   for (const width of widths) {
     await staticRun.page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
     await composition(staticRun.page);
-    await expect(staticRun.page.locator('#video-dialog')).not.toBeVisible();
+    await expect(root(staticRun.page).locator('[data-video-poster]')).toBeVisible();
+    await expect(root(staticRun.page).locator('iframe')).toHaveCount(0);
   }
-  await staticRun.page.locator('[data-video-open]').press('Enter');
-  await expect(staticRun.page).toHaveURL(videoUrl);
-  await expect(staticRun.page.getByRole('heading', { name: 'Mock video' })).toBeVisible();
+  expect(staticRun.requests).toEqual([]);
+  const fallback = root(staticRun.page).locator('[data-video-poster]');
+  await expect(fallback).toHaveAttribute('href', videoUrl);
+  const popupPromise = staticRun.page.waitForEvent('popup');
+  await fallback.click();
+  const popup = await popupPromise;
+  await expect(popup).toHaveURL(videoUrl);
   await staticRun.context.close();
-  expect(errors, 'No runtime errors in hero-product scenarios').toEqual([]);
-  console.log(`Passed (${browserType.name()}): landscape desktop + portrait phone at 320/390/640/768/1024/1440/1920, decoded local placeholders/poster consistency, complete overlap geometry and no overflow, protected copy/actions/play, keyboard/hover/touch centered play after scrolling, loading poster/playback/Escape/focus/scroll restoration, reduced motion, no-JS composition/YouTube fallback and hero axe.`);
+  expect(errors, 'No runtime errors in inline hero scenarios').toEqual([]);
+  console.log(`Passed (${browserType.name()}): one aligned player at seven widths, local poster/no-JS fallback, consent-gated traffic and remembered initialization, immediately visible native controls/volume/fullscreen, mute before autoplay, offscreen/hidden delayed-PLAYING protection, partial-view manual playback and no auto-resume, reduced motion/touch, API failure/reload recovery, stalled-iframe timeout/late readiness, native-error visibility, revocation/stale callbacks, and hero axe.`);
 } finally {
   await browser.close();
 }

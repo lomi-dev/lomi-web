@@ -42,6 +42,9 @@ async function exposedEdge(page, edge, color, label) {
 
 try {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  await context.addInitScript(() => {
+    try { localStorage.setItem('lomi.cookie-consent', JSON.stringify({ version: 1, externalMedia: true, savedAt: Date.now() })); } catch { /* Storage may be unavailable in fallback checks. */ }
+  });
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
@@ -141,6 +144,9 @@ try {
   await context.close();
 
   const staticContext = await browser.newContext({ javaScriptEnabled: false });
+  await staticContext.addInitScript(() => {
+    try { localStorage.setItem('lomi.cookie-consent', JSON.stringify({ version: 1, externalMedia: true, savedAt: Date.now() })); } catch { /* Storage may be unavailable in fallback checks. */ }
+  });
   const staticPage = await staticContext.newPage();
   await staticPage.goto(url, { waitUntil: 'networkidle' });
   await assertCanvas(staticPage, [200, 255, 61]);

@@ -1,0 +1,11 @@
+---
+interface Props { label?: string }
+const { label = 'Cookie settings' } = Astro.props;
+---
+
+<a class="cookie-settings-link" href="/cookies/#preferences" data-cookie-settings>{label}</a>
+
+<style>
+  .cookie-settings-link { display: inline-flex; align-items: center; min-height: 44px; color: inherit; font: inherit; text-underline-offset: 4px; }
+  .cookie-settings-link:hover { text-decoration: underline; }
+</style>

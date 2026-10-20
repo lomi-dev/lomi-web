@@ -15,6 +15,9 @@ await mkdir('artifacts', { recursive: true });
 
 async function makePage({ os = 'macOS', clipboard = 'success', javaScriptEnabled = true, ...options } = {}) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, javaScriptEnabled, ...options });
+  await context.addInitScript(() => {
+    try { localStorage.setItem('lomi.cookie-consent', JSON.stringify({ version: 1, externalMedia: true, savedAt: Date.now() })); } catch { /* Storage may be unavailable in fallback checks. */ }
+  });
   await context.addInitScript(({ os, clipboard }) => {
     Object.defineProperty(navigator, 'platform', { configurable: true, value: os === 'macOS' ? 'MacIntel' : os === 'Windows' ? 'Win32' : os });
     Object.defineProperty(navigator, 'userAgentData', { configurable: true, value: { platform: os } });

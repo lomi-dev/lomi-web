@@ -40,6 +40,9 @@ async function startFixture() {
 
 async function open(target, options = {}) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, ...options });
+  await context.addInitScript(() => {
+    try { localStorage.setItem('lomi.cookie-consent', JSON.stringify({ version: 1, externalMedia: true, savedAt: Date.now() })); } catch { /* Storage may be unavailable in fallback checks. */ }
+  });
   await context.addInitScript((endpoint) => {
     window.__newsletterRequests = [];
     const nativeFetch = window.fetch;

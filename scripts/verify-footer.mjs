@@ -14,6 +14,9 @@ await mkdir('artifacts', { recursive: true });
 
 async function openPage(options = {}, canvasUnavailable = false) {
   const context = await browser.newContext({ viewport: viewports[0], ...options });
+  await context.addInitScript(() => {
+    try { localStorage.setItem('lomi.cookie-consent', JSON.stringify({ version: 1, externalMedia: true, savedAt: Date.now() })); } catch { /* Storage may be unavailable in fallback checks. */ }
+  });
   await context.addInitScript((unavailable) => {
     window.__footerPaints = 0;
     const clear = CanvasRenderingContext2D.prototype.clearRect;

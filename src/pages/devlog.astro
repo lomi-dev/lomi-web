@@ -2,6 +2,7 @@
 import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
 import Icon from '../components/Icon';
+import CookieSettingsLink from '../components/CookieSettingsLink.astro';
 import { site } from '../data/site';
 import { loadLanding } from '../../content/load-landing';
 
@@ -19,7 +20,7 @@ const content = await loadLanding(import.meta.env.CMS_URL);
         <a class="devlog-home" href="/"><Icon name="arrow" width={17} height={17} />Back to lomi</a>
       </div>
     </main>
-    <footer class="devlog-footer"><span>lomi / devlog</span><a href={site.github}>Follow the source<Icon name="diagonal" width={14} height={14} /></a></footer>
+    <footer class="devlog-footer"><span>lomi / devlog</span><CookieSettingsLink /><a href={site.github}>Follow the source<Icon name="diagonal" width={14} height={14} /></a></footer>
   </div>
 </Layout>
 

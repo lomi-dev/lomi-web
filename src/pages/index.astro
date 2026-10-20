@@ -5,7 +5,6 @@ import Hero from '../components/Hero.astro';
 import FeatureGallery from '../components/FeatureGallery.astro';
 import Roadmap from '../components/Roadmap.astro';
 import NewsletterSection from '../components/NewsletterSection.astro';
-import VideoDialog from '../components/VideoDialog.astro';
 import Footer from '../components/Footer.astro';
 import { activeLandingLinks } from '../data/navigation';
 import { loadLanding } from '../../content/load-landing';
@@ -29,7 +28,6 @@ const footerContent = {
     <NewsletterSection content={newsletter} />
   </main>
   <Footer content={footerContent} />
-  <VideoDialog />
 </Layout>
 
 <script>

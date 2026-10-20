@@ -1,6 +1,7 @@
 ---
 import geistFont from '@fontsource-variable/geist/files/geist-latin-wght-normal.woff2?url';
 import '../styles/global.css';
+import CookieConsent from '../components/CookieConsent.astro';
 
 interface Props { title: string; description: string; themeColor?: string; edgeColor?: string }
 const { title, description, themeColor = '#0b0e0b', edgeColor = 'var(--color-chalk)' } = Astro.props;
@@ -37,6 +38,7 @@ const socialImage = Astro.site ? new URL('/social-card.png', Astro.site) : undef
   <body id="top">
     <a class="skip-link" href="#main">Skip to content</a>
     <slot />
+    <CookieConsent />
     <script>
       import { initPageBackdrop } from '../components/page-backdrop';
       initPageBackdrop();
