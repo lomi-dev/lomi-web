@@ -138,6 +138,78 @@ async function settled(page, index) {
     .filter((animation) => ['running', 'paused'].includes(animation.playState)).length)).toBe(0);
 }
 
+async function verifyOriginMotion(page, index) {
+  await card(page, index).scrollIntoViewIfNeeded();
+  const probe = await card(page, index).evaluate((trigger) => {
+    const box = (element) => {
+      const { left, top, width, height } = element.getBoundingClientRect();
+      return { left, top, width, height };
+    };
+    const source = box(trigger);
+    trigger.click();
+    const modal = document.querySelector('#feature-dialog');
+    const motion = modal.getAnimations().find((animation) => animation.effect.target === modal
+      && animation.effect.getKeyframes().some((frame) => frame.transform && frame.transform !== 'none'));
+    if (!motion) return { source, hasWholeDialogMotion: false };
+    motion.pause();
+    const duration = Number(motion.effect.getTiming().duration);
+    const parts = ['[data-feature-panel]', '[data-feature-close]', '[data-feature-slide]:not([hidden]) [data-feature-modal-media]',
+      '[data-feature-slide]:not([hidden]) [data-feature-copy]', '[data-feature-navigation]'].map((selector) => modal.querySelector(selector));
+    motion.currentTime = duration;
+    const target = box(modal);
+    const finalParts = parts.map(box);
+    motion.currentTime = 0;
+    const start = box(modal);
+    motion.currentTime = duration / 2;
+    const middle = box(modal);
+    const middleParts = parts.map(box);
+    const independentMotion = parts.some((part) => getComputedStyle(part).transform !== 'none');
+    motion.play();
+    return { hasWholeDialogMotion: true, source, start, target, middle, finalParts, middleParts, independentMotion };
+  });
+  expect(probe.hasWholeDialogMotion, 'The complete dialog grows from its card').toBe(true);
+  for (const dimension of ['left', 'top', 'width', 'height']) {
+    expect(Math.abs(probe.start[dimension] - probe.source[dimension]), `Dialog starts at the clicked card: ${dimension}`).toBeLessThan(1.5);
+  }
+  expect(probe.independentMotion, 'Content and chrome move with the dialog surface').toBe(false);
+  const scaleX = probe.middle.width / probe.target.width;
+  const scaleY = probe.middle.height / probe.target.height;
+  for (let part = 0; part < probe.finalParts.length; part++) {
+    const final = probe.finalParts[part], middle = probe.middleParts[part];
+    expect(Math.abs(middle.left - (probe.middle.left + (final.left - probe.target.left) * scaleX))).toBeLessThan(1.5);
+    expect(Math.abs(middle.top - (probe.middle.top + (final.top - probe.target.top) * scaleY))).toBeLessThan(1.5);
+    expect(Math.abs(middle.width - final.width * scaleX)).toBeLessThan(1.5);
+    expect(Math.abs(middle.height - final.height * scaleY)).toBeLessThan(1.5);
+  }
+  await settled(page, index);
+  const exit = await dialog(page).evaluate((modal) => {
+    modal.querySelector('[data-feature-close]').click();
+    return modal.getAnimations().some((animation) => animation.effect.target === modal
+      && animation.effect.getKeyframes().some((frame) => frame.transform && frame.transform !== 'none'));
+  });
+  expect(exit, 'Exit animates the complete dialog too').toBe(true);
+  await expect(dialog(page)).not.toBeVisible();
+  await expect(card(page, index)).toBeFocused();
+
+  const interruption = await card(page, index).evaluate((trigger) => {
+    trigger.click();
+    const modal = document.querySelector('#feature-dialog');
+    const opening = modal.getAnimations().find((animation) => animation.effect.target === modal
+      && animation.effect.getKeyframes().some((frame) => frame.transform && frame.transform !== 'none'));
+    opening.pause();
+    opening.currentTime = Number(opening.effect.getTiming().duration) * .35;
+    const before = modal.getBoundingClientRect().toJSON();
+    modal.querySelector('[data-feature-close]').click();
+    const after = modal.getBoundingClientRect().toJSON();
+    return { before, after };
+  });
+  for (const dimension of ['left', 'top', 'width', 'height']) {
+    expect(Math.abs(interruption.before[dimension] - interruption.after[dimension]), `Closing mid-opening keeps the current position: ${dimension}`).toBeLessThan(1.5);
+  }
+  await expect(dialog(page)).not.toBeVisible();
+  await expect(card(page, index)).toBeFocused();
+}
+
 async function directionStep(page, control, index, direction) {
   // Seek native animations in the same task as the click, so direction is
   // measured from rendered geometry without racing a short transition.
@@ -360,6 +432,10 @@ try {
   for (const image of await root.locator('img').all()) {
     expect(new URL(await image.getAttribute('src'), url).origin, 'Feature imagery stays local').toBe(new URL(url).origin);
   }
+  await verifyOriginMotion(page, 1);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await verifyOriginMotion(page, 2);
+  await page.setViewportSize({ width: 1440, height: 900 });
   for (let index = 0; index < 6; index++) {
     const opener = card(page, index);
     await expect(opener).toHaveAttribute('href', `#feature-description-${index}`);
@@ -612,7 +688,7 @@ try {
     await staticRun.context.close();
   }
   expect(errors, 'No runtime errors in feature scenarios').toEqual([]);
-  console.log(`Passed (${browserType.name()}): all feature cards, accessible names/descriptions, wrapping arrows/dots/keyboard, directional whole-feature swipes with image/copy/navigation in lockstep, bounded latest-intent queue, reverse/resize/reduced-motion/close cleanup, rapid input and reopen, native focus containment/Escape/backdrop, focus and scroll restoration, resize/mobile/tablet/short desktop, reduced motion/live cancellation, CMS 1/12 items and long copy, no-JS fallback, local pictures, no overflow and axe.`);
+  console.log(`Passed (${browserType.name()}): whole-dialog card-origin entry/exit and interrupted opening on desktop/mobile, all feature cards, accessible names/descriptions, wrapping arrows/dots/keyboard, directional whole-feature swipes with image/copy/navigation in lockstep, bounded latest-intent queue, reverse/resize/reduced-motion/close cleanup, rapid input and reopen, native focus containment/Escape/backdrop, focus and scroll restoration, resize/mobile/tablet/short desktop, reduced motion/live cancellation, CMS 1/12 items and long copy, no-JS fallback, local pictures, no overflow and axe.`);
 } finally {
   await browser.close();
 }

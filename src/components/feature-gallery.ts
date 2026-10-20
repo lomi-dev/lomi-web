@@ -230,22 +230,50 @@ export function initFeatureGallery(root: HTMLElement) {
     cleanup();
   }
 
+  function hasGeometry(bounds: DOMRect) {
+    return [bounds.left, bounds.top, bounds.width, bounds.height].every(Number.isFinite)
+      && bounds.width > 0 && bounds.height > 0;
+  }
+
+  function surfaceTransform(bounds: DOMRect, target: DOMRect) {
+    return `translate(${bounds.left - target.left}px, ${bounds.top - target.top}px) scale(${bounds.width / target.width}, ${bounds.height / target.height})`;
+  }
+
+  function visibleOpenerBounds() {
+    if (!opener?.isConnected || !opener.getClientRects().length) return null;
+    const bounds = opener.getBoundingClientRect();
+    const style = getComputedStyle(opener);
+    return hasGeometry(bounds) && bounds.bottom > 0 && bounds.top < innerHeight
+      && bounds.right > 0 && bounds.left < innerWidth
+      && style.visibility === 'visible' && Number(style.opacity) > 0 ? bounds : null;
+  }
+
   function requestClose() {
     if (!dialog!.open || closing) return;
-    const opacity = getComputedStyle(panel!).opacity;
+    // Read the animated surface before cancellation, including an interrupted entry.
+    const current = dialog!.getBoundingClientRect();
+    const opacity = getComputedStyle(dialog!).opacity;
+    const origin = visibleOpenerBounds();
     cancelAnimations();
     closing = true;
     dialog!.dataset.state = 'closing';
     const version = generation;
-    const frames = reducedMotion.matches
-      ? [{ opacity }, { opacity: 0 }]
-      : [{ opacity, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(.98)' }];
-    void animate(panel!, frames, reducedMotion.matches ? 80 : 150).then(() => finishClose(version));
+    const target = dialog!.getBoundingClientRect();
+    let frames: Keyframe[] = [{ opacity }, { opacity: 0 }];
+    const geometric = !reducedMotion.matches && hasGeometry(current) && hasGeometry(target);
+    if (geometric) {
+      const transform = surfaceTransform(current, target);
+      frames = [
+        { opacity, transformOrigin: '0 0', transform },
+        { opacity: 0, transformOrigin: '0 0', transform: origin ? surfaceTransform(origin, target) : transform },
+      ];
+    }
+    const duration = reducedMotion.matches ? 80 : geometric && origin ? 200 : 120;
+    void animate(dialog!, frames, duration, navigationEasing).then(() => finishClose(version));
   }
 
   function open(trigger: HTMLAnchorElement, index: number) {
-    const thumbnail = trigger.querySelector<HTMLElement>('[data-feature-card-media]');
-    const origin = thumbnail?.getBoundingClientRect();
+    const origin = trigger.getBoundingClientRect();
     cancelAnimations();
     select(index);
     requested = selected;
@@ -265,24 +293,15 @@ export function initFeatureGallery(root: HTMLElement) {
     dialog!.scrollTop = 0;
     closeButton!.focus({ preventScroll: true });
     const version = generation;
-    const transitions: Promise<void>[] = [animate(panel!, [{ opacity: 0 }, { opacity: 1 }], reducedMotion.matches ? 80 : 220)];
-    const slide = slides[selected]!;
-    const media = slide.querySelector<HTMLElement>('[data-feature-modal-media]');
-    if (media && origin && origin.width > 0 && origin.height > 0 && !reducedMotion.matches) {
-      const target = media.getBoundingClientRect();
-      if (target.width > 0 && target.height > 0) {
-        transitions.push(animate(media, [
-          { transformOrigin: '0 0', transform: `translate(${origin.left - target.left}px, ${origin.top - target.top}px) scale(${origin.width / target.width}, ${origin.height / target.height})` },
-          { transformOrigin: '0 0', transform: 'translate(0, 0) scale(1, 1)' },
-        ], 280));
-      }
+    const target = dialog!.getBoundingClientRect();
+    let frames: Keyframe[] = [{ opacity: 0 }, { opacity: 1 }];
+    if (!reducedMotion.matches && hasGeometry(origin) && hasGeometry(target)) {
+      frames = [
+        { opacity: 0.35, transformOrigin: '0 0', transform: surfaceTransform(origin, target) },
+        { opacity: 1, transformOrigin: '0 0', transform: 'translate(0, 0) scale(1, 1)' },
+      ];
     }
-    const copy = slide.querySelector<HTMLElement>('[data-feature-copy]');
-    if (copy && !reducedMotion.matches) transitions.push(animate(copy, [
-      { opacity: 0, transform: 'translateY(8px)' },
-      { opacity: 1, transform: 'translateY(0)' },
-    ], 200));
-    void Promise.all(transitions).then(() => {
+    void animate(dialog!, frames, reducedMotion.matches ? 80 : 280, navigationEasing).then(() => {
       if (generation === version && dialog!.open && !closing) dialog!.dataset.state = 'open';
     });
     return true;
