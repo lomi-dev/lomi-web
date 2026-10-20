@@ -15,6 +15,7 @@
     "verify:download": "node scripts/verify-download.mjs",
     "verify:remote": "node scripts/verify-remote.mjs",
     "verify:backdrop": "node scripts/verify-backdrop.mjs",
+    "verify:hero-pull": "node scripts/verify-hero-pull.mjs",
     "verify:cookies": "node scripts/verify-cookies.mjs",
     "verify:cms-content": "node scripts/verify-cms-content.mjs",
     "test:consent": "bun test tests/consent.test.ts",

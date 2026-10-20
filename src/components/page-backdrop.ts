@@ -2,10 +2,6 @@
 export function initPageBackdrop(): () => void {
   const root = document.documentElement;
   const surfaces = Array.from(document.querySelectorAll<HTMLElement>('[data-scroll-surface]'));
-  const leaves = surfaces.filter((surface) => !surfaces.some((other) =>
-    surface !== other && surface.contains(other)));
-  const first = leaves[0];
-  const last = leaves.at(-1);
   const probe = document.createElement('span');
   probe.hidden = true;
   probe.style.display = 'none';
@@ -18,11 +14,11 @@ export function initPageBackdrop(): () => void {
   let color = '';
   let refreshColor = true;
 
-  function midpointSurface(): HTMLElement {
+  function surfaceAt(viewportY: number): HTMLElement {
     // Read the marked page regions directly: top-layer dialogs and menus must
-    // not hide the underlying surface from midpoint selection.
+    // not hide the underlying surface from selection.
     const x = Math.max(0, Math.min(innerWidth / 2, root.clientWidth - 1));
-    const y = Math.max(0, Math.min(innerHeight / 2, root.clientHeight - 1));
+    const y = Math.max(0, Math.min(viewportY, root.clientHeight - 1));
     let selectedSurface = document.body;
     for (const surface of surfaces) {
       const bounds = surface.getBoundingClientRect();
@@ -41,13 +37,14 @@ export function initPageBackdrop(): () => void {
     const scrolling = document.scrollingElement ?? root;
     const maximum = Math.max(0, scrolling.scrollHeight - scrolling.clientHeight);
     const position = scrolling.scrollTop;
-    // At physical edges the first/last surface wins even when its visible slice
-    // is smaller than half the viewport (or the footer has its own scroll area).
-    const surface = position <= 1 && first
-      ? first
-      : maximum > 0 && position >= maximum - 1 && last
-        ? last
-        : midpointSurface();
+    // Sample the physical edge during overscroll. The first nested region
+    // (such as a dark hero player) may be far below the page's top surface.
+    const y = position <= 1
+      ? 0
+      : maximum > 0 && position >= maximum - 1
+        ? root.clientHeight - 1
+        : innerHeight / 2;
+    const surface = surfaceAt(y);
     if (surface === selected && !refreshColor) return;
     selected = surface;
     refreshColor = false;

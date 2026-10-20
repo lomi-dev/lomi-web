@@ -25,9 +25,10 @@ async function assertCanvas(page, color) {
 async function exposedEdge(page, edge, color, label) {
   // Reveal the backing canvas to check rendered pixels. This is a paint probe,
   // not a simulation of the operating system's native momentum gesture.
-  const transform = { left: 'translateX(36px)', right: 'translateX(-36px)',
-    top: 'translateY(36px)', bottom: 'translateY(-36px)' }[edge];
-  await page.evaluate((value) => { document.body.style.transform = value; }, transform);
+  // Clip the paint without moving the scroll surfaces being measured.
+  const clip = { left: 'inset(0 0 0 36px)', right: 'inset(0 36px 0 0)',
+    top: 'inset(36px 0 0)', bottom: 'inset(0 0 36px)' }[edge];
+  await page.evaluate((value) => { document.body.style.clipPath = value; }, clip);
   try {
     const png = await page.screenshot({ path: `artifacts/page-canvas-${browserType.name()}-${label}-${edge}.png` });
     const { data, info } = await sharp(png).raw().toBuffer({ resolveWithObject: true });
@@ -36,7 +37,7 @@ async function exposedEdge(page, edge, color, label) {
     const offset = (y * info.width + x) * info.channels;
     expect([...data.subarray(offset, offset + 3)], `${label}: exposed ${edge} canvas pixels`).toEqual(color);
   } finally {
-    await page.evaluate(() => { document.body.style.removeProperty('transform'); });
+    await page.evaluate(() => { document.body.style.removeProperty('clip-path'); });
   }
 }
 
@@ -54,8 +55,22 @@ try {
   await page.goto(url, { waitUntil: 'networkidle' });
   await assertCanvas(page, [255, 255, 255]);
   await exposedEdge(page, 'top', [255, 255, 255], 'hero');
+
+  // A nested player must not become the top overscroll surface.
+  await center(page, '[data-video-player]');
+  const playerColor = await page.locator('[data-video-player]').evaluate((element) => {
+    const placeholder = element.closest('[data-placeholder-poster]:not([data-video-frame])')?.querySelector('[data-media-placeholder]');
+    return getComputedStyle(placeholder ?? element).backgroundColor;
+  });
+  await expect(page.locator('html')).toHaveCSS('background-color', playerColor);
+  await page.mouse.move(720, 450);
+  await page.mouse.wheel(0, -12000);
+  await expect.poll(() => page.evaluate(() => scrollY)).toBe(0);
+  await assertCanvas(page, [255, 255, 255]);
+  await exposedEdge(page, 'top', [255, 255, 255], 'hero-after-player');
+
   for (const [name, selector, color] of [
-    ['hero', '.hero', [255, 255, 255]],
+    ['hero', '.hero-opening', [255, 255, 255]],
     ['features', '#features', [247, 248, 243]],
     ['roadmap', '#roadmap', [17, 22, 16]],
     ['newsletter', '#newsletter', [247, 248, 243]],
@@ -78,14 +93,14 @@ try {
   await page.setViewportSize({ width: 1440, height: 900 });
 
   // A top-layer dialog must not replace the underlying section's edge color.
-  for (const [selector, color] of [['#roadmap', [17, 22, 16]], ['.hero', [255, 255, 255]]]) {
+  for (const [selector, color] of [['#roadmap', [17, 22, 16]], ['.hero-opening', [255, 255, 255]]]) {
     await center(page, selector);
     await assertCanvas(page, color);
     await page.evaluate(() => { const dialog = document.createElement('dialog'); dialog.id = 'verify-native-dialog'; dialog.textContent = 'Native modal probe'; document.body.append(dialog); dialog.showModal(); });
     await expect(page.locator('#verify-native-dialog')).toBeVisible();
     await page.setViewportSize({ width: 1440, height: 901 });
     await page.mouse.move(8, 450);
-    await page.mouse.wheel(0, 100);
+    await page.mouse.wheel(0, -100);
     await page.waitForTimeout(250);
     await assertCanvas(page, color);
     await page.keyboard.press('Escape');
@@ -109,7 +124,7 @@ try {
   for (const viewport of [{ width: 390, height: 844 }, { width: 320, height: 200 }]) {
     await page.setViewportSize(viewport);
     for (const [selector, color] of [
-      ['.hero', [255, 255, 255]], ['#features', [247, 248, 243]], ['#roadmap', [17, 22, 16]],
+      ['.hero-opening', [255, 255, 255]], ['#features', [247, 248, 243]], ['#roadmap', [17, 22, 16]],
       ['#newsletter', [247, 248, 243]],
       ['.site-footer', [200, 255, 61]],
     ]) {
@@ -122,8 +137,14 @@ try {
   await page.goto(`${url}/#roadmap`, { waitUntil: 'networkidle' });
   await assertCanvas(page, [17, 22, 16]);
   await page.goto(`${url}/devlog/`, { waitUntil: 'networkidle' });
-  await assertCanvas(page, [16, 21, 15]);
-  for (const edge of ['top', 'left', 'right', 'bottom']) await exposedEdge(page, edge, [16, 21, 15], 'devlog');
+  const devlogColor = await page.locator('.devlog-surface').evaluate((element) =>
+    getComputedStyle(element).backgroundColor.match(/\d+/g).slice(0, 3).map(Number));
+  await assertCanvas(page, devlogColor);
+  for (const edge of ['top', 'left', 'right', 'bottom']) {
+    if (edge === 'bottom') await page.evaluate(() => scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' }));
+    await assertCanvas(page, devlogColor);
+    await exposedEdge(page, edge, devlogColor, 'devlog');
+  }
   await page.goBack({ waitUntil: 'networkidle' });
   await assertCanvas(page, [17, 22, 16]);
   await page.evaluate(() => scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' }));
@@ -131,6 +152,7 @@ try {
   await page.keyboard.press('Control+Home');
   await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
   await assertCanvas(page, [255, 255, 255]);
+  await exposedEdge(page, 'top', [255, 255, 255], 'hero-after-footer');
   await page.waitForTimeout(500);
   expect(await page.evaluate(async () => {
     let writes = 0;
@@ -151,9 +173,9 @@ try {
   await staticPage.goto(url, { waitUntil: 'networkidle' });
   await assertCanvas(staticPage, [200, 255, 61]);
   await staticPage.goto(`${url}/devlog/`, { waitUntil: 'networkidle' });
-  await assertCanvas(staticPage, [16, 21, 15]);
+  await assertCanvas(staticPage, devlogColor);
   await staticContext.close();
-  console.log(`Passed (${browserType.name()}): matching canvas at top/bottom/left/right, all section colors, early footer entry, modal/resize/backdrop-wheel/close, desktop/mobile/short windows, direct anchors, history restore, Devlog, no-JS fallbacks, no horizontal overflow and no idle style writes. OS-native trackpad momentum requires manual QA.`);
+  console.log(`Passed (${browserType.name()}): matching canvas at top/bottom/left/right, upward scrolling from nested media and footer, all section colors, early footer entry, modal/resize/backdrop-wheel/close, desktop/mobile/short windows, direct anchors, history restore, Devlog, no-JS fallbacks, no horizontal overflow and no idle style writes. OS-native trackpad momentum requires manual QA.`);
 } finally {
   await browser.close();
 }

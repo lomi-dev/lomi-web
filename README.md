@@ -66,11 +66,25 @@ canvas, dark for the roadmap and Devlog, and lime for the footer. Physical top
 and bottom boundaries take their first/last section color.
 Updates run on input and section crossings; no idle animation is needed. The
 body keeps its own chalk surface. Without JavaScript, the homepage canvas stays
-lime and Devlog stays dark. Native bounce and scroll chaining remain enabled.
+lime and Devlog stays dark. Native bounce and scroll chaining remain enabled
+outside the homepage's custom top pull.
 Firefox exposes one solid canvas color, so mixed sections share the midpoint
 section's edge color. The native OS trackpad gesture still needs manual QA.
 Run `bun run verify:backdrop` (or prefix `VERIFY_BROWSER=firefox`) for section,
 edge pixel, navigation, viewport, and fallback regression checks.
+
+At the homepage's top edge, upward wheel input or a one-finger downward drag
+reveals additional rows of the same animated hero background. A fixed 144px
+reserve avoids resizing or restarting the canvas; the pull has resistance,
+stops at 72px and returns continuously as gesture input fades. A critically
+damped spring keeps ordinary wheel gestures around 25px without a long hold
+at the edge or a jump when changing direction. Ordinary page scrolling and the
+footer keep their native behavior. Menus, dialogs, controls, nested scrolling,
+zoom and reduced motion bypass the effect, as do CMS layouts whose hero is
+disabled or placed after another section. Run `bun run verify:hero-pull`
+(also with `VERIFY_BROWSER=firefox`) for input ownership, rendered background,
+spring, layout, fallback and interruption checks. Trackpad feel and hardware
+touch gestures still need manual verification.
 
 Footer social profiles, labels and icons are configured in Payload under
 **Website → Footer → Socials**.
