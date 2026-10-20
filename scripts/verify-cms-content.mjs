@@ -1,3 +1,4 @@
+import { assertPlaceholder } from './verify-placeholders.mjs';
 import { chromium, expect } from '@playwright/test';
 import { createServer } from 'node:http';
 import { spawn, spawnSync } from 'node:child_process';
@@ -106,7 +107,10 @@ try {
   fixture.features.items[0].description = 'CMS feature detail sentinel';
   fixture.features.items[0].image = asset();
   fixture.features.items[0].alt = 'CMS feature alt sentinel';
+  fixture.features.items[1].icon = 'git';
   fixture.features.controls.closeLabel = 'CMS close feature sentinel';
+  fixture.features.controls.pausePreviewsLabel = 'CMS pause previews sentinel';
+  fixture.features.controls.resumePreviewsLabel = 'CMS resume previews sentinel';
   fixture.roadmap.title = 'CMS roadmap title sentinel';
   fixture.roadmap.ui.legendCompleted = 'CMS completed sentinel';
   fixture.roadmap.ui.progressTemplate = 'CMS progress {completed}/{total}';
@@ -131,6 +135,9 @@ try {
   fixture.pages.remote.feedback.copied = 'CMS copied {platform} sentinel';
   fixture.pages.devlog.title = [{ text: 'CMS devlog title sentinel' }];
   fixture.pages.devlog.description = [{ text: 'CMS devlog body sentinel' }];
+  Object.assign(fixture.pages.devlog.empty, { label: 'CMS upcoming sentinel', title: 'CMS empty title sentinel', description: 'CMS empty body sentinel', previewLabel: 'CMS unrecorded sentinel', previewTitle: 'CMS slate sentinel' });
+  fixture.pages.devlog.footerLabel = 'CMS devlog footer sentinel';
+  fixture.pages.devlog.settingsLabel = 'CMS devlog settings sentinel';
   fixture.pages.cookies.title = 'CMS cookies title sentinel';
   fixture.pages.cookies.sections[0].paragraphs = [{ text: 'CMS privacy paragraph sentinel' }];
 
@@ -168,6 +175,9 @@ try {
     if (url.pathname === '/api/globals/landing') {
       cmsRequests.push(url.pathname + url.search);
       response.writeHead(200, { 'Content-Type': 'application/json' }); response.end(JSON.stringify(fixture));
+    } else if (url.pathname === '/api/devlogs') {
+      cmsRequests.push(url.pathname + url.search);
+      response.writeHead(200, { 'Content-Type': 'application/json' }); response.end(JSON.stringify({ docs: [], hasNextPage: false, nextPage: null }));
     } else if (url.pathname === mediaPath) {
       response.writeHead(200, { 'Content-Type': 'image/png' }); response.end(png);
     } else if (url.pathname === videoPath) {
@@ -190,8 +200,9 @@ try {
     } catch { response.writeHead(404); response.end(); }
   });
   await build('youtube-enabled');
-  assert.ok(cmsRequests.length >= 5, 'Each rendered page fetches the published global');
-  assert.ok(cmsRequests.every((url) => url === '/api/globals/landing?depth=1&draft=false'), 'Published populated CMS fetch contract');
+  assert.ok(cmsRequests.filter((url) => url.startsWith('/api/globals/')).length >= 5, 'Each rendered page fetches the published global');
+  assert.ok(cmsRequests.filter((url) => url.startsWith('/api/globals/')).every((url) => url === '/api/globals/landing?depth=1&draft=false'), 'Published populated CMS global fetch contract');
+  assert.deepEqual(cmsRequests.filter((url) => url.startsWith('/api/devlogs')), ['/api/devlogs?depth=1&draft=false&limit=100&page=1&sort=-publishedAt%2C-id&where%5B_status%5D%5Bequals%5D=published'], 'Published Devlog feed contract');
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
   await context.addInitScript(() => localStorage.setItem('lomi.cookie-consent', JSON.stringify({ version: 1, externalMedia: false, savedAt: Date.now() })));
   await context.route('https://api.github.com/**', (route) => route.fulfill({ status: 503, body: '{}' }));
@@ -225,11 +236,28 @@ try {
       await expect(page.locator('[data-roadmap-task-label]').first()).toHaveText('CMS task sentinel');
       await expect(page.locator('.roadmap-progress-caption').first()).toContainText('CMS progress');
       await assertMedia(page, '[data-feature-card] img', fixture.features.items[0].alt);
+      await expect(page.locator('[data-preview-toggle]')).toHaveCount(2);
+      await expect(page.locator('[data-feature-card]').nth(1).locator('[data-feature-simulation]')).toHaveAttribute('data-feature-simulation', fixture.features.items[1].icon);
+      for (const toggle of await page.locator('[data-preview-toggle]').all()) {
+        await expect(toggle).toHaveAttribute('data-pause-label', fixture.features.controls.pausePreviewsLabel);
+        await expect(toggle).toHaveAttribute('data-resume-label', fixture.features.controls.resumePreviewsLabel);
+      }
+      await page.emulateMedia({ reducedMotion: 'no-preference' });
       await page.locator('[data-feature-open="0"]').click();
       await expect(page.locator('#feature-dialog')).toBeVisible();
       await expect(page.locator('#feature-dialog-description-0')).toHaveText(fixture.features.items[0].description);
+      await expect(page.locator('#feature-dialog [data-preview-toggle]')).not.toBeVisible();
       await page.getByRole('button', { name: fixture.features.controls.closeLabel, exact: true }).click();
       await expect(page.locator('#feature-dialog')).not.toBeVisible();
+      await page.locator('[data-feature-open="1"]').click();
+      await expect(page.locator('#feature-dialog')).toBeVisible();
+      const authoredSimulation = page.locator('#feature-dialog [data-feature-slide]').nth(1).locator('[data-feature-simulation]');
+      await expect(authoredSimulation).toHaveAttribute('data-feature-simulation', fixture.features.items[1].icon);
+      await expect(page.locator('#feature-dialog [data-preview-toggle]')).toBeVisible();
+      await assertPlaceholder(authoredSimulation, { variant: 'feature', aspect: '8 / 5' });
+      await page.getByRole('button', { name: fixture.features.controls.closeLabel, exact: true }).click();
+      await expect(page.locator('#feature-dialog')).not.toBeVisible();
+      await page.emulateMedia({ reducedMotion: 'reduce' });
       await expect(page.getByLabel(fixture.newsletter.form.emailLabel, { exact: true })).toBeEnabled();
       await page.getByLabel(fixture.newsletter.form.emailLabel, { exact: true }).fill('cms-fixture@example.test');
       await expect(page.locator('#newsletter-email')).toHaveValue('cms-fixture@example.test');
@@ -257,9 +285,21 @@ try {
     } else if (route === '/devlog/') {
       await expect(page.locator('h1')).toContainText(fixture.pages.devlog.title[0].text);
       await expect(page.locator('.devlog-description')).toHaveText(fixture.pages.devlog.description[0].text);
+      await expect(page.locator('[data-devlog-empty]')).toContainText(fixture.pages.devlog.empty.title);
+      await expect(page.locator('[data-devlog-empty] .empty-description')).toHaveText(fixture.pages.devlog.empty.description);
+      await expect(page.locator('h1')).toHaveText(fixture.pages.devlog.title[0].text);
+      await expect(page.locator('.empty-preview')).toHaveAttribute('aria-hidden', 'true');
+      await expect(page.locator('.empty-preview img')).toHaveAttribute('src', `${cmsOrigin}${mediaPath}`);
+      await expect(page.locator('.empty-preview img')).toHaveAttribute('alt', '');
+      await expect(page.locator('.empty-preview a, .empty-preview button')).toHaveCount(0);
+      await expect(page.locator('.devlog-footer')).toContainText(fixture.pages.devlog.footerLabel);
+      await expect(page.locator('.devlog-footer [data-cookie-settings]')).toHaveText(fixture.pages.devlog.settingsLabel);
     } else {
       await expect(page.locator('h1')).toHaveText(fixture.pages.cookies.title);
       await expect(page.locator('#preferences')).toContainText('CMS privacy paragraph sentinel');
+    }
+    for (const placeholder of await page.locator('[data-media-placeholder]:visible').all()) {
+      await assertPlaceholder(placeholder, { logo: `${cmsOrigin}${mediaPath}`, variant: await placeholder.evaluate((element) => element.closest('[data-feature-card], [data-feature-slide]') ? 'feature' : element.closest('.product-showcase') ? 'download' : 'brand') });
     }
     await page.locator('[data-cookie-settings]').first().click();
     await expect(page.locator('#cookie-banner-title')).toHaveText(fixture.site.cookie.title);
@@ -283,6 +323,9 @@ try {
     item.video = { ...fixture.hero.video };
     item.image = asset();
   }
+  // Reuse this build to cover custom-brand screenshot fallbacks after checking uploads.
+  fixture.pages.download.screenshot.image = null;
+  fixture.pages.remote.screenshot.image = null;
   await build('native-video-disabled-newsletter');
   const second = await browser.newPage({ reducedMotion: 'reduce' });
   second.on('pageerror', (error) => browserErrors.push(error.message));
@@ -290,11 +333,12 @@ try {
   await expect(second.locator('#newsletter, a[href="#newsletter"], a[href="/#newsletter"]')).toHaveCount(0);
   await expect(second.locator('#product-menu, #mobile-product, .product-fallback, .header-action, .mobile-download')).toHaveCount(0);
   await expect(second.locator('a[href="/cookies/#preferences"]').first()).toHaveCount(1);
-  await expect(second.locator('#workspace video')).toHaveAttribute('controls', '');
+  await expect(second.locator('#workspace video')).not.toHaveAttribute('controls');
+  await expect(second.locator('[data-player-controls]')).toBeVisible();
   await expect(second.locator('#workspace video')).toHaveAttribute('poster', `${cmsOrigin}${mediaPath}`);
   await expect(second.locator('#workspace source')).toHaveAttribute('src', `${cmsOrigin}${videoPath}`);
-  await expect(second.locator('#workspace video')).toHaveAttribute('aria-label', fixture.hero.previewAlt);
-  await expect(second.locator('[data-hero-video]')).toHaveCount(0);
+  await expect(second.locator('#workspace video')).toHaveAttribute('aria-label', fixture.hero.player.videoTitle);
+  await expect(second.locator('[data-hero-video]')).toHaveAttribute('data-video-provider', 'video');
   const cardVideo = second.locator('[data-feature-card]').first().locator('video');
   await cardVideo.scrollIntoViewIfNeeded();
   await playNative(cardVideo);
@@ -328,6 +372,9 @@ try {
   await expect(second.locator('a[href="#newsletter"], a[href="/#newsletter"]')).toHaveCount(0);
   await expect(second.locator('a[href="/cookies/#preferences"]').first()).toHaveCount(1);
   await expect(second.locator('#product-menu, #mobile-product, .header-action, .mobile-download')).toHaveCount(0);
+  await assertPlaceholder(second.locator('.remote-showcase [data-media-placeholder]'), { logo: `${cmsOrigin}${mediaPath}`, aspect: '8 / 5' });
+  await second.goto(preview + '/download/', { waitUntil: 'networkidle' });
+  await assertPlaceholder(second.locator('.product-showcase [data-media-placeholder]'), { variant: 'download', aspect: '8 / 5' });
   await second.goto(preview + '/cookies/', { waitUntil: 'networkidle' });
   await expect(second.locator('.cookies-page dl')).toContainText('CMS storage table sentinel');
   await second.close();

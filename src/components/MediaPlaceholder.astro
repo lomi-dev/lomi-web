@@ -1,0 +1,22 @@
+---
+import type { MediaAsset } from '../../content/editor-schema';
+import { resolveMedia } from '../../content/editor-schema';
+
+interface Props { logo?: MediaAsset | null; aspect?: string; class?: string; loading?: 'eager' | 'lazy'; variant?: 'brand' | 'hero' | 'download' }
+const { logo, aspect = '8 / 5', class: className, loading = 'lazy', variant = 'brand' } = Astro.props;
+const brand = variant === 'brand' ? resolveMedia(logo, import.meta.env.CMS_URL) : null;
+const illustrations = {
+  hero: { src: '/placeholders/hero-workspace.svg', width: 1600, height: 1000 },
+  download: { src: '/placeholders/download-workspace.svg', width: 1280, height: 800 },
+};
+const illustration = variant === 'brand' ? null : illustrations[variant];
+---
+
+<picture class="media-placeholder" data-media-placeholder data-placeholder-variant={variant} style={{ '--placeholder-aspect': aspect }} aria-hidden="true">
+  <img class={className} src={illustration?.src ?? brand?.url ?? '/placeholders/lomi-mark.svg'} alt="" width={illustration?.width ?? 491} height={illustration?.height ?? 202} loading={loading} decoding="async"
+    style={illustration ? { width: '100%', height: '100%', objectFit: 'contain' } : { width: 'clamp(120px, 14vw, 200px)', maxWidth: '45%', height: 'auto', maxHeight: '45%', aspectRatio: '491 / 202', objectFit: 'contain', ...(brand ? { opacity: '.18', filter: 'grayscale(1)' } : {}) }} />
+</picture>
+
+<style>
+  .media-placeholder[data-media-placeholder] { display: grid; place-items: center; width: 100%; height: 100%; min-width: 0; aspect-ratio: var(--placeholder-aspect); overflow: hidden; border: 1px solid color-mix(in srgb, var(--line) 70%, transparent); border-radius: 16px; background: color-mix(in srgb, var(--color-ink) 3%, var(--color-chalk)); }
+</style>

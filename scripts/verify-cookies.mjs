@@ -61,7 +61,15 @@ async function open({ raw, blockedStorage = false, failedWrites, ...options } = 
               this.iframe = iframe; this.events = options.events; this.calls = [];
               window.__mockYouTube.players.push(this);
             }
-            mute() { this.calls.push('mute'); }
+            mute() { this.muted = true; this.calls.push('mute'); }
+            unMute() { this.muted = false; this.calls.push('unMute'); }
+            isMuted() { return this.muted ?? true; }
+            getVolume() { return this.volume ?? 100; }
+            setVolume(value) { this.volume = value; }
+            getCurrentTime() { return this.time ?? 0; }
+            getDuration() { return 120; }
+            seekTo(value) { this.time = value; }
+            getPlayerState() { return -1; }
             playVideo() { this.calls.push('playVideo'); }
             stopVideo() { this.calls.push('stopVideo'); }
             pauseVideo() { this.calls.push('pauseVideo'); }

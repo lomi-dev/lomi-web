@@ -94,6 +94,7 @@ export function initPageBackdrop(): () => void {
   window.addEventListener('hashchange', refresh);
   window.addEventListener('popstate', refresh);
   document.addEventListener('visibilitychange', onVisibility);
+  document.addEventListener('lomi:media-surface-change', refresh);
   document.addEventListener('close', refresh, true);
   update();
   observeMidpoint();
@@ -110,6 +111,7 @@ export function initPageBackdrop(): () => void {
     window.removeEventListener('hashchange', refresh);
     window.removeEventListener('popstate', refresh);
     document.removeEventListener('visibilitychange', onVisibility);
+    document.removeEventListener('lomi:media-surface-change', refresh);
     document.removeEventListener('close', refresh, true);
     root.style.removeProperty('--page-canvas-background');
   };

@@ -9,7 +9,7 @@ export function fieldsFromDefaults(defaults: Record<string, unknown>, prefix = '
     const path = prefix ? `${prefix}.${name}` : name
     const tokens = typeof value === 'string' ? [...new Set(value.match(/\{[a-zA-Z]+\}/g) ?? [])] : []
     const templateHelp = tokens.length ? `Keep ${tokens.join(', ')} in the text; the website replaces ${tokens.length === 1 ? 'it' : 'them'} automatically.` : undefined
-    const hidden = ['site.docsUrl', 'roadmap.ui.previousLabel', 'roadmap.ui.nextLabel'].includes(path)
+    const hidden = ['site.docsUrl', 'roadmap.ui.previousLabel', 'roadmap.ui.nextLabel', 'pages.devlog.label', 'pages.devlog.labelAccent', 'pages.devlog.empty.label', 'pages.devlog.empty.previewLabel', 'pages.devlog.empty.previewTitle'].includes(path)
     const common = { name, label: label(name), ...(templateHelp || hidden ? { admin: { ...(templateHelp ? { description: templateHelp } : {}), ...(hidden ? { hidden: true } : {}) } } : {}) }
     if (value === null) {
       const video = /video/i.test(name)

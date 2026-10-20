@@ -179,12 +179,25 @@ describe('website editor contract', () => {
     assert.equal(parsed.editorVersion, 0);
   });
 
-  it('accepts a newly authored feature without its retired icon field', () => {
+  it('accepts a newly authored feature without an optional preview scene', () => {
     const value = document();
     const feature = { title: 'New CMS feature', description: 'New feature description', detail: 'Feature detail', image, video: null, alt: 'New upload alt' };
     const parsed = landingSchema.parse({ ...value, features: { ...value.features, items: [feature] } });
     assert.equal(parsed.features.items[0].title, feature.title);
+    assert.equal(parsed.features.items[0].icon, 'terminal');
     assert.deepEqual(parsed.features.items[0].image, image);
+  });
+
+  it('hydrates preview controls in legacy and null content while preserving authored labels', () => {
+    for (const controls of [undefined, null, { pausePreviewsLabel: null, resumePreviewsLabel: null }]) {
+      const value = document();
+      const parsed = landingSchema.parse({ ...value, features: { ...value.features, controls } });
+      assert.equal(parsed.features.controls.pausePreviewsLabel, 'Pause previews');
+      assert.equal(parsed.features.controls.resumePreviewsLabel, 'Play previews');
+    }
+    const value = document();
+    const controls = { ...value.features.controls, pausePreviewsLabel: 'Stop previews', resumePreviewsLabel: 'Start previews' };
+    assert.deepEqual(landingSchema.parse({ ...value, features: { ...value.features, controls } }).features.controls, controls);
   });
 
   it('defaults retired hidden fields without requiring editors to populate them', () => {

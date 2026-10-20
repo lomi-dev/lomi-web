@@ -23,7 +23,7 @@ const footerContent = {
 <Layout title={page.seo.title} description={page.seo.description} website={content} themeColor={content.site.theme.paper} edgeColor="var(--color-lime)">
   <Header content={content.navigation} site={content.site} layout={content.layout} theme="light" />
   <main id="main" tabindex="-1">
-    <DownloadPage content={page} />
+    <DownloadPage content={page} placeholderLogo={content.site.brand.logo} />
   </main>
   <Footer content={footerContent} site={content.site} layout={content.layout} />
 </Layout>

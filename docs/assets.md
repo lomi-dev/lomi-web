@@ -12,7 +12,8 @@ Official assets copied from the user-supplied `../brandbook/assets/logos` packag
 The document references versioned favicon copies in `public/icons/` (`lomi-v1.3.svg`, `lomi-v1.3.ico`, and `lomi-v1.3-32.png`) so previously cached site icons do not reuse the old URLs. The PNG is the package's original `lomi-favicon-32.png`; root favicon files remain available for browser fallback.
 
 The original SVG geometry is unchanged. Its paths inherit `currentColor`: near-black
-in the white homepage header, white on Devlog, and near-black on the lime footer.
+in the light homepage and Devlog headers, white on dark surfaces, and near-black
+on the lime footer.
 The header wordmark is 82 px wide on desktop and 79 px on mobile.
 The social preview is a browser capture of the page with this logo.
 
@@ -32,18 +33,32 @@ Exact generation prompt:
 
 ## Application screenshots
 
-The hero uses one local [Placehold](https://placehold.co/) image, optimized by
-Astro, while the final product capture is being prepared:
-`src/assets/placeholders/workspace.png` (1600 × 1000). Its width, 16px corners
-and subtle border match the feature gallery, without added window chrome, a
-colored outer card, a separate phone or a hover play button.
-Its alt text explicitly identifies the placeholder and uses the CMS description.
-Astro generates responsive AVIF and WebP variants.
+Missing product media uses a pale background, thin border and 16px corners.
+`MediaPlaceholder.astro` supplies the hero, Download and brand variants.
+The hero shows an outline of Lomi's workspace, with a project explorer,
+editor, development terminal and two
+coding-agent terminals. Feature cards and dialogs use six animated SVG
+closeups of the workspace; see [feature previews](feature-gallery.md).
+Download has a dedicated overview with files, an editor, browser, terminal and
+Git changes inside its existing showcase box. Devlog and Remote use a
+centered faint Lomi wordmark; an uploaded site logo supplies their
+placeholder branding. Uploaded CMS media always
+takes precedence. Placeholder images are decorative and do not repeat
+content labels to screen readers.
+SVG assets remain sharp without responsive raster exports.
+
+`public/placeholders/lomi-mark.svg` contains the existing Lomi logo geometry.
+`public/placeholders/lomi-poster.svg` supplies the same default design for
+generic native video posters. `public/placeholders/hero-workspace.svg` supplies
+the hero outline in image mode and while video loads, including the native
+no-JavaScript poster fallback. These are local, code-native SVGs with no
+external requests. Old numbered PNGs remain archived
+in `src/assets/placeholders/` but are no longer imported by rendered pages.
 
 `HeroVideo.astro` embeds the selected YouTube video `dQw4w9WgXcQ` directly in
 this frame after external-media permission, including remembered permission.
-The local image remains while the official API loads; the native embed replaces
-it completely as soon as it mounts. YouTube's own controls remain unobscured.
+The placeholder or uploaded poster remains until the first playback signal.
+Custom controls sit inside the frame; see [player behavior](hero-player.md).
 The [official YouTube IFrame API](https://developers.google.com/youtube/iframe_api_reference)
 mutes before automatic playback, which begins only when half the player is in
 view and reduced motion is off. Leaving view or hiding the tab pauses playback.
@@ -58,10 +73,10 @@ Unchanged desktop captures copied from `../lomi/docs/images/` remain in
 terminal), `source-control.png` (Git history and diff), and `browser.png`.
 They are 2880 × 1800 and remain available for future approved replacements.
 
-The download page reuses the unchanged `src/assets/product/workbench.png`
-capture at its original aspect ratio, without additional window chrome. Its
-alt text identifies the shown platform as macOS. Astro exports
-responsive AVIF and WebP sources with a PNG fallback; the screenshot is static.
+Download uses `public/placeholders/download-workspace.svg`; Remote uses the
+shared brand placeholder until its screenshot is uploaded in Payload.
+The archived desktop captures are available for a future
+approved upload and are no longer used as automatic page fallbacks.
 
 The download system picker uses local Iconify Simple Icons SVGs, with their
 original path geometry and the fill changed to Lomi ink:
@@ -111,11 +126,9 @@ Iconify Simple Icons for macOS, Linux and Windows, with unchanged geometry.
 The command bar, separators and copy symbol are HTML/CSS/inline SVG. The shared
 `Icon` component supplies the copied-state check and diagonal link arrow.
 The two choices combine macOS/Linux and keep Windows separate. Beneath the
-installer, the page reuses `src/assets/product/workbench.png` unchanged: the
-authentic macOS desktop capture already shown on Download. Its alt text identifies
-the desktop workspace, without presenting it as a Remote dashboard. Astro serves
-responsive AVIF/WebP sources with a PNG fallback, intrinsic image dimensions and
-lazy loading. No external image request or icon package is added. Native radio
+installer, the page shows an uploaded screenshot or the shared branded
+placeholder. Images retain intrinsic dimensions and lazy loading; the local
+placeholder does not require an external service. No icon package is added. Native radio
 inputs and CSS `:has()` select the command even without JavaScript. See
 [Remote command behavior and provenance](remote.md).
 

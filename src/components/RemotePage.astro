@@ -1,12 +1,11 @@
 ---
 import ContentMedia from './ContentMedia.astro';
-import type { Editable } from '../../content/editor-schema';
+import type { Editable, MediaAsset } from '../../content/editor-schema';
 import { pageDefaults } from '../../content/page-defaults';
 import Icon from './Icon';
 import { remoteInstallPlatforms } from '../data/remote';
-import workbench from '../assets/product/workbench.png';
-interface Props { content: Editable<typeof pageDefaults.remote> }
-const { content } = Astro.props;
+interface Props { content: Editable<typeof pageDefaults.remote>; placeholderLogo?: MediaAsset | null }
+const { content, placeholderLogo } = Astro.props;
 const platforms = remoteInstallPlatforms.map((platform) => ({ ...platform, ...content.platforms[platform.id] }));
 ---
 
@@ -56,7 +55,7 @@ const platforms = remoteInstallPlatforms.map((platform) => ({ ...platform, ...co
       <div class="remote-preview-stage">
         <ContentMedia
           image={content.screenshot.image}
-          fallback={workbench}
+          placeholderLogo={placeholderLogo}
           alt={content.screenshot.alt}
           widths={[640, 960, 1440, 1920, 2400]}
           sizes="(min-width: 1280px) 1104px, (min-width: 1000px) calc(100vw - 160px), (min-width: 768px) calc(100vw - 112px), calc(100vw - 72px)"
@@ -113,6 +112,8 @@ const platforms = remoteInstallPlatforms.map((platform) => ({ ...platform, ...co
   .remote-preview-stage { padding: 48px; border-radius: 16px; background: #edf1e7; }
   .remote-preview-stage :global(picture) { display: block; border-radius: 8px; box-shadow: 0 20px 48px -16px #1d2c124d; }
   .remote-preview-stage :global(.remote-capture) { display: block; width: 100%; height: auto; border-radius: 8px; }
+  .remote-preview-stage:has([data-media-placeholder]) { padding: 0; background: transparent; }
+  .remote-preview-stage :global([data-media-placeholder]) { display: grid; height: auto; border-radius: 16px; box-shadow: none; }
   .visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
   @media (hover: hover) and (pointer: fine) {
     .copy-command:not(:disabled, [aria-disabled='true']):hover { background: #edf2e6; color: var(--color-ink); }

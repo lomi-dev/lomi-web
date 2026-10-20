@@ -1,15 +1,21 @@
-Temporary hero images from [Placehold](https://placehold.co/), stored locally
-and optimized by Astro with the other site assets.
+Archived image placeholders from [Placehold](https://placehold.co/):
 
-- `workspace.png`: [1600 × 1000](https://placehold.co/1600x1000/000000/FFFFFF/png),
-  used by the single hero preview while the inline video API loads.
-- `mobile.png`: [430 × 932](https://placehold.co/430x932/111111/FFFFFF/png),
-  archived from the previous two-device hero composition.
-- `detail.png`: [660 × 600](https://placehold.co/660x600/111111/FFFFFF/png),
-  retained for the feature gallery's supporting views.
+- `workspace.png`: 1600 × 1000.
+- `mobile.png`: 430 × 932, from the previous two-device hero.
+- `detail.png`: 660 × 600, from the earlier feature gallery.
 
-After building, check the single preview, responsive layout and inline video flow:
+The website no longer renders these numbered images. Current fallbacks use
+`src/components/MediaPlaceholder.astro`: a pale frame, thin border and 16px
+corners. The hero variant outlines a Lomi workspace. Features and dialogs use
+`FeatureSimulation.astro` for six animated workspace closeups. Download has a
+dedicated workspace overview; Devlog and Remote use a centered faint Lomi
+wordmark, or the uploaded CMS brand logo.
+
+The workspace outline, built-in wordmark and native video posters are local,
+code-native SVGs in `public/placeholders/` and make no external requests.
+Real uploaded media takes precedence over placeholders.
 
 ```sh
-VERIFY_URL=http://localhost:4322/ node scripts/verify-hero-product.mjs
+bun run build
+bun run verify:placeholders
 ```

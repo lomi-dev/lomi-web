@@ -1,0 +1,210 @@
+import { assertPlaceholder } from './verify-placeholders.mjs';
+import { chromium, expect } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
+import assert from 'node:assert/strict';
+import { createServer } from 'node:http';
+import { spawn, spawnSync } from 'node:child_process';
+import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { dirname, extname, resolve, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+// Build and serve throwaway fixtures. Never reuse preview servers or write dist.
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const scratch = await mkdtemp(resolve(tmpdir(), 'lomi-devlog-'));
+const servers = [];
+const errors = [];
+const cmsRequests = [];
+const youtubePattern = /^https:\/\/(?:[^/]+\.)?(?:youtube\.com|youtube-nocookie\.com|youtu\.be|ytimg\.com|googlevideo\.com)\//;
+const feedPath = '/api/devlogs?depth=1&draft=false&limit=100&page=1&sort=-publishedAt%2C-id&where%5B_status%5D%5Bequals%5D=published';
+const mediaPath = '/api/media/file/devlog-fixture.png';
+const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a6ioAAAAASUVORK5CYII=', 'base64');
+const episodes = [
+  { id: 2, _status: 'published', title: 'A quieter terminal', videoUrl: 'https://youtu.be/bbbbbbbbbbb?t=30', publishedAt: '2026-09-20T10:00:00Z', duration: '4:23' },
+  { id: 4, _status: 'published', title: 'The workspace comes together', description: 'A look at the editor, agents and terminals sharing one workspace.', videoUrl: 'https://www.youtube.com/watch?v=ddddddddddd&list=ignored', publishedAt: '2026-10-20T23:30:00-02:00', duration: '12:34', thumbnail: { id: 91, url: mediaPath, mimeType: 'image/png', width: 1, height: 1, alt: 'Uploaded metadata description' }, thumbnailAlt: 'The latest workspace preview' },
+  { id: 1, _status: 'published', title: 'The first prototype', videoUrl: 'https://www.youtube-nocookie.com/embed/aaaaaaaaaaa', publishedAt: '2026-08-01T10:00:00Z' },
+  { id: 3, _status: 'published', title: 'Making room for agents', description: 'Small decisions that make everyday development easier.', videoUrl: 'https://www.youtube.com/shorts/ccccccccccc', publishedAt: '2026-10-01T10:00:00Z' },
+];
+let output;
+let docs = [];
+let browser;
+
+async function serve(handler) {
+  const server = createServer(handler);
+  servers.push(server);
+  await new Promise((done, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', done); });
+  return `http://127.0.0.1:${server.address().port}`;
+}
+async function build(name, cms) {
+  output = resolve(scratch, name);
+  await new Promise((done, reject) => {
+    const child = spawn(process.execPath, ['node_modules/astro/bin/astro.mjs', 'build', '--outDir', output], {
+      cwd: root, env: { ...process.env, CMS_URL: cms, SITE_URL: 'https://fixture.lomi.test', ASTRO_TELEMETRY_DISABLED: '1' }, stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    let log = '';
+    child.stdout.on('data', (chunk) => { log += chunk; });
+    child.stderr.on('data', (chunk) => { log += chunk; });
+    const timeout = setTimeout(() => { child.kill('SIGTERM'); reject(new Error(`Devlog ${name} build timed out\n${log}`)); }, 120000);
+    child.once('error', (error) => { clearTimeout(timeout); reject(error); });
+    child.once('exit', (code) => { clearTimeout(timeout); code === 0 ? done() : reject(new Error(`Devlog ${name} build failed (${code})\n${log}`)); });
+  });
+}
+
+try {
+  const parsed = spawnSync('bun', ['-e', "import {landingSchema} from './content/landing-schema.ts'; import seed from './content/landing.json'; console.log(JSON.stringify(landingSchema.parse(seed)));"], { cwd: root, encoding: 'utf8' });
+  assert.equal(parsed.status, 0, parsed.stderr);
+  const fixture = JSON.parse(parsed.stdout);
+  fixture._status = 'published';
+  const cms = await serve((request, response) => {
+    const url = new URL(request.url, 'http://fixture.test');
+    if (url.pathname === '/api/globals/landing' || url.pathname === '/api/devlogs') {
+      cmsRequests.push(url.pathname + url.search);
+      response.writeHead(200, { 'Content-Type': 'application/json' });
+      response.end(JSON.stringify(url.pathname === '/api/devlogs' ? { docs, hasNextPage: false, nextPage: null } : fixture));
+    } else if (url.pathname === mediaPath) {
+      response.writeHead(200, { 'Content-Type': 'image/png' }); response.end(png);
+    } else { response.writeHead(404); response.end(); }
+  });
+  const preview = await serve(async (request, response) => {
+    try {
+      const pathname = decodeURIComponent(new URL(request.url, 'http://fixture.test').pathname);
+      const path = resolve(output, `.${pathname}`, pathname.endsWith('/') ? 'index.html' : '');
+      if (!path.startsWith(output + sep)) { response.writeHead(403); response.end(); return; }
+      const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.avif': 'image/avif', '.webp': 'image/webp', '.woff2': 'font/woff2' };
+      const content = await readFile(path);
+      response.writeHead(200, { 'Content-Type': types[extname(path)] || 'application/octet-stream' }); response.end(content);
+    } catch { response.writeHead(404); response.end(); }
+  });
+  browser = await chromium.launch();
+  await mkdir(resolve(root, 'artifacts'), { recursive: true });
+  for (const state of ['empty', 'populated']) {
+    docs = state === 'empty' ? [] : episodes;
+    if (state === 'populated') {
+      fixture.pages.devlog.latestLabel = 'Featured recording';
+      fixture.pages.devlog.archiveLabel = 'Earlier recordings';
+      fixture.pages.devlog.watchLabel = 'Watch this recording';
+    }
+    cmsRequests.length = 0;
+    await build(state, cms);
+    assert.deepEqual(cmsRequests.filter((url) => url.startsWith('/api/devlogs')), [feedPath], `${state}: published feed request`);
+    for (const javaScriptEnabled of [false, true]) {
+      const context = await browser.newContext({ javaScriptEnabled, viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce', timezoneId: 'Pacific/Honolulu' });
+      await context.addInitScript(() => localStorage.setItem('lomi.cookie-consent', JSON.stringify({ version: 1, externalMedia: true, savedAt: Date.now() })));
+      const externalRequests = [];
+      await context.route(youtubePattern, (route) => {
+        externalRequests.push(route.request().url());
+        return route.fulfill({ contentType: 'text/html', body: '<!doctype html><html lang="en"><title>Local YouTube destination</title><body>Local navigation fixture</body></html>' });
+      });
+      const page = await context.newPage();
+      page.on('pageerror', (error) => errors.push(error.message));
+      for (const width of [320, 390, 768, 1440]) {
+        await page.setViewportSize({ width, height: 1000 });
+        await page.goto(preview + '/devlog/', { waitUntil: 'networkidle' });
+        await expect(page).toHaveTitle(fixture.pages.devlog.seo.title);
+        await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
+        await expect(page.getByRole('heading', { level: 1 })).toHaveAccessibleName('Devlog.');
+        await expect(page.locator('.desktop-navigation a[href="/devlog/"]')).toHaveAttribute('aria-current', 'page');
+        await expect(page.locator('.devlog-surface')).toHaveCSS('background-color', 'rgb(247, 248, 243)');
+        await expect(page.locator('h1')).toHaveCSS('color', 'rgb(11, 13, 12)');
+        await expect(page.locator('.site-header')).toHaveAttribute('data-theme', 'light');
+        await expect(page.locator('.site-header')).toHaveCSS('color', 'rgb(32, 44, 24)');
+        if (width >= 768) {
+          await expect(page.locator('.devlog-intro')).toHaveCSS('position', 'sticky');
+          const intro = await page.locator('.devlog-intro').boundingBox();
+          const recordings = await page.locator('.devlog-recordings').boundingBox();
+          assert.ok(intro.x + intro.width < recordings.x, 'Desktop introduction sits beside the recordings');
+        }
+        await expect(page.locator('iframe')).toHaveCount(0);
+        assert.deepEqual(externalRequests, [], 'No YouTube requests before following a link, even with media consent');
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), width, `${state}, JS=${javaScriptEnabled}, ${width}px overflow`);
+        if (state === 'empty') {
+          await expect(page.locator('[data-devlog-card]')).toHaveCount(0);
+          await expect(page.locator('[data-devlog-empty]')).toBeVisible();
+          await expect(page.getByRole('heading', { level: 2 })).toHaveCount(1);
+          await expect(page.getByRole('heading', { level: 2 })).toHaveText(fixture.pages.devlog.empty.title);
+          await expect(page.getByRole('link', { name: fixture.pages.devlog.cta.label })).toHaveAttribute('href', '/');
+          await expect(page.locator('.empty-preview')).toHaveAttribute('aria-hidden', 'true');
+          await expect(page.locator('.empty-preview')).toHaveCSS('aspect-ratio', '16 / 9');
+          await expect(page.locator('.empty-preview a, .empty-preview button, .empty-preview .episode-play')).toHaveCount(0);
+          const wordmarkFits = await page.locator('.empty-preview').evaluate((preview) => {
+            const bounds = preview.getBoundingClientRect();
+            const wordmark = preview.querySelector('[data-media-placeholder] img').getBoundingClientRect();
+            return wordmark.width > 0 && wordmark.height > 0 && wordmark.left >= bounds.left && wordmark.right <= bounds.right + 1 && wordmark.top >= bounds.top && wordmark.bottom <= bounds.bottom + 1;
+          });
+          assert.ok(wordmarkFits, `Decorative wordmark fits its empty preview at ${width}px`);
+        } else {
+          await expect(page.locator('[data-devlog-empty]')).toHaveCount(0);
+          const cards = page.locator('[data-devlog-card]');
+          await expect(cards).toHaveCount(4);
+          await expect(cards.locator('h3')).toHaveText(['The workspace comes together', 'Making room for agents', 'A quieter terminal', 'The first prototype']);
+          await expect(page.getByRole('heading', { level: 2 })).toHaveCount(2);
+          await expect(page.getByRole('heading', { level: 3 })).toHaveCount(4);
+          await expect(page.locator('.devlog-latest > h2.devlog-section-heading')).toHaveText(fixture.pages.devlog.latestLabel);
+          await expect(page.locator('.devlog-archive > h2.devlog-section-heading')).toHaveText(fixture.pages.devlog.archiveLabel);
+          await expect(cards.locator('.episode-watch')).toHaveText(Array(4).fill(fixture.pages.devlog.watchLabel));
+          assert.deepEqual(await cards.locator('a').evaluateAll((links) => links.map((link) => link.getAttribute('target'))), Array(4).fill(null));
+          assert.deepEqual(await cards.locator('a').evaluateAll((links) => links.map((link) => link.getAttribute('href'))), ['ddddddddddd', 'ccccccccccc', 'bbbbbbbbbbb', 'aaaaaaaaaaa'].map((id) => `https://www.youtube.com/watch?v=${id}`));
+          await expect(cards.first().locator('time')).toHaveText('Oct 21, 2026');
+          await expect(cards.first().locator('img')).toHaveAttribute('src', cms + mediaPath);
+          await expect(cards.first().locator('img')).toHaveAttribute('alt', episodes[1].thumbnailAlt);
+          await expect(cards.first().locator('.episode-duration')).toHaveText('12:34');
+          const latestThumbnail = await cards.first().locator('.episode-thumbnail').boundingBox();
+          const latestCaption = await cards.first().locator('.episode-copy').boundingBox();
+          assert.ok(latestCaption.y >= latestThumbnail.y + latestThumbnail.height - 1, 'Featured caption sits below its thumbnail');
+          const gridColumns = await page.locator('.devlog-grid').evaluate((grid) => getComputedStyle(grid).gridTemplateColumns.split(' ').length);
+          assert.equal(gridColumns, width > 540 ? 2 : 1, 'Archive uses two columns when space allows');
+          for (let index = 0; index < 4; index++) {
+            const image = cards.nth(index).locator('img');
+            await image.scrollIntoViewIfNeeded();
+            await expect.poll(() => image.evaluate((element) => element.complete && element.naturalWidth > 0)).toBe(true);
+            if (index > 0) {
+              assert.equal(new URL(await image.getAttribute('src'), preview).origin, preview, 'Missing thumbnails use a local asset');
+              await expect(image).toHaveAttribute('alt', '');
+              await assertPlaceholder(cards.nth(index).locator('[data-media-placeholder]'), { aspect: '16 / 9' });
+            }
+            const ratio = await cards.nth(index).locator('.episode-thumbnail').evaluate((element) => getComputedStyle(element).aspectRatio);
+            assert.equal(ratio, '16 / 9', 'Thumbnails reserve a consistent aspect ratio');
+            const playFits = await cards.nth(index).locator('.episode-thumbnail').evaluate((thumbnail) => {
+              const bounds = thumbnail.getBoundingClientRect();
+              const play = thumbnail.querySelector('.episode-play').getBoundingClientRect();
+              return play.left > bounds.left && play.top > bounds.top && play.right < bounds.right && play.bottom < bounds.bottom && play.left < bounds.left + bounds.width / 2 && play.top > bounds.top + bounds.height / 2;
+            });
+            assert.ok(playFits, `Episode ${index + 1} play icon stays inside the thumbnail at bottom left (${width}px)`);
+          }
+        }
+        await page.evaluate(() => window.scrollTo(0, 0));
+        if (javaScriptEnabled) {
+          const result = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
+          assert.deepEqual(result.violations.map(({ id, nodes }) => ({ id, targets: nodes.map((node) => node.target) })), [], `${state} ${width}px accessibility`);
+          if (width === 320 || width === 1440) await page.screenshot({ path: resolve(root, `artifacts/devlog-${state}-${width}.png`), fullPage: true });
+          await page.locator('[data-cookie-settings]').click();
+          await expect(page.locator('#cookie-preferences')).toBeVisible();
+          await page.locator('#cookie-external-media').uncheck();
+          await page.locator('[data-cookie-save]').click();
+          await expect(page.locator('#cookie-preferences')).not.toBeVisible();
+          assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('lomi.cookie-consent')).externalMedia), false);
+        } else {
+          await expect(page.locator('[data-cookie-settings]')).toHaveAttribute('href', '/cookies/#preferences');
+        }
+      }
+      if (state === 'populated') {
+        for (const keyboard of [false, true]) {
+          await page.goto(preview + '/devlog/', { waitUntil: 'networkidle' });
+          externalRequests.length = 0;
+          const link = page.locator('[data-devlog-card] > a').first();
+          if (keyboard) { await link.focus(); await page.keyboard.press('Enter'); } else { await link.click(); }
+          await expect(page).toHaveURL('https://www.youtube.com/watch?v=ddddddddddd');
+          assert.deepEqual(externalRequests, ['https://www.youtube.com/watch?v=ddddddddddd']);
+          assert.equal(context.pages().length, 1, 'Episode opens in the same tab');
+        }
+      }
+      await context.close();
+    }
+  }
+  assert.deepEqual(errors, [], 'No browser runtime errors');
+  console.log('Passed: two isolated Devlog builds; light empty/populated layouts and editable CMS labels; four sorted episodes; uploaded/local thumbnails and UTC dates; JS/no-JS same-tab click/keyboard links; no embedded or unsolicited YouTube requests; 320/390/768/1440px overflow, decorative wordmark and play-icon containment, headings, active navigation, cookie preferences and whole-page axe; four screenshots.');
+} finally {
+  await browser?.close();
+  await Promise.all(servers.map((server) => new Promise((done) => { server.close(done); server.closeAllConnections(); })));
+  await rm(scratch, { recursive: true, force: true });
+}

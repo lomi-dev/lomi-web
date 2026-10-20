@@ -2,50 +2,91 @@
 import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
 import Icon from '../components/Icon';
+import DevlogCard from '../components/DevlogCard.astro';
 import CookieSettingsLink from '../components/CookieSettingsLink.astro';
+import MediaPlaceholder from '../components/MediaPlaceholder.astro';
 import { loadLanding } from '../../content/load-landing';
+import { loadDevlogs } from '../../content/load-devlogs';
 
-const content = await loadLanding(import.meta.env.CMS_URL);
+const [content, episodes] = await Promise.all([loadLanding(import.meta.env.CMS_URL), loadDevlogs(import.meta.env.CMS_URL)]);
 const page = content.pages.devlog;
+const [latest, ...archive] = episodes;
 ---
 
-<Layout title={page.seo.title} description={page.seo.description} website={content} edgeColor="var(--color-dark)">
+<Layout title={page.seo.title} description={page.seo.description} website={content} themeColor={content.site.theme.background} edgeColor="var(--color-chalk)">
   <div class="devlog-surface" data-scroll-surface>
-    <Header content={content.navigation} site={content.site} layout={content.layout} />
-    <main id="main" class="devlog-page" tabindex="-1">
-      <div class="devlog-content">
-        <p class="devlog-label"><span aria-hidden="true">{page.labelAccent}</span> {page.label}</p>
-        <h1>{page.title.map((line, index) => <>{index > 0 && <br />}{line.text}</>)}<span aria-hidden="true">{page.accent}</span></h1>
+    <Header content={content.navigation} site={content.site} layout={content.layout} theme="light" />
+    <main id="main" class="devlog-page devlog-shell" tabindex="-1">
+      <header class="devlog-intro">
+        <h1>{page.title.map((line, index) => <>{index > 0 && ' '}{line.text}</>)}{page.accent && <span aria-hidden="true">{page.accent}</span>}</h1>
         <p class="devlog-description">{page.description.map((line, index) => <>{index > 0 && <br />}{line.text}</>)}</p>
         <a class="devlog-home" href={page.cta.href}><Icon name="arrow" width={17} height={17} />{page.cta.label}</a>
+      </header>
+
+      <div class="devlog-recordings">
+        {latest ? <>
+          <section class="devlog-latest" aria-labelledby="latest-label">
+            <h2 id="latest-label" class="devlog-section-heading">{page.latestLabel}</h2>
+            <DevlogCard episode={latest} featured language={content.site.language} watchLabel={page.watchLabel} placeholderLogo={content.site.brand.logo} />
+          </section>
+          {archive.length > 0 && <section class="devlog-archive" aria-labelledby="archive-label">
+            <h2 id="archive-label" class="devlog-section-heading">{page.archiveLabel}</h2>
+            <div class="devlog-grid">{archive.map((episode) => <DevlogCard episode={episode} language={content.site.language} watchLabel={page.watchLabel} placeholderLogo={content.site.brand.logo} />)}</div>
+          </section>}
+        </> : <section class="devlog-empty" data-devlog-empty aria-labelledby="empty-title">
+          <div class="empty-preview" aria-hidden="true">
+            <MediaPlaceholder logo={content.site.brand.logo} aspect="16 / 9" />
+          </div>
+          <div class="empty-copy">
+            <h2 id="empty-title">{page.empty.title}</h2>
+            <p class="empty-description">{page.empty.description}</p>
+          </div>
+        </section>}
       </div>
     </main>
-    <footer class="devlog-footer"><span>{page.footerLabel}</span><CookieSettingsLink label={page.settingsLabel} /><a href={page.source.href}>{page.source.label}<Icon name="diagonal" width={14} height={14} /></a></footer>
+    <footer class="devlog-footer devlog-shell"><span>{page.footerLabel}</span><div><CookieSettingsLink label={page.settingsLabel} /><a href={page.source.href}>{page.source.label}<Icon name="diagonal" width={14} height={14} /></a></div></footer>
   </div>
 </Layout>
 
 <style>
-  .devlog-surface { --scroll-surface-color: var(--color-dark); min-height: 100svh; display: flex; flex-direction: column; background: var(--color-dark); color: var(--color-dark-text); }
-  .devlog-page { display: flex; flex: 1; align-items: center; width: min(1120px, calc(100% - 64px)); margin-inline: auto; padding: 178px 26px 94px; }
-  .devlog-content { width: 100%; }
-  .devlog-label { display: flex; align-items: center; gap: 16px; margin-bottom: 30px; font-family: var(--font-mono); font-size: 11px; color: #b4c4a8; }
-  .devlog-label > span { color: var(--color-lime); }
-  h1 { margin: 0; font-size: clamp(68px, 9.4vw, 138px); font-weight: 450; letter-spacing: -.065em; line-height: .99; }
-  h1 > span { color: var(--color-lime); }
-  .devlog-description { margin-top: 34px; color: #b4c4a8; font-size: 15px; line-height: 1.85; }
-  .devlog-home { display: inline-flex; align-items: center; gap: 13px; min-height: 44px; margin-top: 29px; font-size: 13px; color: var(--color-lime); }
+  .devlog-surface { --scroll-surface-color: var(--color-chalk); --devlog-muted: var(--color-text-secondary); --devlog-line: var(--line); min-height: 100svh; display: flex; flex-direction: column; background: var(--color-chalk); color: var(--color-ink); overflow-wrap: anywhere; }
+  .devlog-shell { width: min(1440px, calc(100% - clamp(40px, 10.4vw, 192px))); margin-inline: auto; }
+  .devlog-page { display: grid; grid-template-columns: minmax(0, .75fr) minmax(0, 2.25fr); align-items: start; flex: 1; gap: clamp(44px, 6vw, 88px); padding-top: 156px; padding-bottom: 100px; }
+  .devlog-intro { position: sticky; top: calc(var(--site-header-height) + 56px); }
+  h1 { margin: 0; font-size: clamp(46px, 4.8vw, 72px); font-weight: 500; letter-spacing: -.055em; line-height: 1.06; text-wrap: balance; }
+  .devlog-description { max-width: 240px; margin-top: 22px; color: var(--devlog-muted); font-size: 16px; line-height: 1.75; text-wrap: pretty; }
+  .devlog-home { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; margin-top: 27px; color: var(--devlog-muted); font-size: 13px; }
   .devlog-home :global(svg) { transform: rotate(180deg); }
-  .devlog-home:hover { text-decoration: underline; text-underline-offset: 5px; }
-  .devlog-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; width: min(1068px, calc(100% - 116px)); margin-inline: auto; padding-block: 20px; border-top: 1px solid #b8cca824; font-family: var(--font-mono); font-size: 9px; color: #a7b69a; }
+  .devlog-home:hover { color: var(--color-ink); text-decoration: underline; text-underline-offset: 4px; }
+  .devlog-recordings { min-width: 0; padding-top: 8px; }
+  .devlog-section-heading { margin: 0 0 22px; color: var(--devlog-muted); font-size: 13px; font-weight: 400; letter-spacing: normal; line-height: 1.5; }
+  .devlog-archive { margin-top: 54px; padding-top: 28px; border-top: 1px solid var(--line); }
+  .devlog-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 36px 24px; }
+  .empty-preview { aspect-ratio: 16 / 9; }
+  .empty-copy { padding: 27px 0 0; }
+  .empty-copy h2 { font-size: 24px; line-height: 1.3; letter-spacing: -.025em; }
+  .empty-description { max-width: 420px; margin-top: 10px; color: var(--devlog-muted); font-size: 15px; line-height: 1.75; text-wrap: pretty; }
+  .devlog-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px 24px; padding-block: 20px; border-top: 1px solid var(--line); font-size: 12px; color: var(--devlog-muted); }
+  .devlog-footer > div { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 28px; }
   .devlog-footer a { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; }
-  .devlog-footer a:hover { color: var(--color-dark-text); }
-  .devlog-surface :focus-visible { outline-color: var(--color-lime); }
+  .devlog-footer a:hover { color: var(--color-ink); text-decoration: underline; text-underline-offset: 4px; }
+  @media (max-width: 1000px) { .devlog-page { grid-template-columns: minmax(0, .8fr) minmax(0, 2fr); gap: 40px; } h1 { font-size: 50px; } .devlog-description { font-size: 15px; } }
   @media (max-width: 767px) {
-    .devlog-page { width: calc(100% - 40px); padding: 150px 0 65px; }
-    h1 { font-size: clamp(61px, 14vw, 105px); }
-    .devlog-label { margin-bottom: 27px; font-size: 10px; }
-    .devlog-description { font-size: 13px; margin-top: 28px; }
-    .devlog-home { margin-top: 23px; }
-    .devlog-footer { width: calc(100% - 40px); font-size: 8px; padding-block: 12px; }
+    .devlog-page { display: block; padding-top: 116px; padding-bottom: 64px; }
+    .devlog-intro { position: static; margin-bottom: 38px; }
+    h1 { font-size: 54px; }
+    .devlog-description { max-width: 360px; margin-top: 16px; }
+    .devlog-home { margin-top: 15px; }
+    .devlog-recordings { padding-top: 0; }
+    .devlog-section-heading { margin-bottom: 18px; }
+    .empty-copy { padding-top: 22px; }
+    .empty-copy h2 { font-size: 22px; }
+    .empty-description { font-size: 14px; }
+    .devlog-archive { margin-top: 36px; padding-top: 24px; }
+    .devlog-footer { align-items: flex-start; }
+    .devlog-footer > div { gap: 12px 20px; }
   }
+  @media (max-width: 540px) { .devlog-grid { grid-template-columns: 1fr; gap: 28px; } }
+  @media (max-height: 600px) { .devlog-intro { position: static; } }
+  @media (prefers-reduced-motion: no-preference) { .devlog-home :global(svg) { transition: transform 160ms ease; } .devlog-home:hover :global(svg) { transform: rotate(180deg) translateX(3px); } }
 </style>

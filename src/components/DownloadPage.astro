@@ -1,13 +1,12 @@
 ---
 import ContentMedia from './ContentMedia.astro';
-import type { Editable } from '../../content/editor-schema';
+import type { Editable, MediaAsset } from '../../content/editor-schema';
 import { pageDefaults } from '../../content/page-defaults';
 import Icon from './Icon';
-import workbench from '../assets/product/workbench.png';
 import { downloadPlatforms, releaseFallback } from '../lib/downloads';
 
-interface Props { content: Editable<typeof pageDefaults.download> }
-const { content } = Astro.props;
+interface Props { content: Editable<typeof pageDefaults.download>; placeholderLogo?: MediaAsset | null }
+const { content, placeholderLogo } = Astro.props;
 const platforms = downloadPlatforms.map((platform) => ({ ...platform, ...content.platforms[platform.id] }));
 ---
 
@@ -64,7 +63,8 @@ const platforms = downloadPlatforms.map((platform) => ({ ...platform, ...content
           <div class="preview-heading"><span>{content.screenshot.heading}</span><span class="preview-caption">{content.screenshot.caption}</span></div>
           <ContentMedia
             image={content.screenshot.image}
-            fallback={workbench}
+            placeholderLogo={placeholderLogo}
+            placeholderVariant="download"
             alt={content.screenshot.alt}
             widths={[640, 960, 1440, 1920]}
             sizes="(min-width: 1280px) 720px, (min-width: 1000px) 54vw, (min-width: 768px) 620px, calc(100vw - 72px)"
@@ -147,6 +147,7 @@ const platforms = downloadPlatforms.map((platform) => ({ ...platform, ...content
   .preview-caption { color: #5a694e; font-size: 12px; line-height: 1.6; }
   .product-stage :global(picture) { display: block; width: 100%; border-radius: 8px; box-shadow: 0 20px 48px -16px #1d2c124d; }
   .product-stage :global(.product-capture) { display: block; width: 100%; height: auto; border-radius: 8px; }
+  .product-stage :global([data-media-placeholder]) { display: grid; height: auto; border-radius: 16px; box-shadow: none; }
   .download-help { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 16px; margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--download-line); color: var(--download-muted); font-size: 12px; line-height: 1.7; }
   .download-help a { display: inline-flex; align-items: center; gap: 12px; min-height: 40px; color: #263b15; }
   .download-page :focus-visible { outline-color: var(--color-focus); }

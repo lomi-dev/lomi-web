@@ -25,8 +25,8 @@ const footerContent = {
     <div class="home-pull-content">
       <main id="main" tabindex="-1" data-scroll-surface style="--scroll-surface-color: var(--color-chalk)">
         {!content.layout.some((row) => row.section === 'hero' && row.enabled) && <h1 class="sr-only">{content.seo.title}</h1>}
-        {content.layout.filter((row) => row.enabled).map(({ section }) => section === 'hero' ? <Hero content={hero} layout={content.layout} />
-          : section === 'features' ? <FeatureGallery content={features} />
+        {content.layout.filter((row) => row.enabled).map(({ section }) => section === 'hero' ? <Hero content={hero} layout={content.layout} placeholderLogo={content.site.brand.logo} />
+          : section === 'features' ? <FeatureGallery content={features} placeholderLogo={content.site.brand.logo} />
           : section === 'roadmap' ? <Roadmap content={roadmap} />
           : section === 'newsletter' ? <NewsletterSection content={newsletter} site={content.site} /> : null)}
       </main>

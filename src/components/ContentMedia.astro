@@ -1,33 +1,37 @@
 ---
-import { Picture } from 'astro:assets';
-import type { ImageMetadata } from 'astro';
 import { resolveMedia, type MediaAsset } from '../../content/editor-schema';
+import MediaPlaceholder from './MediaPlaceholder.astro';
+import FeatureSimulation from './FeatureSimulation.astro';
+import type { Landing } from '../../content/landing-schema';
 
 interface Props {
   image?: MediaAsset | null;
   video?: MediaAsset | null;
   alt: string;
-  fallback?: ImageMetadata;
+  placeholderLogo?: MediaAsset | null;
+  placeholderAspect?: string;
+  placeholderVariant?: 'brand' | 'hero' | 'download';
+  placeholderFeature?: Landing['features']['items'][number]['icon'];
   class?: string;
   loading?: 'eager' | 'lazy';
   controls?: boolean;
   widths?: number[];
   sizes?: string;
 }
-const { image, video, alt, fallback, class: className, loading = 'lazy', controls = true, widths = [480, 800, 1200, 1600], sizes = '100vw' } = Astro.props;
+const { image, video, alt, placeholderLogo, placeholderAspect, placeholderVariant, placeholderFeature, class: className, loading = 'lazy', controls = true } = Astro.props;
 const picture = resolveMedia(image, import.meta.env.CMS_URL);
 const clip = resolveMedia(video, import.meta.env.CMS_URL);
 const description = alt || picture?.alt || clip?.alt || '';
 ---
 
 {clip ? <video class={className} data-cms-video controls={controls} muted playsinline loop preload="metadata"
-  poster={picture?.url ?? fallback?.src} width={clip.width ?? 1600} height={clip.height ?? 1000} aria-label={description}>
+  poster={picture?.url ?? '/placeholders/lomi-poster.svg'} width={clip.width ?? 1600} height={clip.height ?? 1000} aria-label={description}>
   <source src={clip.url} type={clip.mimeType} />
   {description}
 </video> : picture ? <picture><img class={className} src={picture.url} alt={description}
   width={picture.width ?? 1600} height={picture.height ?? 1000} loading={loading} decoding="async" /></picture>
-  : fallback ? <Picture src={fallback} alt={description} class={className} formats={['avif', 'webp']}
-    widths={widths} sizes={sizes} loading={loading} decoding="async" /> : null}
+  : placeholderFeature ? <FeatureSimulation kind={placeholderFeature} class={className} />
+  : <MediaPlaceholder logo={placeholderLogo} aspect={placeholderAspect} variant={placeholderVariant} class={className} loading={loading} />}
 
 <script>
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');

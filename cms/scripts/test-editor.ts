@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict'
-import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
 import { createLocalReq, getPayload } from 'payload'
@@ -10,11 +11,18 @@ import { editorDefaults } from '../../content/editor-defaults'
 import { mergeEditorPatch } from '../src/hooks/editorContent'
 
 const directory = await mkdtemp(path.join(tmpdir(), 'lomi-cms-editor-'))
+const cmsDirectory = fileURLToPath(new URL('../', import.meta.url))
+await writeFile(path.join(directory, '.env'), '# Disposable editor test environment\n')
+await symlink(path.join(cmsDirectory, 'src/migrations'), path.join(directory, 'migrations'), 'dir')
+process.env.PAYLOAD_CONFIG_PATH = path.join(cmsDirectory, 'src/payload.config.ts')
 process.env.PAYLOAD_SECRET = randomBytes(32).toString('hex')
 process.env.DATABASE_URL = `file:${path.join(directory, 'test.db')}`
 process.env.MEDIA_UPLOAD_DIR = path.join(directory, 'media')
 const command = (args: string[], production = false) => {
-  const result = spawnSync('bun', args, { env: { ...process.env, ...(production ? { NODE_ENV: 'production' } : {}) }, encoding: 'utf8' })
+  const isolatedArgs = args[1] === 'payload'
+    ? [path.join(cmsDirectory, 'node_modules/payload/bin.js'), ...args.slice(2)]
+    : [path.join(cmsDirectory, 'node_modules/.bin/tsx'), path.join(cmsDirectory, args[1] === 'seed' ? 'scripts/seed.ts' : args[2])]
+  const result = spawnSync(process.execPath, isolatedArgs, { cwd: directory, env: { ...process.env, ...(production ? { NODE_ENV: 'production' } : {}) }, encoding: 'utf8' })
   assert.equal(result.status, 0, result.stdout + result.stderr)
   return result.stdout
 }
@@ -35,19 +43,71 @@ try {
   const migrations = (await readdir(new URL('../src/migrations/', import.meta.url))).filter((name) => name.endsWith('_website_editor.ts'))
   assert.equal(migrations.length, 1)
   const migration = await import(`../src/migrations/${migrations[0]}`)
+  const controlsMigration = await import('../src/migrations/20261020_140000_hero_player_controls')
+  const previewsMigration = await import('../src/migrations/20261020_160000_feature_previews')
+  const devlogsMigration = await import('../src/migrations/20261020_150000_devlogs')
   await payload.updateGlobal({ slug: 'landing', data: { hero: { title: 'Previously edited headline' } } })
   const args = { db: payload.db.drizzle, payload, req: await createLocalReq({}, payload) }
   const legacySchema = JSON.parse(await readFile(new URL('../src/migrations/20261020_120000.json', import.meta.url), 'utf8')).tables as Record<string, { columns: Record<string, unknown> }>
   const oldTables = Object.keys(legacySchema).filter((name) => name.startsWith('landing') || name.startsWith('_landing_v'))
   const oldColumns = oldTables.map((name) => Object.keys(legacySchema[name].columns).map((column) => '"' + column + '"').join(', '))
   const before = await Promise.all(oldTables.map((table, index) => payload!.db.drizzle.$client.execute(`SELECT ${oldColumns[index]} FROM ${table} ORDER BY id`)))
+  // Roll back dependents first: the older migration rebuilds its own tables.
+  await payload.db.drizzle.transaction(async (transaction) => previewsMigration.down({ ...args, db: transaction as unknown as typeof args.db }))
+  await payload.db.drizzle.transaction(async (transaction) => devlogsMigration.down({ ...args, db: transaction as unknown as typeof args.db }))
+  await payload.db.drizzle.transaction(async (transaction) => controlsMigration.down({ ...args, db: transaction as unknown as typeof args.db }))
   await payload.db.drizzle.transaction(async (transaction) => migration.down({ ...args, db: transaction }))
   for (const [index, table] of oldTables.entries()) assert.deepEqual((await payload.db.drizzle.$client.execute(`SELECT ${oldColumns[index]} FROM ${table} ORDER BY id`)).rows, before[index].rows)
   await payload.db.drizzle.transaction(async (transaction) => migration.up({ ...args, db: transaction }))
   for (const [index, table] of oldTables.entries()) assert.deepEqual((await payload.db.drizzle.$client.execute(`SELECT ${oldColumns[index]} FROM ${table} ORDER BY id`)).rows, before[index].rows)
+  await payload.db.drizzle.transaction(async (transaction) => controlsMigration.up({ ...args, db: transaction as unknown as typeof args.db }))
+  await payload.db.drizzle.transaction(async (transaction) => devlogsMigration.up({ ...args, db: transaction as unknown as typeof args.db }))
+  await payload.db.drizzle.transaction(async (transaction) => previewsMigration.up({ ...args, db: transaction as unknown as typeof args.db }))
   website = await payload.findGlobal({ slug: 'landing', depth: 1 })
   assert.equal(website.hero.title, 'Previously edited headline')
   assert.equal(website.navigation.productLabel, editorDefaults.navigation.productLabel)
+  // Check the controls migration against all existing rows and history.
+  const controlKeys = ['controlsLabel', 'playLabel', 'pauseLabel', 'replayLabel', 'muteLabel', 'unmuteLabel', 'volumeLabel', 'seekLabel', 'fullscreenLabel', 'exitFullscreenLabel', 'retryLabel', 'timeLabel'] as const
+  const savedPlayer = { videoTitle: 'Saved video title', privacyLabel: 'Saved privacy copy', watchLabel: 'Saved watch copy', loadingLabel: 'Saved loading copy', readyLabel: 'Saved ready copy', errorLabel: 'Saved error copy' }
+  await payload.updateGlobal({ slug: 'landing', data: { hero: { player: savedPlayer } } })
+  const playerSchema = JSON.parse(await readFile(new URL('../src/migrations/20261020_130000_website_editor.json', import.meta.url), 'utf8')).tables as Record<string, { columns: Record<string, unknown> }>
+  const playerTables = Object.keys(playerSchema)
+  const playerColumns = playerTables.map((table) => Object.keys(playerSchema[table].columns).map((column) => '"' + column + '"').join(', '))
+  const readExistingRows = () => Promise.all(playerTables.map(async (table, index) => (await payload!.db.drizzle.$client.execute(`SELECT ${playerColumns[index]} FROM "${table}" ORDER BY rowid`)).rows))
+  const savedRows = await readExistingRows()
+  await payload.db.drizzle.transaction(async (transaction) => controlsMigration.down({ ...args, db: transaction as unknown as typeof args.db }))
+  assert.deepEqual(await readExistingRows(), savedRows)
+  await payload.db.drizzle.transaction(async (transaction) => controlsMigration.up({ ...args, db: transaction as unknown as typeof args.db }))
+  assert.deepEqual(await readExistingRows(), savedRows)
+  for (const table of ['landing', '_landing_v']) {
+    const prefix = table === 'landing' ? '' : 'version_'
+    const columns = controlKeys.map((key) => `"${prefix}hero_player_${key.replace(/[A-Z]/g, (letter) => '_' + letter.toLowerCase())}"`).join(', ')
+    const rows = (await payload.db.drizzle.$client.execute(`SELECT ${columns} FROM "${table}"`)).rows
+    assert.ok(rows.length)
+    for (const row of rows) assert.ok(Object.values(row).every((value) => value === null), 'Migration leaves new published/history labels null')
+  }
+  website = await payload.findGlobal({ slug: 'landing' })
+  for (const [key, value] of Object.entries(savedPlayer)) assert.equal(website.hero.player?.[key as keyof typeof savedPlayer], value)
+  for (const key of controlKeys) assert.equal(website.hero.player?.[key], editorDefaults.hero.player[key])
+  // Preview labels add nullable columns without changing any existing data or history.
+  const previewKeys = ['pausePreviewsLabel', 'resumePreviewsLabel'] as const
+  const previewSchema = JSON.parse(await readFile(new URL('../src/migrations/20261020_150000_devlogs.json', import.meta.url), 'utf8')).tables as Record<string, { columns: Record<string, unknown> }>
+  const previewTables = Object.keys(previewSchema)
+  const previewColumns = previewTables.map((table) => Object.keys(previewSchema[table].columns).map((column) => '"' + column + '"').join(', '))
+  const readPreviewLegacyRows = () => Promise.all(previewTables.map(async (table, index) => (await payload!.db.drizzle.$client.execute(`SELECT ${previewColumns[index]} FROM "${table}" ORDER BY rowid`)).rows))
+  const previewLegacyRows = await readPreviewLegacyRows()
+  await payload.db.drizzle.transaction(async (transaction) => previewsMigration.down({ ...args, db: transaction as unknown as typeof args.db }))
+  assert.deepEqual(await readPreviewLegacyRows(), previewLegacyRows)
+  await payload.db.drizzle.transaction(async (transaction) => previewsMigration.up({ ...args, db: transaction as unknown as typeof args.db }))
+  assert.deepEqual(await readPreviewLegacyRows(), previewLegacyRows)
+  for (const table of ['landing', '_landing_v']) {
+    const prefix = table === 'landing' ? '' : 'version_'
+    const rows = (await payload.db.drizzle.$client.execute(`SELECT "${prefix}features_controls_pause_previews_label", "${prefix}features_controls_resume_previews_label" FROM "${table}"`)).rows
+    assert.ok(rows.length)
+    for (const row of rows) assert.ok(Object.values(row).every((value) => value === null), 'Migration leaves new preview labels null in published rows and history')
+  }
+  website = await payload.findGlobal({ slug: 'landing' })
+  for (const key of previewKeys) assert.equal(website.features.controls?.[key], editorDefaults.features.controls[key])
   // A legacy row with no new arrays must present their defaults to the editor.
   assert.equal(website.layout?.length, editorDefaults.layout.length)
 
@@ -56,6 +116,15 @@ try {
   assert.equal(website.layout?.length, editorDefaults.layout.length, 'A legacy partial write must persist hydrated lists')
 
   const user = await payload.create({ collection: 'users', data: { email: 'editor@example.com', password: randomBytes(24).toString('hex') } })
+  const publishedControls = Object.fromEntries(controlKeys.map((key) => [key, `Published ${editorDefaults.hero.player[key]}`]))
+  const publishedPreviewControls = { pausePreviewsLabel: 'Pause feature previews', resumePreviewsLabel: 'Play feature previews' }
+  const draftPreviewControls = { pausePreviewsLabel: 'Draft pause previews', resumePreviewsLabel: 'Draft play previews' }
+  const draftControls = Object.fromEntries(controlKeys.map((key) => [key, `Draft ${editorDefaults.hero.player[key]}`]))
+  await payload.updateGlobal({ slug: 'landing', data: { hero: { player: publishedControls }, features: { controls: publishedPreviewControls }, _status: 'published' }, user, overrideAccess: false })
+  const authoredPreviews = (await payload.findGlobal({ slug: 'landing', overrideAccess: false })).features.controls
+  assert.deepEqual(authoredPreviews && Object.fromEntries(previewKeys.map((key) => [key, authoredPreviews[key]])), publishedPreviewControls)
+  const authoredPlayer = (await payload.findGlobal({ slug: 'landing', overrideAccess: false })).hero.player
+  for (const key of controlKeys) assert.equal(authoredPlayer?.[key], publishedControls[key])
   const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j1ioAAAAASUVORK5CYII=', 'base64')
   const file = { data: png, mimetype: 'image/png', name: 'preview.png', size: png.length }
   await assert.rejects(payload.create({ collection: 'media', data: { alt: 'Public attempt' }, file, overrideAccess: false }))
@@ -78,7 +147,7 @@ try {
   assert.equal(website.pages?.remote?.title, 'Edited remote page')
   assert.equal(website.site?.theme?.accent, '#aabbcc')
   assert.deepEqual(website.layout?.map(({ section }) => section), ['roadmap', 'hero'])
-  await payload.updateGlobal({ slug: 'landing', data: { features: { items: [{ title: 'A newly authored feature', description: 'Published without the hidden legacy icon.', detail: 'Available now', image: media.id }] } }, user, overrideAccess: false })
+  await payload.updateGlobal({ slug: 'landing', data: { features: { items: [{ title: 'A newly authored feature', description: 'Published without an optional preview scene.', detail: 'Available now', image: media.id }] } }, user, overrideAccess: false })
   const newFeature = await payload.findGlobal({ slug: 'landing', depth: 1, overrideAccess: false })
   assert.equal(landingSchema.parse(newFeature).features.items[0].title, 'A newly authored feature')
   for (const data of [
@@ -98,14 +167,26 @@ try {
   await payload.updateGlobal({ slug: 'landing', data: { layout: [], footer: { socials: [] } } })
   assert.deepEqual((await payload.findGlobal({ slug: 'landing' })).layout, [])
   assert.deepEqual((await payload.findGlobal({ slug: 'landing' })).footer.socials, [])
-  await payload.updateGlobal({ slug: 'landing', data: { pages: { remote: { title: 'Private remote draft' } }, _status: 'draft' }, draft: true, user, overrideAccess: false })
+  await payload.updateGlobal({ slug: 'landing', data: { pages: { remote: { title: 'Private remote draft' } }, hero: { player: draftControls }, features: { controls: draftPreviewControls }, _status: 'draft' }, draft: true, user, overrideAccess: false })
   assert.equal((await payload.findGlobal({ slug: 'landing', draft: true, overrideAccess: false })).pages?.remote?.title, 'Edited remote page')
   assert.equal((await payload.findGlobal({ slug: 'landing', draft: true, user, overrideAccess: false })).pages?.remote?.title, 'Private remote draft')
+  const publicPlayer = (await payload.findGlobal({ slug: 'landing', draft: true, overrideAccess: false })).hero.player
+  const privatePlayer = (await payload.findGlobal({ slug: 'landing', draft: true, user, overrideAccess: false })).hero.player
+  for (const key of controlKeys) {
+    assert.equal(publicPlayer?.[key], publishedControls[key])
+    assert.equal(privatePlayer?.[key], draftControls[key])
+  }
+  const publicPreviews = (await payload.findGlobal({ slug: 'landing', draft: true, overrideAccess: false })).features.controls
+  const privatePreviews = (await payload.findGlobal({ slug: 'landing', draft: true, user, overrideAccess: false })).features.controls
+  for (const key of previewKeys) {
+    assert.equal(publicPreviews?.[key], publishedPreviewControls[key])
+    assert.equal(privatePreviews?.[key], draftPreviewControls[key])
+  }
   assert.match(command(['run', 'seed'], true), /already exists; seed skipped/)
   assert.equal((await payload.findGlobal({ slug: 'landing', draft: true })).pages?.remote?.title, 'Private remote draft')
   // A separate process opens the same SQLite file and resolves the saved upload.
   command(['x', 'tsx', 'scripts/verify-editor-persistence.ts'], true)
-  console.log('Passed: website migration rollback/up preserves legacy edits/history, defaults, media upload/access/filtering/population/files, editor validation, order/empty lists, page draft isolation, idempotent seed, and persisted SQLite restart.')
+  console.log('Passed: website migration rollback/up preserves legacy edits/history, defaults, player and preview controls migration/null hydration/authored draft isolation, media upload/access/filtering/population/files, editor validation, order/empty lists, page draft isolation, idempotent seed, and persisted SQLite restart.')
 } finally {
   await payload?.destroy()
   await rm(directory, { recursive: true, force: true })

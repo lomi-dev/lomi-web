@@ -1,13 +1,12 @@
 ---
-import { Picture } from 'astro:assets';
-import workspacePlaceholder from '../assets/placeholders/workspace.png';
+import MediaPlaceholder from './MediaPlaceholder.astro';
 ---
 
 <dialog class="video-dialog" id="video-dialog" aria-label="Watch Lomi" aria-describedby="video-instructions" tabindex="0" autofocus>
   <p class="video-instructions" id="video-instructions">Press Escape to close, or click outside the video.</p>
   <div class="video-player" data-video-player data-video-status="loading" aria-busy="true">
     <div class="video-poster" data-video-poster aria-hidden="true">
-      <Picture src={workspacePlaceholder} alt="" formats={['avif', 'webp']} widths={[640, 960, 1440, 1920]} sizes="(min-width: 1112px) 1080px, calc(100vw - 32px)" loading="eager" decoding="async" />
+      <MediaPlaceholder loading="eager" />
       <span class="video-loading" data-video-loading><span class="video-loading-ring"></span></span>
     </div>
     <div class="video-mount" data-video-mount inert></div>

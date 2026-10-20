@@ -14,7 +14,7 @@
     "check": "tsc --noEmit",
     "generate:types": "payload generate:types",
     "seed": "tsx scripts/seed.ts",
-    "test": "tsx scripts/test.ts && tsx scripts/test-editor.ts"
+    "test": "tsx scripts/test.ts && tsx scripts/test-editor.ts && tsx scripts/test-devlogs.ts"
   },
   "dependencies": {
     "@payloadcms/db-sqlite": "3.91.0",

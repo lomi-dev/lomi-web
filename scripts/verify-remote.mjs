@@ -82,18 +82,14 @@ async function verifyShowcase(page) {
   await expect(screenshot).toHaveCount(1);
   await screenshot.scrollIntoViewIfNeeded();
   await expect(screenshot).toBeVisible();
-  await expect(screenshot).toHaveAttribute('src', /\/_astro\//);
-  const dimensions = await screenshot.evaluate(async (element) => {
-    await element.decode();
-    return { width: Number(element.getAttribute('width')), height: Number(element.getAttribute('height')), naturalWidth: element.naturalWidth, naturalHeight: element.naturalHeight };
-  });
-  expect(dimensions.width).toBe(2880);
-  expect(dimensions.height).toBe(1800);
-  expect(dimensions.naturalWidth).toBeGreaterThan(0);
-  expect(dimensions.naturalHeight).toBeGreaterThan(0);
+  await expect(screenshot).toHaveAttribute('src', '/placeholders/lomi-mark.svg');
+  await expect(screenshot).toHaveAttribute('alt', '');
+  await expect.poll(() => screenshot.evaluate((element) => element.complete && element.naturalWidth > 0)).toBe(true);
+  const frame = figure.locator('[data-media-placeholder]');
+  await expect(frame).toHaveCSS('aspect-ratio', '8 / 5');
   const installer = await page.locator('[data-remote-installer]').boundingBox();
-  const image = await screenshot.boundingBox();
-  expect(Math.abs(image.height - image.width * dimensions.height / dimensions.width), 'The rendered screenshot preserves its declared aspect ratio within one CSS pixel').toBeLessThanOrEqual(1);
+  const image = await frame.boundingBox();
+  expect(Math.abs(image.height - image.width * 5 / 8), 'The preview reserves its aspect ratio within one CSS pixel').toBeLessThanOrEqual(1);
   expect(image.y, 'The screenshot follows the installer').toBeGreaterThanOrEqual(installer.y + installer.height);
   expect(image.x).toBeGreaterThanOrEqual(0);
   expect(image.x + image.width).toBeLessThanOrEqual(page.viewportSize().width);

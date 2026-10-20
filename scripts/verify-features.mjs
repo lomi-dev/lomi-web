@@ -84,7 +84,7 @@ async function noOverflow(page) {
 }
 
 async function controlsVisible(page) {
-  for (const control of await dialog(page).locator('[data-feature-close], [data-feature-prev], [data-feature-next], [data-feature-dot]').all()) {
+  for (const control of await dialog(page).locator('[data-feature-close], [data-feature-prev], [data-feature-next], [data-feature-dot], [data-preview-toggle]:not([hidden])').all()) {
     await expect(control).toBeVisible();
     expect(await control.evaluate((element) => {
       const rect = element.getBoundingClientRect();
@@ -119,7 +119,7 @@ async function axe(page, label) {
   // Contrast snapshots describe the readable resting state; motion itself is
   // sampled separately while its outgoing visual copies remain aria-hidden.
   await expect.poll(() => dialog(page).evaluate((element) => element.getAnimations({ subtree: true })
-    .filter((animation) => ['running', 'paused'].includes(animation.playState)).length)).toBe(0);
+    .filter((animation) => animation.constructor.name === 'Animation' && ['running', 'paused'].includes(animation.playState)).length)).toBe(0);
   const result = await new AxeBuilder({ page }).include('#features').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
   expect(result.violations, `${label}: feature accessibility`).toEqual([]);
 }
@@ -135,7 +135,7 @@ async function settled(page, index) {
   await selected(page, index);
   await expect(dialog(page).locator('[data-feature-motion-layer]')).toHaveCount(0);
   await expect.poll(() => dialog(page).evaluate((element) => element.getAnimations({ subtree: true })
-    .filter((animation) => ['running', 'paused'].includes(animation.playState)).length)).toBe(0);
+    .filter((animation) => animation.constructor.name === 'Animation' && ['running', 'paused'].includes(animation.playState)).length)).toBe(0);
 }
 
 async function verifyOriginMotion(page, index) {
@@ -228,7 +228,7 @@ async function directionStep(page, control, index, direction) {
     const before = {
       slide: beforeSlide.getBoundingClientRect().left,
       media: left(beforeSlide, '[data-feature-modal-media]'),
-      picture: left(beforeSlide, 'picture'),
+      picture: left(beforeSlide, 'picture, [data-placeholder-variant="feature"]'),
       copy: left(beforeSlide, '[data-feature-copy]'),
       description: left(beforeSlide, '.feature-modal-description'),
       close: box(element.querySelector('[data-feature-close]')),
@@ -256,7 +256,7 @@ async function directionStep(page, control, index, direction) {
       outgoing: outgoing ? outgoing.getBoundingClientRect().left - before.slide : null,
       displacements: {
         media: left(slide, '[data-feature-modal-media]') - before.media,
-        picture: left(slide, 'picture') - before.picture,
+        picture: left(slide, 'picture, [data-placeholder-variant="feature"]') - before.picture,
         copy: left(slide, '[data-feature-copy]') - before.copy,
         description: left(slide, '.feature-modal-description') - before.description,
         navigation: left(slide, '[data-feature-navigation]') - before.navigation,
@@ -266,7 +266,7 @@ async function directionStep(page, control, index, direction) {
       },
       outgoingDisplacements: outgoing ? {
         media: left(outgoing, '.feature-modal-media') - before.media,
-        picture: left(outgoing, 'picture') - before.picture,
+        picture: left(outgoing, 'picture, [data-placeholder-variant="feature"]') - before.picture,
         copy: left(outgoing, '.feature-modal-copy') - before.copy,
         description: left(outgoing, '.feature-modal-description') - before.description,
         navigation: left(outgoing, '.feature-modal-navigation') - before.navigation,
@@ -274,8 +274,8 @@ async function directionStep(page, control, index, direction) {
         arrows: left(outgoing, '.feature-modal-arrows') - before.arrows,
         dots: left(outgoing, '.feature-modal-dots') - before.dots,
       } : null,
-      opacity: [slide, copy, slide.querySelector('.feature-modal-description'), slide.querySelector('picture'), slide.querySelector('[data-feature-modal-media]'),
-        outgoing, outgoing?.querySelector('.feature-modal-copy'), outgoing?.querySelector('picture'), outgoing?.querySelector('.feature-modal-media')]
+      opacity: [slide, copy, slide.querySelector('.feature-modal-description'), slide.querySelector('picture, [data-placeholder-variant="feature"]'), slide.querySelector('[data-feature-modal-media]'),
+        outgoing, outgoing?.querySelector('.feature-modal-copy'), outgoing?.querySelector('picture, [data-placeholder-variant="feature"]'), outgoing?.querySelector('.feature-modal-media')]
         .map((item) => item ? Number(getComputedStyle(item).opacity) : null),
       ownership: animations.map((animation) => animation.effect.target === slide ? 'incoming' : animation.effect.target === outgoing ? 'outgoing' : 'child'),
       clipped: ['hidden', 'clip'].includes(getComputedStyle(frame).overflowX),
@@ -314,13 +314,17 @@ async function directionStep(page, control, index, direction) {
   expect(motion.duplicateIds, 'Visual copies do not duplicate accessible IDs').toEqual([]);
   if (index === 1 && direction === 1) {
     for (let step = 0; step < 24; step++) {
+      const previousFocus = await dialog(page).evaluate(() => document.activeElement?.outerHTML.slice(0, 500));
       await page.keyboard.press(step < 12 ? 'Tab' : 'Shift+Tab');
-      expect(await dialog(page).evaluate((element) => element.contains(document.activeElement)
-        && !document.activeElement.closest('[data-feature-motion-layer]')), 'Tab keeps focus on live controls and ignores outgoing navigation').toBe(true);
+      const tabFocus = await dialog(page).evaluate((element) => ({
+        contained: element.contains(document.activeElement) && !document.activeElement.closest('[data-feature-motion-layer]'),
+        active: document.activeElement?.outerHTML.slice(0, 500),
+      }));
+      expect(tabFocus.contained, `Tab keeps focus on live controls and ignores outgoing navigation (step ${step}, previous ${previousFocus}, ${JSON.stringify(tabFocus)})`).toBe(true);
     }
     await dialog(page).evaluate((element, selector) => element.querySelector(selector).focus({ preventScroll: true }), control);
   }
-  await dialog(page).evaluate((element) => element.getAnimations({ subtree: true }).filter((animation) => animation.playState === 'paused').forEach((animation) => animation.play()));
+  await dialog(page).evaluate((element) => element.getAnimations({ subtree: true }).filter((animation) => animation.constructor.name === 'Animation' && animation.playState === 'paused').forEach((animation) => animation.play()));
   await settled(page, index);
 }
 
@@ -427,7 +431,7 @@ try {
   await expect(root).toHaveCSS('background-color', 'rgb(247, 248, 243)');
   expect(await root.getAttribute('data-scroll-surface')).not.toBeNull();
   await expect(root.locator('[data-feature-open]')).toHaveCount(6);
-  await expect(root.locator('[data-feature-card-media] picture img')).toHaveCount(6);
+  await expect(root.locator('[data-feature-card-media] [data-feature-simulation] > svg')).toHaveCount(6);
   await expect(root.locator('video, iframe')).toHaveCount(0);
   for (const image of await root.locator('img').all()) {
     expect(new URL(await image.getAttribute('src'), url).origin, 'Feature imagery stays local').toBe(new URL(url).origin);
@@ -511,7 +515,7 @@ try {
 
   for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }, { width: 768, height: 1024 }, { width: 1440, height: 500 }]) {
     await page.setViewportSize(viewport);
-    await selected(page, 1);
+    await settled(page, 1);
     await controlsVisible(page);
     await layout(page);
     await dialog(page).locator('[data-feature-next]').click();
@@ -632,7 +636,7 @@ try {
           expect(Math.abs(geometry.outgoing[property] - geometry.before[property]), `Outgoing ${property} preserves scrolled text geometry at ${viewport.width}px`).toBeLessThanOrEqual(1);
         }
         expect(geometry.slideLayers).toBe(1);
-        await dialog(fixture.page).evaluate((element) => element.getAnimations({ subtree: true }).filter((animation) => animation.playState === 'paused').forEach((animation) => animation.play()));
+        await dialog(fixture.page).evaluate((element) => element.getAnimations({ subtree: true }).filter((animation) => animation.constructor.name === 'Animation' && animation.playState === 'paused').forEach((animation) => animation.play()));
         await expect(dialog(fixture.page).locator('[data-feature-motion-layer]')).toHaveCount(0);
         const after = await dialog(fixture.page).locator('[data-feature-slide]:not([hidden]) [data-feature-copy]').evaluate((copy) => ({
           clientWidth: copy.clientWidth, scrollHeight: copy.scrollHeight, clientHeight: copy.clientHeight,
@@ -688,7 +692,7 @@ try {
     await staticRun.context.close();
   }
   expect(errors, 'No runtime errors in feature scenarios').toEqual([]);
-  console.log(`Passed (${browserType.name()}): whole-dialog card-origin entry/exit and interrupted opening on desktop/mobile, all feature cards, accessible names/descriptions, wrapping arrows/dots/keyboard, directional whole-feature swipes with image/copy/navigation in lockstep, bounded latest-intent queue, reverse/resize/reduced-motion/close cleanup, rapid input and reopen, native focus containment/Escape/backdrop, focus and scroll restoration, resize/mobile/tablet/short desktop, reduced motion/live cancellation, CMS 1/12 items and long copy, no-JS fallback, local pictures, no overflow and axe.`);
+  console.log(`Passed (${browserType.name()}): whole-dialog card-origin entry/exit and interrupted opening on desktop/mobile, all feature cards, accessible names/descriptions, wrapping arrows/dots/keyboard, directional whole-feature swipes with image/copy/navigation in lockstep, bounded latest-intent queue, reverse/resize/reduced-motion/close cleanup, rapid input and reopen, native focus containment/Escape/backdrop, focus and scroll restoration, resize/mobile/tablet/short desktop, reduced motion/live cancellation, CMS 1/12 items and long copy, no-JS fallback, local simulations, no overflow and axe.`);
 } finally {
   await browser.close();
 }

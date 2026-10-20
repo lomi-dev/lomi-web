@@ -10,6 +10,11 @@ try {
   assert.equal(typeof website.hero.video === 'object' && website.hero.video?.mimeType, 'video/webm')
   assert.equal(website.pages?.remote?.title, 'Edited remote page')
   assert.deepEqual(website.layout, [])
+  assert.equal(website.features.controls?.pausePreviewsLabel, 'Pause feature previews')
+  assert.equal(website.features.controls?.resumePreviewsLabel, 'Play feature previews')
+  const draft = await payload.findGlobal({ slug: 'landing', draft: true })
+  assert.equal(draft.features.controls?.pausePreviewsLabel, 'Draft pause previews')
+  assert.equal(draft.features.controls?.resumePreviewsLabel, 'Draft play previews')
 } finally {
   await payload.destroy()
 }

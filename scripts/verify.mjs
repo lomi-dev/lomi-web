@@ -120,7 +120,15 @@ async function mockVideoRequests(targetPage) {
             this.iframe = iframe; this.events = options.events; this.calls = [];
             window.__mockYouTube.players.push(this);
           }
-          mute() { this.calls.push('mute'); }
+          mute() { this.muted = true; this.calls.push('mute'); }
+          unMute() { this.muted = false; this.calls.push('unMute'); }
+          isMuted() { return this.muted ?? true; }
+          getVolume() { return this.volume ?? 100; }
+          setVolume(value) { this.volume = value; }
+          getCurrentTime() { return this.time ?? 0; }
+          getDuration() { return 120; }
+          seekTo(value) { this.time = value; }
+          getPlayerState() { return -1; }
           playVideo() { this.calls.push('playVideo'); }
           pauseVideo() { this.calls.push('pauseVideo'); }
           destroy() { this.calls.push('destroy'); this.iframe.remove(); }
@@ -143,16 +151,16 @@ async function verifyInlineVideo(targetPage, requests) {
   expect(requests.some((request) => request.includes('/iframe_api')), 'Remembered consent initializes the API without a hero click').toBe(true);
   const source = new URL(await iframe.getAttribute('src'));
   expect(source.hostname).toBe('www.youtube-nocookie.com');
-  expect(source.searchParams.get('controls')).toBe('1');
+  expect(source.searchParams.get('controls')).toBe('0');
   expect(source.searchParams.get('autoplay')).toBe('0');
   await expect(iframe).toHaveAttribute('allowfullscreen', '');
-  await expect(root.locator('[data-video-poster]')).toHaveCSS('visibility', 'hidden');
-  await expect(root.locator('[data-video-mount]')).not.toHaveAttribute('inert');
+  await expect(root.locator('[data-video-poster]')).toBeVisible();
+  await expect(root.locator('[data-player-controls]')).toBeVisible();
   await expect.poll(() => targetPage.evaluate(() => window.__mockYouTube?.players.length || 0)).toBe(1);
   await root.locator('[data-video-player]').evaluate((element) => element.scrollIntoView({ block: 'center', behavior: 'instant' }));
   await targetPage.evaluate(() => { const instance = window.__mockYouTube.players[0]; instance.events.onReady({ target: instance }); });
   expect((await targetPage.evaluate(() => window.__mockYouTube.players[0].calls))[0], 'Mute precedes any autoplay').toBe('mute');
-  await expect(targetPage.frameLocator('[data-video-mount] iframe').getByRole('slider', { name: 'Volume' })).toBeVisible();
+  await expect(root.locator('[data-player-volume]')).toBeVisible();
   expect(await targetPage.evaluate(() => [document.documentElement.style.overflow, document.body.style.overflow]), 'Inline playback does not lock scrolling').not.toContain('hidden');
 }
 
@@ -710,7 +718,7 @@ async function verifyDevlog(javaScriptEnabled) {
     await expect(devlogPage).toHaveURL(devlogUrl);
     await expect(devlogPage).toHaveTitle('Devlog — lomi');
     await expect(devlogPage.getByRole('heading', { level: 1 })).toHaveCount(1);
-    await expect(devlogPage.getByRole('heading', { level: 1 })).toHaveAccessibleName('Work in progress');
+    await expect(devlogPage.getByRole('heading', { level: 1 })).toHaveAccessibleName('Devlog.');
     await expect(devlogPage.locator('main article')).toHaveCount(0);
     await expect(devlogPage.locator('.wordmark')).toHaveAttribute('href', '/');
     await expect(devlogPage.getByRole('link', { name: 'Back to lomi' })).toHaveAttribute('href', '/');
@@ -952,7 +960,7 @@ try {
   const workspace = page.locator('.hero #workspace');
   const workspaceImage = workspace.locator('[data-video-player]');
   await expect(workspace.locator('img')).toHaveCount(1);
-  await expect(workspace.locator('img')).toHaveAttribute('alt', /\S/);
+  await expect(workspace.locator('[data-media-placeholder] img')).toHaveAttribute('alt', '');
   await expect.poll(() => workspace.locator('img').evaluate((image) => image.naturalWidth)).toBeGreaterThan(0);
   await verifyInlineVideo(page, videoRequests);
 
@@ -1097,7 +1105,7 @@ try {
   await expect(staticWorkspace.locator('img')).toHaveCount(1);
   const staticImage = staticWorkspace.locator('[data-video-poster] img');
   await expect(staticImage).toBeVisible();
-  await expect(staticImage).toHaveAttribute('alt', /\S/);
+  await expect(staticImage).toHaveAttribute('alt', '');
   await expect.poll(() => staticImage.evaluate((element) => element.naturalWidth)).toBeGreaterThan(0);
   await verifyHeroComposition(staticPage, 390);
   await expect(staticWorkspace.locator('iframe')).toHaveCount(0);

@@ -27,7 +27,10 @@ content. Edit the homepage section order and visibility in Layout; each section
 can appear once. Page content includes Download, Remote, Devlog, and Cookies.
 Images, uploaded videos, YouTube URLs, theme colors, SEO, links, labels, and
 accessibility text are editable. Upload a poster and choose the hero media mode
-to display an image, a YouTube player, or an uploaded video.
+to display an image, a YouTube player, or an uploaded video. Hero → Player
+includes the custom video player's controls, playback, mute, volume, seeking,
+fullscreen, retry, and time labels. Keep `{current}` and `{duration}` in the
+time label so the website can insert playback times.
 
 Legacy unused fields are hidden, retained in storage, and optional. New optional
 fields receive the shared website defaults when older documents are read. Saving
@@ -86,7 +89,14 @@ Before changing an existing production schema, create and apply Payload database
 migrations (`bunx payload migrate:create`, then `bunx payload migrate`). The
 checked-in migrations include the initial schema, task statuses, complete website
 fields, published and draft/version tables, and media relationships. Apply them
-in order before production start. The website migration preserves existing
+in order before production start. The additive hero player controls migration
+adds optional labels to published content and version history; existing player
+copy is preserved and missing labels use the shared defaults. Its rollback
+removes only those new labels. The additive `20261020_160000_feature_previews`
+migration adds optional pause/play labels for simulated feature previews to
+published content and version history. Existing feature `icon` values now
+appear as **Preview scene** choices; uploaded images and videos take priority.
+The website migration preserves existing
 edited fields; its rollback removes the new editor fields and media database
 records, so back up first. Rollback does not remove uploaded files. Run
 `NODE_ENV=production bunx payload migrate` with the production environment.
@@ -94,3 +104,30 @@ Do not use development schema push against a migrated production database.
 
 No email transport is configured: Payload logs emails locally. Configure a
 production email adapter before relying on password-reset email delivery.
+
+Devlog episodes live in the separate **Devlogs** collection. It starts empty:
+seeding website copy never creates sample episodes. Add a title, an HTTPS
+YouTube watch/share/shorts/embed URL, and a publication date, then publish.
+Incomplete work can be saved as a draft. Optional fields include a description
+(up to 1000 characters), duration (`m:ss` or `h:mm:ss`), an uploaded image
+thumbnail, and alternative text (up to 500 characters). Thumbnail selection
+accepts only images from the Media library. Without an uploaded image, the
+website uses its local placeholder; it never fetches YouTube thumbnails.
+Publication dates determine newest-first ordering and display; future dates do
+not schedule publication. Published episodes are public immediately.
+
+Anonymous visitors can read published episodes only. Authenticated editors can
+create, update, delete, read drafts, and inspect up to 20 versions per episode.
+The published feed is available at `/api/devlogs?depth=1&draft=false`; its default
+sort is `-publishedAt`. Website → Page content → Devlog page contains the page
+heading, latest/archive/watch labels, and empty-state copy. Publish and rebuild
+the Astro website to display episode or page-copy changes.
+
+The additive `20261020_150000_devlogs` migration creates the episode and version
+tables, locked-document relationship, and optional Devlog page-copy columns.
+Existing website rows and version history are preserved. Its rollback removes
+Devlog episodes and their history plus the new copy columns, while retaining
+older website data and uploads. Back up before rolling back. Roll back this
+migration before older website migrations, then reapply dependencies in order.
+`bun run test` includes an isolated Devlog integration check using disposable
+SQLite and upload directories.

@@ -4,9 +4,10 @@ import WorkspaceDeck from './WorkspaceDeck.astro';
 import Icon from './Icon';
 import { activeLandingLinks } from '../data/navigation';
 import type { Landing } from '../../content/landing-schema';
+import type { MediaAsset } from '../../content/editor-schema';
 
-interface Props { content: Landing['hero']; layout?: Landing['layout'] }
-const { content, layout } = Astro.props;
+interface Props { content: Landing['hero']; layout?: Landing['layout']; placeholderLogo?: MediaAsset | null }
+const { content, layout, placeholderLogo } = Astro.props;
 const primary = activeLandingLinks([{label: content.primaryLabel, href: content.primaryHref}], layout)[0];
 const secondary = activeLandingLinks([{label: content.secondaryLabel, href: content.secondaryHref}], layout)[0];
 ---
@@ -24,7 +25,7 @@ const secondary = activeLandingLinks([{label: content.secondaryLabel, href: cont
     </div>
   </div>
   <div class="hero-product">
-    <WorkspaceDeck content={content} />
+    <WorkspaceDeck content={content} placeholderLogo={placeholderLogo} />
   </div>
 </section>
 

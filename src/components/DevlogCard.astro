@@ -1,0 +1,60 @@
+---
+import { resolveMedia, type MediaAsset } from '../../content/editor-schema';
+import { devlogWatchUrl, type Devlog } from '../../content/devlog-schema';
+import MediaPlaceholder from './MediaPlaceholder.astro';
+import Icon from './Icon';
+
+interface Props { episode: Devlog; featured?: boolean; language: string; watchLabel: string; placeholderLogo?: MediaAsset | null }
+const { episode, featured = false, language, watchLabel, placeholderLogo } = Astro.props;
+const thumbnail = resolveMedia(episode.thumbnail, import.meta.env.CMS_URL);
+const titleId = `episode-${episode.id}`;
+const date = new Date(episode.publishedAt);
+const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' };
+let published;
+try { published = new Intl.DateTimeFormat(language, options).format(date); }
+catch { published = new Intl.DateTimeFormat('en', options).format(date); }
+---
+
+<article class:list={['devlog-card', { 'devlog-card-featured': featured }]} data-devlog-card>
+  <a href={devlogWatchUrl(episode.videoUrl)} aria-labelledby={titleId} aria-describedby={`${titleId}-watch`}>
+    <div class="episode-thumbnail">
+      {thumbnail ? <img src={thumbnail.url} alt={episode.thumbnailAlt || thumbnail.alt || ''} width={thumbnail.width ?? 1600} height={thumbnail.height ?? 1000} loading={featured ? 'eager' : 'lazy'} decoding="async" /> : <MediaPlaceholder logo={placeholderLogo} aspect="16 / 9" loading={featured ? 'eager' : 'lazy'} />}
+      <span class="episode-play" aria-hidden="true"><Icon name="play" width={20} height={20} /></span>
+      {episode.duration && <span class="episode-duration">{episode.duration}</span>}
+    </div>
+    <div class="episode-copy">
+      <time datetime={episode.publishedAt}>{published}</time>
+      <h3 id={titleId}>{episode.title}</h3>
+      {episode.description && <p>{episode.description}</p>}
+      <span class="episode-watch" id={`${titleId}-watch`}>{watchLabel}<Icon name="diagonal" width={14} height={14} /></span>
+    </div>
+  </a>
+</article>
+
+<style>
+  .devlog-card { min-width: 0; }
+  .devlog-card > a { display: block; height: 100%; border-radius: 16px 16px 4px 4px; }
+  .episode-thumbnail { position: relative; aspect-ratio: 16 / 9; overflow: hidden; border: 1px solid color-mix(in srgb, var(--color-ink) 12%, transparent); border-radius: 16px; background: var(--color-ink); }
+  .episode-thumbnail:has([data-media-placeholder]) { border: 0; }
+  .episode-thumbnail > img { width: 100%; height: 100%; object-fit: cover; }
+  .episode-play { position: absolute; display: grid; place-items: center; bottom: 16px; left: 16px; width: 40px; height: 40px; border: 1px solid rgb(255 255 255 / 25%); border-radius: 50%; background: #0b0d0c; color: #fff; }
+  .episode-play :global(svg) { margin-left: 2px; }
+  .episode-duration { position: absolute; bottom: 20px; right: 16px; padding: 3px 6px; border-radius: 4px; background: #0b0d0c; color: #fff; font-size: 11px; line-height: 1.5; font-variant-numeric: tabular-nums; }
+  .episode-copy { display: flex; flex-direction: column; align-items: flex-start; padding: 20px 0 0; }
+  time { color: var(--devlog-muted); font-size: 12px; line-height: 1.5; font-variant-numeric: tabular-nums; }
+  h3 { margin-top: 9px; font-size: 22px; line-height: 1.25; font-weight: 500; overflow-wrap: anywhere; text-wrap: balance; }
+  .episode-copy > p { margin-top: 10px; color: var(--devlog-muted); font-size: 14px; line-height: 1.75; text-wrap: pretty; }
+  .episode-watch { display: inline-flex; align-items: center; gap: 9px; padding-block: 12px 4px; font-size: 12px; color: var(--devlog-muted); line-height: 1.6; }
+  .devlog-card > a:hover .episode-watch { color: var(--color-ink); text-decoration: underline; text-underline-offset: 4px; }
+  .devlog-card > a:is(:hover, :focus-visible) .episode-play { background: var(--color-lime); border-color: var(--color-lime); color: var(--color-ink); }
+  .devlog-card > a:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 6px; }
+  .devlog-card-featured .episode-copy { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 24px; align-items: start; padding-top: 23px; }
+  .devlog-card-featured h3 { grid-column: 1; grid-row: 1; max-width: 660px; margin: 0; font-size: clamp(28px, 3vw, 42px); line-height: 1.14; }
+  .devlog-card-featured time { grid-column: 2; grid-row: 1; padding-top: 8px; text-align: right; }
+  .devlog-card-featured .episode-copy > p { grid-column: 1; max-width: 570px; margin-top: 16px; font-size: 15px; }
+  .devlog-card-featured .episode-watch { grid-column: 1; padding-top: 14px; }
+  .devlog-card-featured .episode-play { width: 48px; height: 48px; bottom: 20px; left: 20px; }
+  .devlog-card-featured .episode-duration { bottom: 30px; right: 20px; }
+  @media (max-width: 1000px) { .devlog-card-featured .episode-copy { display: flex; } .devlog-card-featured h3 { margin-top: 9px; font-size: 30px; } .devlog-card-featured time { padding-top: 0; text-align: left; } }
+  @media (max-width: 767px) { .devlog-card-featured .episode-play { width: 40px; height: 40px; bottom: 16px; left: 16px; } .devlog-card-featured .episode-duration { bottom: 20px; right: 16px; } }
+</style>

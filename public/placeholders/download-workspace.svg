@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="800" viewBox="0 0 1280 800" fill="none">
+  <title>Lomi desktop workspace outline</title>
+  <desc>A project explorer, source editor, browser preview, terminal and Git changes arranged in one desktop window.</desc>
+  <rect width="1280" height="800" fill="#f0f1ec"/>
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif" font-size="18" color="#97a48a">
+    <!-- One native window contains the whole workflow. -->
+    <rect x="24.5" y="24.5" width="1231" height="751" rx="14" fill="#fcfdf9" stroke="#c8d0bf"/>
+    <path d="M39 25h1202a14 14 0 0 1 14 14v49H25V39a14 14 0 0 1 14-14Z" fill="#f6f8f1"/>
+    <g fill="#d4dbcd"><circle cx="49" cy="56" r="5"/><circle cx="68" cy="56" r="5"/><circle cx="87" cy="56" r="5"/></g>
+    <rect x="111" y="38" width="150" height="36" rx="6" fill="#edf1e7"/>
+    <path d="M126 49h7l3 3h11v15h-21V49Z" stroke="#98a68b" stroke-width="1.5" stroke-linejoin="round"/>
+    <text x="159" y="62" fill="#607351" font-weight="500">lomi</text>
+    <path d="m234 54 4 4 4-4" stroke="#98a68b" stroke-width="1.5" stroke-linecap="round"/>
+    <rect x="278" y="38" width="226" height="36" rx="6" fill="#e7efd9"/>
+    <text x="296" y="62" fill="#566d45">Workspace.tsx</text>
+    <path d="m481 51 8 8m0-8-8 8M539 49v14m-7-7h14" stroke="#a0ad93" stroke-width="1.5" stroke-linecap="round"/>
+    <path d="M25 88h1230" stroke="#d7ddce"/>
+
+    <!-- Project explorer. -->
+    <path d="M25 89h209v657H25Z" fill="#f5f7f0"/>
+    <path d="M234 88v658" stroke="#d7ddce"/>
+    <text x="45" y="121" fill="#87967b" font-size="16">Explorer</text>
+    <path d="m45 157 4 4 4-4M63 149h6l3 3h10v14H63v-17Z" stroke="#a2ae97" stroke-width="1.4" stroke-linejoin="round"/>
+    <text x="95" y="164" fill="#607351">lomi</text>
+    <path d="m59 201 4 4 4-4M78 193h6l3 3h10v14H78v-17Z" stroke="#a2ae97" stroke-width="1.4" stroke-linejoin="round"/>
+    <text x="110" y="208" fill="#87967b">src</text>
+    <rect x="36" y="229" width="187" height="38" rx="5" fill="#e7efd9"/>
+    <path d="M82 239h8l4 4v14H82v-18Zm8 0v5h4" stroke="#96a786" stroke-width="1.3" stroke-linejoin="round"/>
+    <text x="106" y="254" fill="#526a40" font-size="16">Workspace.tsx</text>
+    <g fill="#8d9b80" font-size="16">
+      <text x="106" y="298">Panel.tsx</text><text x="106" y="342">styles.css</text>
+      <text x="80" y="398">public</text><text x="80" y="442">package.json</text><text x="80" y="486">README.md</text>
+    </g>
+    <g stroke="#a2ae97" stroke-width="1.3" stroke-linejoin="round">
+      <path d="M82 283h8l4 4v14H82v-18Zm8 0v5h4M82 327h8l4 4v14H82v-18Zm8 0v5h4"/>
+      <path d="M49 383h6l3 3h10v14H49v-17ZM50 427h8l4 4v14H50v-18Zm8 0v5h4M50 471h8l4 4v14H50v-18Zm8 0v5h4"/>
+    </g>
+
+    <!-- Source editor. -->
+    <path d="M235 89h600v43H235Z" fill="#f8faf3"/>
+    <path d="M234 132h1021M835 88v658M234 491h1021" stroke="#d7ddce"/>
+    <text x="255" y="117" fill="#829473" font-size="16">src / Workspace.tsx</text>
+    <rect x="287" y="298" width="524" height="31" rx="4" fill="#edf3e4"/>
+    <g font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="17">
+      <g fill="#b1bda7" text-anchor="end">
+        <text x="270" y="179">1</text><text x="270" y="211">2</text><text x="270" y="243">3</text>
+        <text x="270" y="275">4</text><text x="270" y="307">5</text><text x="270" y="339">6</text>
+        <text x="270" y="371">7</text><text x="270" y="403">8</text><text x="270" y="435">9</text><text x="270" y="467">10</text>
+      </g>
+      <text x="303" y="179" fill="#819572">export function Workspace() {</text>
+      <text x="326" y="243" fill="#8e9e81">return (</text>
+      <text x="349" y="307" fill="#6f8859">&lt;PanelGroup layout="split"&gt;</text>
+      <text x="373" y="339" fill="#8e9e81">&lt;Editor /&gt;</text>
+      <text x="373" y="371" fill="#8e9e81">&lt;Terminal /&gt;</text>
+      <text x="349" y="403" fill="#8e9e81">&lt;/PanelGroup&gt;</text>
+      <text x="326" y="435" fill="#8e9e81">);</text>
+      <text x="303" y="467" fill="#819572">}</text>
+    </g>
+    <path d="M805 154v311" stroke="#e0e6d9"/>
+    <rect x="626" y="285" width="3" height="22" fill="#a4bb85"/>
+
+    <!-- Embedded browser, kept next to its source. -->
+    <path d="M836 89h419v43H836Z" fill="#f8faf3"/>
+    <text x="856" y="117" fill="#829473" font-size="16">Browser</text>
+    <rect x="854" y="149" width="383" height="35" rx="6" fill="#f2f5ec"/>
+    <path d="m873 159-6 7 6 7m17-14 6 7-6 7" stroke="#a7b29b" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="923" y="172" fill="#8b9b7e" font-size="15">localhost:4321</text>
+    <text x="866" y="231" fill="#6e835c" font-size="21" font-weight="500">Workspace</text>
+    <path d="M867 253h154" stroke="#d1dbc6" stroke-width="6" stroke-linecap="round"/>
+    <rect x="866" y="280" width="163" height="171" rx="7" fill="#edf3e4"/>
+    <rect x="1046" y="280" width="179" height="77" rx="7" fill="#f1f4eb"/>
+    <rect x="1046" y="374" width="179" height="77" rx="7" fill="#f1f4eb"/>
+    <g stroke="#c5d2b6" stroke-width="5" stroke-linecap="round">
+      <path d="M883 303h59m-59 22h118m-118 22h84m-84 22h100M1063 303h73m-73 22h140M1063 397h73m-73 22h140"/>
+    </g>
+
+    <!-- Terminal and version control share the bottom row. -->
+    <path d="M235 492h600v42H235ZM836 492h419v42H836Z" fill="#f8faf3"/>
+    <path d="M234 534h1021" stroke="#d7ddce"/>
+    <path d="m255 506 6 6-6 6m13 0h7" stroke="#91a47f" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="287" y="519" fill="#829473" font-size="16">Terminal</text>
+    <text x="856" y="519" fill="#829473" font-size="16">Changes</text>
+    <g font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="17">
+      <text x="255" y="574" fill="#91a47f">$</text><text x="279" y="574" fill="#758c61">bun run dev</text>
+      <text x="279" y="608" fill="#98a98a" font-size="15">localhost:4321</text>
+    </g>
+    <path d="M280 639h277m-277 25h190" stroke="#d8dfd1" stroke-width="6" stroke-linecap="round"/>
+    <path d="m255 704 6 6-6 6" stroke="#91a47f" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="280" y="700" width="3" height="21" fill="#a4bb85"/>
+    <rect x="854" y="552" width="383" height="37" rx="5" fill="#edf3e4"/>
+    <text x="869" y="576" fill="#7b9068" font-size="16">Workspace.tsx</text><text x="1206" y="576" fill="#87a06d" font-size="16">M</text>
+    <rect x="854" y="609" width="383" height="28" rx="4" fill="#f1eee7"/>
+    <rect x="854" y="647" width="383" height="28" rx="4" fill="#e7efd9"/>
+    <g stroke="#cbd4c2" stroke-width="5" stroke-linecap="round"><path d="M890 623h193m-193 38h253"/></g>
+    <path d="M866 623h10m-10 38h10m-5-5v10" stroke="#9db289" stroke-width="1.4" stroke-linecap="round"/>
+
+    <path d="M25 746h1230v15a14 14 0 0 1-14 14H39a14 14 0 0 1-14-14v-15Z" fill="#f0f4e9"/>
+    <path d="M25 746h1230" stroke="#d7ddce"/>
+    <path d="M46 754v13m0-8h7v-5" stroke="#9aaa8d" stroke-width="1.3" stroke-linecap="round"/>
+    <text x="65" y="765" fill="#97a88a" font-size="13">main</text>
+    <text x="1100" y="765" fill="#97a88a" font-size="13">TypeScript</text><text x="1200" y="765" fill="#97a88a" font-size="13">UTF-8</text>
+  </g>
+</svg>

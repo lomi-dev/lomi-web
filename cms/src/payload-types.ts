@@ -69,6 +69,7 @@ export interface Config {
   collections: {
     users: User;
     media: Media;
+    devlogs: Devlog;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -78,6 +79,7 @@ export interface Config {
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
+    devlogs: DevlogsSelect<false> | DevlogsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -156,7 +158,7 @@ export interface User {
 export interface Media {
   id: number;
   /**
-   * Describe the image for people using screen readers. Leave empty only for decorative assets.
+   * Describe the image for screen readers. Page or feature alternative text can override this description. Leave empty only for decorative assets.
    */
   alt?: string | null;
   updatedAt: string;
@@ -170,6 +172,40 @@ export interface Media {
   height?: number | null;
   focalX?: number | null;
   focalY?: number | null;
+}
+/**
+ * Add real development videos. Save incomplete drafts, then publish when ready. Rebuild and redeploy the website to show published changes.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "devlogs".
+ */
+export interface Devlog {
+  id: number;
+  title: string;
+  /**
+   * HTTPS YouTube watch, share, shorts, or embed URL. The site links to YouTube without loading an embedded player.
+   */
+  videoUrl: string;
+  /**
+   * Display date and archive order. Published entries are public immediately; this is not a publishing schedule.
+   */
+  publishedAt: string;
+  description?: string | null;
+  /**
+   * Optional duration, such as 8:42 or 1:08:42.
+   */
+  duration?: string | null;
+  /**
+   * Optional uploaded image. Without one, the website displays a local placeholder. YouTube thumbnails are never fetched automatically.
+   */
+  thumbnail?: (number | null) | Media;
+  /**
+   * Optional image description; leave empty to use the media library alternative text.
+   */
+  thumbnailAlt?: string | null;
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -202,6 +238,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'media';
         value: number | Media;
+      } | null)
+    | ({
+        relationTo: 'devlogs';
+        value: number | Devlog;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -285,6 +325,22 @@ export interface MediaSelect<T extends boolean = true> {
   height?: T;
   focalX?: T;
   focalY?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "devlogs_select".
+ */
+export interface DevlogsSelect<T extends boolean = true> {
+  title?: T;
+  videoUrl?: T;
+  publishedAt?: T;
+  description?: T;
+  duration?: T;
+  thumbnail?: T;
+  thumbnailAlt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -502,6 +558,21 @@ export interface Landing {
       loadingLabel?: string | null;
       readyLabel?: string | null;
       errorLabel?: string | null;
+      controlsLabel?: string | null;
+      playLabel?: string | null;
+      pauseLabel?: string | null;
+      replayLabel?: string | null;
+      muteLabel?: string | null;
+      unmuteLabel?: string | null;
+      volumeLabel?: string | null;
+      seekLabel?: string | null;
+      fullscreenLabel?: string | null;
+      exitFullscreenLabel?: string | null;
+      retryLabel?: string | null;
+      /**
+       * Keep {current}, {duration} in the text; the website replaces them automatically.
+       */
+      timeLabel?: string | null;
     };
   };
   features: {
@@ -510,6 +581,9 @@ export interface Landing {
     description: string;
     accent: string;
     items: {
+      /**
+       * Used only when Image and Video are empty.
+       */
       icon?: ('terminal' | 'panels' | 'code' | 'expand' | 'git' | 'spark') | null;
       title: string;
       description: string;
@@ -534,6 +608,8 @@ export interface Landing {
        * Keep {title} in the text; the website replaces it automatically.
        */
       showLabel?: string | null;
+      pausePreviewsLabel?: string | null;
+      resumePreviewsLabel?: string | null;
     };
   };
   roadmap: {
@@ -829,6 +905,16 @@ export interface Landing {
         label?: string | null;
         href?: string | null;
       };
+      latestLabel?: string | null;
+      archiveLabel?: string | null;
+      watchLabel?: string | null;
+      empty?: {
+        label?: string | null;
+        title?: string | null;
+        description?: string | null;
+        previewLabel?: string | null;
+        previewTitle?: string | null;
+      };
     };
     cookies?: {
       seo?: {
@@ -1095,6 +1181,18 @@ export interface LandingSelect<T extends boolean = true> {
               loadingLabel?: T;
               readyLabel?: T;
               errorLabel?: T;
+              controlsLabel?: T;
+              playLabel?: T;
+              pauseLabel?: T;
+              replayLabel?: T;
+              muteLabel?: T;
+              unmuteLabel?: T;
+              volumeLabel?: T;
+              seekLabel?: T;
+              fullscreenLabel?: T;
+              exitFullscreenLabel?: T;
+              retryLabel?: T;
+              timeLabel?: T;
             };
       };
   features?:
@@ -1124,6 +1222,8 @@ export interface LandingSelect<T extends boolean = true> {
               nextLabel?: T;
               chooseLabel?: T;
               showLabel?: T;
+              pausePreviewsLabel?: T;
+              resumePreviewsLabel?: T;
             };
       };
   roadmap?:
@@ -1438,6 +1538,18 @@ export interface LandingSelect<T extends boolean = true> {
                 | {
                     label?: T;
                     href?: T;
+                  };
+              latestLabel?: T;
+              archiveLabel?: T;
+              watchLabel?: T;
+              empty?:
+                | T
+                | {
+                    label?: T;
+                    title?: T;
+                    description?: T;
+                    previewLabel?: T;
+                    previewTitle?: T;
                   };
             };
         cookies?:

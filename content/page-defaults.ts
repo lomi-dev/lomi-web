@@ -35,9 +35,11 @@ export const pageDefaults = {
     showScreenshot: true, screenshot: { image: null, alt: 'The lomi desktop app on macOS, with the project explorer, TypeScript editor and terminal in one workspace.' },
   },
   devlog: {
-    seo: { title: 'Devlog — lomi', description: 'Notes from building lomi. Work in progress.' },
-    label: 'Devlog', labelAccent: '/', title: [{ text: 'Work in' }, { text: 'progress' }], accent: '_', description: [{ text: 'Notes from building lomi.' }, { text: 'We’ll have more to share here soon.' }],
+    seo: { title: 'Devlog — lomi', description: 'Watch lomi take shape. Development videos, new features and the decisions behind the desktop workspace.' },
+    label: 'Devlog', labelAccent: '/', title: [{ text: 'Devlog.' }], accent: '', description: [{ text: 'Features, fixes and experiments in lomi. Recorded along the way.' }],
     cta: { label: 'Back to lomi', href: '/' }, footerLabel: 'lomi / devlog', settingsLabel: 'Cookie settings', source: { label: 'Follow the source', href: 'https://github.com/lomi-dev/lomi' },
+    latestLabel: 'Latest episode', archiveLabel: 'Previous episodes', watchLabel: 'Watch on YouTube',
+    empty: { label: 'Coming soon', title: 'No recordings yet.', description: 'The first devlog will appear here when it’s ready.', previewLabel: 'Not recorded yet', previewTitle: '' },
   },
   cookies: {
     seo: { title: 'Cookies & privacy — lomi', description: 'How this website remembers your privacy choices and handles optional YouTube videos.' },

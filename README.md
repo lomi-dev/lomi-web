@@ -22,23 +22,30 @@ The page includes:
   product preview over an interactive field of terminal characters.
 - A fixed navigation bar at the viewport's top edge: Product opens a three-column dropdown,
   followed by Roadmap, Newsletter, Devlog, and Docs. Mobile Product uses a Back drill-in.
-- A separate `/devlog/` page with a Work in progress placeholder.
+- A `/devlog/` video archive with a featured latest episode, thumbnail cards
+  linking to YouTube, and an empty state until the first real episode is published.
 - A site-wide consent banner and Cookie settings, with optional YouTube media
   blocked until permission and a `/cookies/` information page. See
   [consent behavior and verification](docs/cookies.md).
-- An inline YouTube player aligned with the feature gallery, with native
+- An inline video player aligned with the feature gallery, with custom
   controls and a local placeholder before external media loads.
-- An asymmetric feature gallery with local placeholders and a native media
-  dialog, including feature navigation, keyboard support, and readable fallbacks.
+- An asymmetric feature gallery with six animated workspace previews and a
+  native media dialog, including feature navigation, keyboard support, and
+  readable fallbacks.
 - A dark horizontal roadmap with a lime axis, alternating milestones, and
   native scroll progress. Small windows and reduced motion use a vertical list.
+- A pale workspace outline in the hero, with project files, an editor and
+  terminal panes. Feature cards/dialogs demonstrate each tool with matching
+  illustrations; Download has its own workspace overview, while Devlog and
+  Remote use a centered Lomi wordmark. Uploaded CMS media replaces these
+  placeholders.
 - A newsletter invitation above the footer, with a paper signup card in a lime
   envelope and a direct Newsletter link in desktop and mobile navigation.
 - A lime footer that fills exactly one viewport in both dimensions.
 - A dedicated `/download/` page linked from the hero, navigation, and footer.
 - A dedicated `/remote/` page, linked in Product, with a centered installation
   command, copy control and a combined macOS/Linux choice alongside Windows.
-  The selector shares the command box; an authentic desktop capture follows it.
+  The selector shares the command box; a product preview follows it.
   It follows the Download
   page's visual system; native system choices also work without JavaScript. See
   [Remote content boundaries and verification](docs/remote.md).
@@ -62,11 +69,11 @@ keyboard, accessibility, motion, and fallback checks.
 
 The document canvas follows the section at the viewport midpoint during native
 elastic overscroll in every direction: white for the hero, chalk for the main
-canvas, dark for the roadmap and Devlog, and lime for the footer. Physical top
+canvas and Devlog, dark for the roadmap, and lime for the footer. Physical top
 and bottom boundaries take their first/last section color.
 Updates run on input and section crossings; no idle animation is needed. The
 body keeps its own chalk surface. Without JavaScript, the homepage canvas stays
-lime and Devlog stays dark. Native bounce and scroll chaining remain enabled
+lime and Devlog stays light. Native bounce and scroll chaining remain enabled
 outside the homepage's custom top pull.
 Firefox exposes one solid canvas color, so mixed sections share the midpoint
 section's edge color. The native OS trackpad gesture still needs manual QA.
@@ -110,7 +117,7 @@ The hero uses static HTML for its centered content and a single local product
 placeholder aligned with the feature gallery, without React hydration or
 CLI icon cards.
 The inline player occupies the same surface; there is no separate phone,
-hover play overlay, or hero video dialog. The archived React Bits TiltedCard
+hover-following controls, or hero video dialog. The archived React Bits TiltedCard
 source and agent marks remain available locally.
 
 The background is an authored Canvas 2D interpretation of React Bits Shape Waves:
@@ -185,7 +192,9 @@ deployment provider is configured by this task.
 - `src/components/feature-gallery.ts`: dialog navigation, motion, and focus.
 - `src/components/Roadmap.astro`: CMS-driven timeline and responsive layout.
 - `src/components/roadmap-timeline.ts`: native scroll progress and stage navigation.
-- `src/pages/devlog.astro`: the standalone Devlog placeholder.
+- `src/pages/devlog.astro` and `src/components/DevlogCard.astro`: the Devlog archive.
+- `content/load-devlogs.ts`: published, paginated Devlog collection fetch.
+- `cms/src/collections/Devlogs.ts`: episode drafts, thumbnails and publication.
 - `src/pages/download.astro`: the dedicated installer and package page.
 - `src/components/Header.astro`: Product groups, responsive disclosure, and routing.
 - `src/styles/global.css`: responsive layout and brand tokens.
@@ -201,34 +210,40 @@ newsletter and cookie messages, plus all four subpages. Images and videos can
 be uploaded through the Media library. Built-in assets remain fallbacks.
 See [the editing guide](docs/cms-editing.md) for field locations, templates,
 media modes, publishing and the settings intentionally kept in code.
+See [Devlog publishing](docs/devlog.md) to add the first episode.
 
 ## Video and download behavior
 
-The hero shows one local landscape placeholder aligned with the feature gallery. The
-YouTube player is embedded in that same surface without opening a dialog or
-locking page scroll. Native controls handle playback, volume and fullscreen.
-The local poster remains visible while the API loads, then yields completely
-to the embed; no site controls cover the active player.
+The hero uses one inline video surface aligned with the feature gallery.
+An integrated control strip provides play/pause/replay, elapsed time, seeking,
+mute/volume and fullscreen for both YouTube and uploaded MP4/WebM. Controls float
+inside the lower part of the video over a subtle gradient, and fade away after
+two seconds of inactivity. Pointer movement brings them back; keyboard focus
+and active slider adjustments keep them visible. The local
+poster remains until the first playback frame, with a loading spinner while
+the player starts. All player labels are editable in Payload.
 
 YouTube loads automatically when a valid external-media preference is already
 saved. Otherwise clicking the poster opens the existing Cookie settings;
-no YouTube request is made before permission. The preview has no caption or
-action bar underneath. Revoking permission destroys the player, restores the
+no YouTube request is made before permission. Revoking permission destroys the player, restores the
 local poster and invalidates pending callbacks. If the API cannot load, the
 poster links to YouTube. Without JavaScript the image also links directly
-to YouTube. Native playback errors remain within the embedded player.
+to YouTube. Uploaded files retain native controls without JavaScript. Playback
+errors expose a retry action while the poster link remains usable.
 
 The official IFrame API mutes the player before any automatic playback. It
-starts once at least half the preview is visible, pauses when it leaves view
+starts once more than half the preview is visible, pauses when it leaves view
 or the tab is hidden, and leaves subsequent playback to the visitor. Reduced
 motion disables automatic playback and spinner motion. Replace the temporary
 video URL in **Website → Homepage → Hero** before launch. Use `http://localhost:4322` for
 local playback if YouTube rejects a numeric loopback referrer.
 
+See [custom player behavior and verification](docs/hero-player.md).
+
 The hero, navigation, and legacy CMS download links lead to `/download/`. The
 page shares the homepage's white canvas, Geist typography and lime action.
 A complete download chooser groups the system, package and primary action
-beside an unchanged native workbench capture. Local Iconify Simple Icons
+beside an editable product preview with the shared placeholder. Local Iconify Simple Icons
 identify each system. The copyable Arch Linux command appears only when
 Linux is selected and precedes the product image on small screens.
 The page uses the latest stable primary GitHub release to offer the available seven
@@ -261,6 +276,10 @@ PUBLIC_NEWSLETTER_ENDPOINT=https://auth.example.com/v1/newsletter/subscribe bun 
 
 ```sh
 bun run test:content
+bun run test:devlog
+bun run verify:devlog
+bun run verify:placeholders
+bun run verify:feature-previews
 bun run verify:cms-content
 bun run check
 bun run build

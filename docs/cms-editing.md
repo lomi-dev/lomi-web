@@ -31,6 +31,28 @@ The removed workflow, principles, FAQ and old download sections are hidden in
 the editor. Their stored content is retained for compatibility and history;
 they are not available as Layout rows.
 
+## Devlog episodes
+
+Choose **Devlogs** in the CMS sidebar to add a video. Episodes are separate
+documents with their own drafts and publication history. **Title**, **YouTube
+URL** and **Published at** are required for publication. Description, duration,
+uploaded thumbnail and thumbnail alternative text are optional. The display
+date determines newest-first order; it does not schedule publication.
+
+The newest published episode appears as a wide thumbnail with its title below.
+Other published episodes form a two-column archive grid. The introduction
+sits beside the videos on desktop and above them on mobile. Each card links
+directly to its YouTube video.
+Thumbnails come from the Media library or a local placeholder; visiting Devlog
+does not request YouTube thumbnails or load an embedded player.
+
+Page headings, labels, SEO and the empty state are in **Website → Page content
+→ Devlog page**. Without published episodes the page shows a neutral thumbnail
+space and a short message, without sample films. The old decorative slate and
+eyebrow fields are hidden and their values retained. Existing authored page copy is preserved when upgrading;
+change the previous Work in progress text in this group if it was already saved.
+Publish the episode and rebuild the website to show it. See [the Devlog guide](devlog.md).
+
 ## Images and video
 
 Upload files in **Media library**, or select/upload a file in a media field.
@@ -43,8 +65,24 @@ Hero **Media mode** selects one image, an inline YouTube player, or an uploaded
 video. **Poster** supplies the image and the YouTube loading state. **Video URL**
 accepts an HTTPS YouTube watch, share or embed URL. The player still requires
 the visitor's external-media permission; changing content does not bypass it.
-An uploaded video uses native playback controls and does not require YouTube.
-If the selected media is empty, the existing local placeholder is used.
+An uploaded video uses the same custom controls and does not require YouTube.
+If the hero **Poster** is empty, a local workspace outline shows the intended
+composition of the product preview: project files, an editor and terminal
+panes. Selecting a poster replaces this illustration in image and video modes.
+Feature cards and dialogs use animated workspace illustrations when both
+media fields are empty. **Preview scene** selects which function to demonstrate
+and stays with the feature when you reorder it. **Features → Controls** contains
+the pause/resume labels. Uploaded images and videos replace these illustrations.
+Download uses a dedicated workspace overview while its **Screenshot → Image**
+field is empty. Selecting an image replaces the illustration inside the same
+showcase box. Devlog thumbnails and Remote use a pale placeholder with a
+centered brand logo. The uploaded site logo replaces the built-in Lomi
+wordmark there. Native video poster fallbacks use local SVGs until the
+video's first frame is ready.
+
+The hero **Player** group contains labels for playback, replay, seeking,
+volume, fullscreen and retry. Its time template supports `{current}` and
+`{duration}`. Player controls remain inside the preview frame on every screen.
 
 Each feature can have an image and an uploaded video. With both selected, the
 video is shown and the image is its poster. **Alt** overrides the file's

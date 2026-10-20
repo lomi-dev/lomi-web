@@ -1,0 +1,283 @@
+---
+interface Props {
+  kind: 'terminal' | 'panels' | 'code' | 'expand' | 'git' | 'spark';
+  class?: string;
+}
+const { kind, class: className } = Astro.props;
+const titles = {
+  terminal: 'Terminal', panels: 'Workspace', code: 'Editor',
+  expand: 'Preview', git: 'Changes', spark: 'Agents',
+};
+const codeLines = [
+  'export function Workspace() {',
+  '  const [panels, setPanels] =',
+  '    useState(initialPanels);',
+  '',
+  '  return (',
+  '    <main className="workspace">',
+  '      <PanelGroup panels={panels} />',
+  '    </main>',
+  '  );',
+  '}',
+];
+---
+
+<div class:list={['feature-simulation', className]} data-feature-simulation={kind} data-media-placeholder data-placeholder-variant="feature" aria-hidden="true">
+  <svg xmlns="http://www.w3.org/2000/svg" width="960" height="600" viewBox="0 0 960 600" fill="none" font-size="22" focusable="false">
+    <rect width="960" height="600" fill="#f0f1ec" />
+    <rect class="window" x="30.5" y="30.5" width="899" height="539" rx="14" />
+    <path class="chrome" d="M45 31h870a14 14 0 0 1 14 14v45H31V45a14 14 0 0 1 14-14Z" />
+    <path class="rule" d="M31 90h898" />
+    <g class="window-dots"><circle cx="55" cy="60" r="5" /><circle cx="74" cy="60" r="5" /><circle cx="93" cy="60" r="5" /></g>
+    <rect class="tab" x="122" y="42" width="176" height="36" rx="7" />
+    <path class="icon" d="M139 55h7l3 3h10v13h-20V55Z" />
+    <text class="label strong" x="171" y="66">lomi</text>
+    <text class="label muted" x="323" y="66">{titles[kind]}</text>
+    <path class="icon" d="M887 54v12m-6-6h12" />
+
+    {kind === 'terminal' && <>
+      <path class="chrome" d="M31 91h898v43H31Z" />
+      <text class="label strong" x="55" y="119">Terminal</text>
+      <text class="label muted" x="199" y="119">~/lomi</text>
+      <path class="rule" d="M31 134h898M596 134v406" />
+      <text class="mono muted" x="625" y="176">dev server</text>
+      <text class="mono" x="625" y="219">$ bun run dev</text>
+      <rect class="accent-soft" x="622" y="242" width="274" height="43" rx="6" />
+      <text class="mono" x="639" y="270">localhost:4321</text>
+      <text class="mono muted" x="625" y="322">watching for changes</text>
+      <g class="terminal-command">
+        <text class="mono accent-text" x="57" y="188">❯</text>
+        <text class="mono" x="86" y="188">bun run <tspan class="strong">check</tspan></text>
+      </g>
+      <rect class="terminal-cover surface" x="86" y="162" width="258" height="34" data-simulation-motion />
+      <g class="terminal-output" data-simulation-motion>
+        <text class="mono muted" x="86" y="243">src / workspace.tsx</text>
+        <path class="code-stroke" d="M87 278h316m-316 30h255m-255 30h298" />
+        <text class="mono muted" x="86" y="393">Type checking…</text>
+      </g>
+      <path class="icon" d="m58 475 6 6-6 6" />
+      <rect class="caret" x="86" y="470" width="3" height="22" data-simulation-motion />
+      <g class="server-output" data-simulation-motion><path class="code-stroke" d="M627 363h229m-229 28h169m-169 28h201" /></g>
+    </>}
+
+    {kind === 'panels' && <>
+      <path class="chrome" d="M31 91h898v43H31Z" />
+      <rect class="tab" x="46" y="98" width="163" height="29" rx="5" />
+      <text class="label strong" x="64" y="119">Workspace</text>
+      <text class="label muted" x="234" y="119">model.ts</text>
+      <path class="icon" d="M875 104h19v17h-19Zm9 0v17" />
+      <g class="panel-editor">
+        <rect class="panel" x="47" y="150" width="524" height="374" rx="7" />
+        <path class="rule" d="M48 193h522" />
+        <text class="label" x="67" y="179">model.ts</text>
+        <g class="mono muted" font-size="16">{[1, 2, 3, 4, 5, 6, 7].map((n) => <text x="68" y={232 + (n - 1) * 36}>{n}</text>)}</g>
+        <path class="code-stroke" d="M110 226h144m18 0h109M110 262h82m18 0h166M132 298h117m18 0h170M132 334h91m18 0h132M132 370h162M110 406h56M110 442h129m18 0h98" />
+        <rect class="accent-soft" x="99" y="316" width="451" height="35" rx="4" />
+      </g>
+      <g class="panel-terminal" data-simulation-motion>
+        <rect class="panel" x="587" y="150" width="326" height="180" rx="7" />
+        <path class="rule" d="M588 193h324" />
+        <text class="label" x="608" y="179">Terminal</text>
+        <text class="mono" x="608" y="230">$ bun run dev</text>
+        <path class="code-stroke" d="M609 265h210m-210 27h149" />
+      </g>
+      <g class="panel-agent" data-simulation-motion>
+        <rect class="panel" x="587" y="346" width="326" height="178" rx="7" />
+        <path class="rule" d="M588 389h324" />
+        <text class="label" x="608" y="375">Codex</text>
+        <text class="mono" x="608" y="428">$ codex</text>
+        <path class="code-stroke" d="M609 463h242m-242 27h174" />
+      </g>
+      <rect class="panel-drop" x="587" y="150" width="326" height="374" rx="7" data-simulation-motion />
+    </>}
+
+    {kind === 'code' && <>
+      <path class="chrome" d="M31 91h898v43H31Z" />
+      <rect class="tab" x="46" y="98" width="186" height="29" rx="5" />
+      <text class="label strong" x="64" y="119">Workspace.tsx</text>
+      <text class="label muted" x="735" y="119">src / components</text>
+      <rect class="code-selection" x="108" y="322" width="759" height="34" rx="4" data-simulation-motion />
+      <g class="mono code-text" font-size="21">{codeLines.map((line, i) => <>
+        <text class="line-number" x="76" y={177 + i * 35} text-anchor="end">{i + 1}</text>
+        {i === 5 ? <>
+          <text class="edit-before" x="117" y="352" xml:space="preserve" data-simulation-motion>{line}</text>
+          <text class="edit-after" x="117" y="352" xml:space="preserve" data-simulation-motion>{'    <main className="canvas">'}</text>
+        </> : <text x="117" y={177 + i * 35} xml:space="preserve">{line}</text>}
+      </>)}</g>
+      <rect class="editor-caret caret" x="458" y="332" width="2.5" height="25" data-simulation-motion />
+      <path class="rule" d="M858 151v359" />
+      <path class="minimap" d="M878 159h28m-28 9h20m-20 9h28m-28 9h16m-16 9h24m-24 9h20m-20 9h28m-28 9h16" />
+    </>}
+
+    {kind === 'expand' && <>
+      <path class="rule" d="M469 91v449" />
+      <path class="chrome" d="M31 91h437v43H31ZM470 91h459v43H470Z" />
+      <text class="label strong" x="55" y="119">page.tsx</text>
+      <text class="label muted" x="494" y="119">Preview</text>
+      <g class="mono" font-size="20">
+        <text class="muted" x="55" y="181">1</text><text x="86" y="181">{'export function Page() {'}</text>
+        <text class="muted" x="55" y="218">2</text><text x="108" y="218">return (</text>
+        <text class="muted" x="55" y="255">3</text><text x="130" y="255">{'<Card'}</text>
+        <text class="muted" x="55" y="292">4</text><text x="152" y="292">title="Workspace"</text>
+        <rect class="accent-soft" x="144" y="307" width="300" height="33" rx="4" />
+        <text class="muted" x="55" y="329">5</text>
+        <text class="edit-before" x="152" y="329" data-simulation-motion>layout="<tspan class="accent-text">list</tspan>"</text>
+        <text class="edit-after" x="152" y="329" data-simulation-motion>layout="<tspan class="accent-text">grid</tspan>"</text>
+        <text class="muted" x="55" y="366">6</text><text x="130" y="366">{'/>'}</text>
+        <text class="muted" x="55" y="403">7</text><text x="108" y="403">);</text>
+        <text class="muted" x="55" y="440">8</text><text x="86" y="440">{'}'}</text>
+      </g>
+      <rect class="editor-caret caret" x="343" y="309" width="2.5" height="25" data-simulation-motion />
+      <rect class="panel" x="488" y="151" width="422" height="369" rx="8" />
+      <path class="chrome" d="M497 152h404a8 8 0 0 1 8 8v37H489v-37a8 8 0 0 1 8-8Z" />
+      <rect class="surface" x="542" y="160" width="311" height="28" rx="5" />
+      <text class="label muted" x="561" y="180" font-size="16">localhost:4321</text>
+      <path class="icon" d="m505 169-5 5 5 5m378-11a7 7 0 1 1-4 12m-1-8v8h8" />
+      <text class="label strong" x="513" y="242" font-size="24">Workspace</text>
+      <path class="code-stroke" d="M515 268h176" />
+      <g class="preview-list edit-before" data-simulation-motion>
+        <rect class="accent-soft" x="512" y="293" width="372" height="92" rx="7" />
+        <path class="preview-line" d="M530 316h116m-116 20h277m-277 20h215" />
+        <rect class="tab" x="512" y="403" width="372" height="92" rx="7" />
+        <path class="preview-line" d="M530 426h116m-116 20h277m-277 20h215" />
+      </g>
+      <g class="preview-grid edit-after" data-simulation-motion>
+        <rect class="accent-soft" x="512" y="293" width="174" height="92" rx="7" /><path class="preview-line" d="M530 316h67m-67 20h124m-124 20h93" />
+        <rect class="tab" x="704" y="293" width="180" height="92" rx="7" /><path class="preview-line" d="M722 316h67m-67 20h124m-124 20h93" />
+        <rect class="tab" x="512" y="403" width="174" height="92" rx="7" /><path class="preview-line" d="M530 426h67m-67 20h124m-124 20h93" />
+        <rect class="accent-soft" x="704" y="403" width="180" height="92" rx="7" /><path class="preview-line" d="M722 426h67m-67 20h124m-124 20h93" />
+      </g>
+    </>}
+
+    {kind === 'git' && <>
+      <path class="chrome" d="M31 91h898v43H31Z" />
+      <text class="label strong" x="55" y="119">Changes</text><text class="label muted" x="360" y="119">Workspace.tsx</text>
+      <path class="rule" d="M324 134v406M31 134h898" />
+      <text class="label muted" x="55" y="177">Working tree</text>
+      <rect class="tab" x="46" y="196" width="262" height="44" rx="6" />
+      <text class="label" x="63" y="224">Workspace.tsx</text><text class="label accent-text" x="281" y="224">M</text>
+      <text class="label muted" x="63" y="276">styles.css</text><text class="label accent-text" x="281" y="276">M</text>
+      <path class="rule" d="M48 312h259" />
+      <text class="label muted" x="55" y="350">Staged changes</text>
+      <g class="staged-file" data-simulation-motion>
+        <text class="label" x="63" y="396">Workspace.tsx</text>
+        <path class="stage-check" d="m281 386 5 5 10-11" />
+      </g>
+      <g class="mono" font-size="20">
+        <text class="muted" x="350" y="181">@@ Workspace @@</text>
+        <text x="383" y="232">{'return ('}</text>
+        <rect class="removed" x="340" y="254" width="573" height="40" rx="4" />
+        <text class="muted" x="351" y="281">−</text><text class="muted" x="383" y="281">{'  <main className="page">'}</text>
+        <rect class="diff-added" x="340" y="302" width="573" height="40" rx="4" data-simulation-motion />
+        <text class="accent-text" x="351" y="329">+</text><text x="383" y="329">{'  <main className="canvas">'}</text>
+        <text x="383" y="377">{'    <PanelGroup />'}</text>
+        <text x="383" y="425">{'  </main>'}</text>
+        <text x="383" y="473">{');'}</text>
+      </g>
+    </>}
+
+    {kind === 'spark' && <>
+      <path class="chrome" d="M31 91h898v43H31Z" /><path class="rule" d="M480 134v406M31 134h898" />
+      <text class="label strong" x="55" y="119">Codex</text><text class="label strong" x="504" y="119">Claude Code</text>
+      <circle class="agent-status" cx="441" cy="112" r="4" /><circle class="agent-status" cx="891" cy="112" r="4" />
+      <text class="mono" x="55" y="185">$ codex</text><text class="mono" x="504" y="185">$ claude</text>
+      <text class="mono muted" x="55" y="231" font-size="18">› Refine the workspace layout</text>
+      <text class="mono muted" x="504" y="231" font-size="18">› Review the panel controls</text>
+      <g class="agent-stream codex-stream" data-simulation-motion>
+        <text class="mono accent-text" x="55" y="289" font-size="18">Reading Workspace.tsx</text>
+        <path class="code-stroke" d="M57 321h325m-325 28h269m-269 28h303" />
+        <rect class="accent-soft" x="54" y="403" width="393" height="42" rx="5" />
+        <text class="mono" x="70" y="430" font-size="18">~ src / Workspace.tsx</text>
+      </g>
+      <g class="agent-stream claude-stream" data-simulation-motion>
+        <text class="mono accent-text" x="504" y="289" font-size="18">Reading PanelControls.tsx</text>
+        <path class="code-stroke" d="M506 321h325m-325 28h269m-269 28h303" />
+        <rect class="accent-soft" x="503" y="403" width="393" height="42" rx="5" />
+        <text class="mono" x="519" y="430" font-size="18">~ src / PanelControls.tsx</text>
+      </g>
+      <path class="icon" d="m56 488 5 5-5 5m449-10 5 5-5 5" />
+      <rect class="caret" x="82" y="482" width="3" height="21" data-simulation-motion /><rect class="caret delayed" x="531" y="482" width="3" height="21" data-simulation-motion />
+    </>}
+
+    <path class="status" d="M31 540h898v15a14 14 0 0 1-14 14H45a14 14 0 0 1-14-14v-15Z" />
+    <path class="rule" d="M31 540h898" />
+    <path class="icon" d="M52 547v14m0-7h8v-7" />
+    <text class="status-label" x="72" y="560">main</text>
+    <text class="status-label" x="794" y="560">UTF-8</text>
+    <text class="status-label" x="859" y="560">LF</text>
+  </svg>
+</div>
+
+<style>
+  .feature-simulation[data-media-placeholder] { display: grid; place-items: center; width: 100%; height: 100%; min-width: 0; aspect-ratio: 8 / 5; overflow: hidden; border: 1px solid color-mix(in srgb, var(--line) 70%, transparent); border-radius: 16px; background: color-mix(in srgb, var(--color-ink) 3%, var(--color-chalk)); }
+  .feature-simulation svg { display: block; width: 100%; height: 100%; min-width: 0; max-width: 100%; max-height: 100%; object-fit: contain; font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif); color: #65765a; }
+  .window { fill: #fcfdf9; stroke: #c8d0bf; }
+  .surface { fill: #fcfdf9; }
+  .chrome { fill: #f6f8f1; }
+  .tab { fill: #edf1e7; }
+  .panel { fill: #fcfdf9; stroke: #d7ddce; }
+  .rule { stroke: #d7ddce; }
+  .window-dots { fill: #d4dbcd; }
+  .label { fill: #65765a; font-size: 19px; }
+  .strong { fill: #4f6342; font-weight: 500; }
+  .muted { fill: #8c9981; }
+  .icon { stroke: #9ca991; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .mono { fill: #65765a; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .mono.muted, .mono .muted { fill: #8c9981; }
+  .mono.accent-text, .mono .accent-text, .accent-text { fill: #78944f; }
+  .code-text { fill: #748567; }
+  .line-number { fill: #b4bdac; font-size: 16px; }
+  .code-stroke { stroke: #cdd7c3; stroke-width: 7; stroke-linecap: round; }
+  .accent-soft, .code-selection, .diff-added { fill: #e7efd9; }
+  .caret { fill: #8ba95f; }
+  .panel-drop { fill: #dce9c8; fill-opacity: .18; stroke: #a9bd8e; stroke-width: 2; stroke-dasharray: 8 8; opacity: 0; }
+  .minimap { stroke: #d5ddcd; stroke-width: 3; stroke-linecap: round; }
+  .preview-line { stroke: #b9c7ab; stroke-width: 5; stroke-linecap: round; }
+  .removed { fill: #f1eee7; }
+  .stage-check { stroke: #89a463; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+  .agent-status { fill: #a7bd87; }
+  .status { fill: #f0f4e9; }
+  .status-label { fill: #91a083; font-size: 14px; }
+
+  /* The parent owns playback. A detached clone starts paused, too. */
+  [data-simulation-motion] { animation-duration: 8s; animation-iteration-count: infinite; animation-timing-function: var(--ease-out, cubic-bezier(.23, 1, .32, 1)); animation-play-state: paused; }
+  .feature-simulation[data-preview-running] [data-simulation-motion] { animation-play-state: running; }
+  .terminal-cover { animation-name: type-command; animation-timing-function: linear; }
+  .terminal-output { animation-name: terminal-output; }
+  .server-output { animation-name: server-output; }
+  .caret { animation-name: caret; animation-timing-function: steps(1, end); }
+  .delayed { animation-delay: -2s; }
+  .panel-terminal { animation-name: move-terminal; }
+  .panel-agent { animation-name: move-agent; }
+  .panel-drop { animation-name: drop-target; }
+  .code-selection { animation-name: selection; }
+  .edit-before { animation-name: edit-before; }
+  .edit-after { opacity: 0; animation-name: edit-after; }
+  .editor-caret { animation-name: editor-caret; }
+  .staged-file { animation-name: stage-file; }
+  .diff-added { animation-name: selection; }
+  .agent-stream { animation-name: stream-output; animation-timing-function: linear; }
+  .claude-stream { animation-delay: -2s; }
+  @keyframes type-command { 0%, 8%, 48%, 100% { clip-path: inset(0 0 0 100%); } 16%, 22% { clip-path: inset(0); } }
+  @keyframes terminal-output { 0%, 8%, 59%, 100% { opacity: 1; transform: translateY(0); } 17%, 45% { opacity: 0; transform: translateY(6px); } }
+  @keyframes server-output { 0%, 40% { opacity: .35; } 52%, 84% { opacity: 1; } 96%, 100% { opacity: .35; } }
+  @keyframes caret { 0%, 40%, 70%, 100% { opacity: 1; } 20%, 60%, 90% { opacity: 0; } }
+  @keyframes move-terminal { 0%, 18%, 88%, 100% { transform: translateY(0); } 38%, 70% { transform: translateY(194px); } }
+  @keyframes move-agent { 0%, 18%, 88%, 100% { transform: translateY(0); } 38%, 70% { transform: translateY(-196px); } }
+  @keyframes drop-target { 0%, 12%, 40%, 70%, 100% { opacity: 0; } 20%, 30%, 78% { opacity: 1; } }
+  @keyframes selection { 0%, 12%, 90%, 100% { opacity: .45; } 28%, 76% { opacity: 1; } }
+  @keyframes edit-before { 0%, 26%, 100% { opacity: 1; } 32%, 90% { opacity: 0; } }
+  @keyframes edit-after { 0%, 34%, 88%, 100% { opacity: 0; } 44%, 82% { opacity: 1; } }
+  @keyframes editor-caret { 0%, 15%, 94%, 100% { opacity: 1; transform: translateX(-56px); } 34%, 82% { opacity: 1; transform: translateX(0); } 87% { opacity: 0; transform: translateX(0); } }
+  @keyframes stage-file { 0%, 26%, 94%, 100% { opacity: .3; transform: translateY(-5px); } 43%, 82% { opacity: 1; transform: translateY(0); } }
+  @keyframes stream-output {
+    0%, 14%, 100% { opacity: 1; clip-path: inset(0 0 82% 0); }
+    26% { opacity: 1; clip-path: inset(0 0 65% 0); }
+    38% { opacity: 1; clip-path: inset(0 0 48% 0); }
+    50% { opacity: 1; clip-path: inset(0 0 30% 0); }
+    65%, 84% { opacity: 1; clip-path: inset(0); }
+    92% { opacity: 0; clip-path: inset(0); }
+    96% { opacity: 0; clip-path: inset(0 0 82% 0); }
+  }
+  @media (prefers-reduced-motion: reduce) { [data-simulation-motion] { animation: none; } .terminal-cover { opacity: 0; } }
+</style>

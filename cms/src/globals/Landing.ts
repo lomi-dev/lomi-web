@@ -47,7 +47,14 @@ export const Landing: GlobalConfig = {
     group('features', [
       ...intro(), text('accent'),
       rows('items', [
-        { name: 'icon', type: 'select', required: true, options: ['terminal', 'panels', 'code', 'expand', 'git', 'spark'] },
+        { name: 'icon', label: 'Preview scene', type: 'select', options: [
+          { label: 'Terminal session', value: 'terminal' },
+          { label: 'Workspace panels', value: 'panels' },
+          { label: 'Code editor', value: 'code' },
+          { label: 'Browser preview', value: 'expand' },
+          { label: 'Git workflow', value: 'git' },
+          { label: 'Coding agents', value: 'spark' },
+        ], admin: { description: 'Used only when Image and Video are empty.' } },
         ...item(), text('detail'),
       ], 12),
     ]),
@@ -108,7 +115,6 @@ function websiteFields(legacy: Field[]): Field[] {
   const feature = merge('features') as Extract<Field, { type: 'group' }>
   feature.fields = feature.fields.map((field) => 'name' in field && field.name === 'items' && field.type === 'array'
     ? { ...field, admin: { ...field.admin, initCollapsed: true }, fields: [...field.fields, ...fieldsFromDefaults({ image: null, video: null, alt: '' }, 'features.items[]')] } : field)
-  feature.fields = feature.fields.map((field) => field.type === 'array' && field.name === 'items' ? { ...field, fields: field.fields.map((child) => 'name' in child && child.name === 'icon' ? { ...optional(child), admin: { hidden: true } } as Field : child) } : field)
   const retired = ['workflow', 'principles', 'faq', 'download'].map((name) => ({ ...optional(find(name)), admin: { hidden: true } } as Field))
   const collapse = (label: string, field: Field): Field => ({
     type: 'collapsible', label, admin: { initCollapsed: true }, fields: [{ ...field, label: false } as Field],

@@ -148,7 +148,12 @@ const action = activeLandingLinks([{ label: content.actionLabel, href: content.a
     // Product captures have a dark interface inside their white image frames.
     if (surface.closest('.deck-frame, .deck-detail')) return [19, 23, 20];
     for (let element: Element | null = surface; element; element = element.parentElement) {
-      const channels = getComputedStyle(element).backgroundColor.match(/[\d.]+/g)?.map(Number);
+      const background = getComputedStyle(element).backgroundColor;
+      const channels = background.match(/[\d.]+/g)?.map(Number);
+      // color-mix(in srgb, ...) is serialized with 0–1 channels, unlike rgb().
+      if (channels && background.startsWith('color(srgb ')) {
+        for (let index = 0; index < 3; index++) channels[index] *= 255;
+      }
       if (channels && channels.length >= 3 && (channels[3] ?? 1) >= .95) {
         return channels.slice(0, 3) as SurfaceColor;
       }
@@ -204,6 +209,7 @@ const action = activeLandingLinks([{ label: content.actionLabel, href: content.a
   product?.addEventListener('toggle', scheduleHeaderSurface);
   mobile?.addEventListener('toggle', scheduleHeaderSurface);
   document.addEventListener('close', scheduleHeaderSurface, true);
+  document.addEventListener('lomi:media-surface-change', scheduleHeaderSurface);
   if (header) header.dataset.navigationReady = '';
   desktop.addEventListener('change', () => {
     const active = document.activeElement;
