@@ -163,9 +163,11 @@ try {
     await route.fulfill({ status: 202, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: '{"accepted":true}' });
   });
   await email.fill('reader@example.test');
-  await button.click();
+  await email.press('Enter');
   await expect(root).toHaveAttribute('data-state', 'pending');
-  await expect(email).toBeDisabled();
+  await expect(email).toBeFocused();
+  await expect(email).toBeEnabled();
+  await expect(email).not.toBeEditable();
   await expect(button).toBeDisabled();
   await expect(form).toHaveAttribute('aria-busy', 'true');
   await form.evaluate((element) => element.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
@@ -176,6 +178,8 @@ try {
   await expect(root).toHaveAttribute('data-state', 'success');
   await expect(email).toHaveValue('');
   await expect(email).toBeEnabled();
+  await expect(email).toBeEditable();
+  await expect(email).toBeFocused();
   await expect(button).toContainText('Subscribed');
   await expect(form).toHaveAttribute('aria-busy', 'false');
   await expect(page.locator('.letter-accepted')).toHaveCSS('opacity', '1');
@@ -187,10 +191,12 @@ try {
 
   for (const [status, body, message] of [[200, '{"accepted":true}', 'couldn’t'], [202, '{"accepted":false}', 'couldn’t'], [202, '{', 'couldn’t'], [503, '{}', 'couldn’t'], [429, '{}', 'Too many']]) {
     await mock(page, status, body);
-    await button.click();
+    await email.press('Enter');
     await expect(root, `HTTP ${status}, ${body} is not accepted`).toHaveAttribute('data-state', 'error');
     await expect(page.locator('#newsletter-status')).toContainText(message);
     await expect(email).toHaveValue('retry@example.test');
+    await expect(email).toBeFocused();
+    await expect(email).toBeEditable();
     await expect(button).toBeEnabled();
   }
   await page.unroute(endpoint);

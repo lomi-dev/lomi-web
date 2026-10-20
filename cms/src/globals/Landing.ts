@@ -51,7 +51,20 @@ export const Landing: GlobalConfig = {
       rows('items', [
         text('phase'),
         { name: 'status', type: 'select', required: true, options: ['available', 'next', 'later'] },
-        ...item(), rows('points', [text('label')], 8),
+        ...item(), rows('points', [
+          text('label'),
+          {
+            name: 'status', type: 'select',
+            options: [
+              { label: 'Completed', value: 'completed' },
+              { label: 'In progress', value: 'in-progress' },
+              { label: 'Not started', value: 'not-started' },
+            ],
+            admin: {
+              description: 'Leave empty to inherit Completed for an available milestone, or Not started for other milestones.',
+            },
+          },
+        ], 8),
       ]),
       text('linkLabel'),
     ]),

@@ -4,10 +4,47 @@ import assert from 'node:assert/strict';
 import seed from '../content/landing.json';
 import { landingSchema, safeHref } from '../content/landing-schema';
 import { loadLanding } from '../content/load-landing';
+import { summarizeRoadmapStage } from '../content/roadmap-progress';
 import { activeLandingLinks } from '../src/data/navigation';
 
 afterEach(() => { globalThis.fetch = originalFetch; });
 const originalFetch = globalThis.fetch;
+
+describe('roadmap task progress', () => {
+  const stage = seed.roadmap.items[0];
+
+  it('uses authored statuses and counts only completed tasks', () => {
+    const parsed = landingSchema.parse({ ...seed, roadmap: { ...seed.roadmap, items: [{
+      ...stage, status: 'available', points: [
+        { label: 'Done', status: 'completed' },
+        { label: 'Building', status: 'in-progress' },
+        { label: 'Planned', status: 'not-started' },
+      ],
+    }] } });
+    assert.deepEqual(summarizeRoadmapStage(parsed.roadmap.items[0]), {
+      tasks: parsed.roadmap.items[0].points,
+      completed: 1, total: 3, percent: 33,
+    });
+  });
+
+  it('inherits milestone status for missing and null task statuses', () => {
+    for (const status of ['available', 'next', 'later'] as const) {
+      const result = summarizeRoadmapStage({ ...stage, status, points: [{ label: 'Legacy' }, { label: 'Unset', status: null }] });
+      const expected = status === 'available' ? 'completed' : 'not-started';
+      assert.deepEqual(result.tasks, [{ label: 'Legacy', status: expected }, { label: 'Unset', status: expected }]);
+      assert.equal(result.completed, status === 'available' ? 2 : 0);
+      assert.equal(result.total, 2);
+      assert.equal(result.percent, status === 'available' ? 100 : 0);
+      assert.equal(landingSchema.safeParse({ ...seed, roadmap: { ...seed.roadmap, items: [{ ...stage, status, points: [{ label: 'Unset', status: null }] }] } }).success, true);
+    }
+  });
+
+  it('rejects unsupported task statuses', () => {
+    assert.equal(landingSchema.safeParse({ ...seed, roadmap: { ...seed.roadmap, items: [{
+      ...stage, points: [{ label: 'Invalid', status: 'done' }],
+    }] } }).success, false);
+  });
+});
 
 describe('published landing content', () => {
   it('renders the checked-in outline without a CMS or a network request', async () => {

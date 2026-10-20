@@ -110,7 +110,23 @@ try {
     await expect(root.locator('[data-roadmap-milestone]')).toHaveCount(3);
     expect(await root.locator('[data-roadmap-milestone]').evaluateAll((items) => items.map((item) => item.dataset.status))).toEqual(['available', 'next', 'later']);
     expect(await root.locator('[aria-live]').count(), 'Scrolling stages do not create live announcements').toBe(0);
-    for (const stage of await root.locator('[data-roadmap-milestone]').all()) expect(await stage.locator('ul > li').count()).toBeGreaterThan(0);
+    for (const stage of await root.locator('[data-roadmap-milestone]').all()) {
+      const tasks = stage.locator('.roadmap-tasks > li');
+      const total = await tasks.count();
+      expect(total).toBeGreaterThan(0);
+      const completed = await stage.getAttribute('data-status') === 'available' ? total : 0;
+      const progress = stage.getByRole('progressbar');
+      await expect(progress).toHaveAttribute('max', String(total));
+      await expect(progress).toHaveAttribute('value', String(completed));
+      await expect(progress).toHaveAttribute('aria-label', /progress$/);
+      await expect(stage.locator('.roadmap-progress-percent')).toHaveText(completed ? '100%' : '0%');
+      await expect(tasks).toHaveCount(total);
+      for (const task of await tasks.all()) {
+        await expect(task).toHaveAttribute('data-task-status', completed ? 'completed' : 'not-started');
+        await expect(task.locator('.roadmap-sr-only')).toHaveText(completed ? /Completed/ : /Not started/);
+      }
+    }
+    await expect(root.locator('.roadmap-legend li')).toHaveText(['Completed', 'In progress', 'Not started']);
 
     const positions = [];
     for (const progress of [0, .5, 1]) {
@@ -208,7 +224,7 @@ try {
             points.replaceChildren();
             for (let index = 0; index < 8; index++) {
               const entry = point.cloneNode(true);
-              entry.querySelector('span').textContent = `Extended published point ${index + 1} with supporting details.`;
+              entry.querySelector('[data-roadmap-task-label]').textContent = `Extended published point ${index + 1} with supporting details.`;
               points.append(entry);
             }
           }

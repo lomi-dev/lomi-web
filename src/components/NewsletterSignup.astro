@@ -57,7 +57,8 @@ const isConfigured = Boolean(endpoint);
     status.dataset.state = state;
     status.textContent = message;
     form.setAttribute('aria-busy', String(state === 'pending'));
-    emailInput.disabled = state === 'pending';
+    emailInput.disabled = false;
+    emailInput.readOnly = state === 'pending';
     submitButton.disabled = state === 'pending';
     submitLabel.textContent = state === 'pending' ? 'Subscribing…' : state === 'success' ? 'Subscribed' : 'Keep me posted';
   }

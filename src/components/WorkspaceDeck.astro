@@ -1,14 +1,13 @@
 ---
 import { Picture } from 'astro:assets';
 import workspacePlaceholder from '../assets/placeholders/workspace.png';
-import detailPlaceholder from '../assets/placeholders/detail.png';
+import mobilePlaceholder from '../assets/placeholders/mobile.png';
 
 interface Props {
-  caption: string;
   alt: string;
 }
 
-const { caption, alt } = Astro.props;
+const { alt } = Astro.props;
 ---
 
 <div class="deck-root">
@@ -17,10 +16,10 @@ const { caption, alt } = Astro.props;
       <a class="deck-frame" href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" data-video-open aria-label="Watch the Lomi video" aria-haspopup="dialog" aria-controls="video-dialog">
         <Picture
           src={workspacePlaceholder}
-          alt={`Placeholder: ${alt}`}
+          alt={`Desktop placeholder: ${alt}`}
           formats={['avif', 'webp']}
           widths={[640, 960, 1440, 1920]}
-          sizes="(min-width: 1965px) 1514px, (min-width: 768px) 77vw, calc(100vw - 40px)"
+          sizes="(min-width: 1965px) 1549px, (min-width: 768px) 79vw, calc(88vw - 35.2px)"
           loading="eager"
           decoding="async"
           class="deck-image"
@@ -30,32 +29,39 @@ const { caption, alt } = Astro.props;
           <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path d="M6 3.5a.7.7 0 0 1 1.06-.6l9 6.5a.74.74 0 0 1 0 1.2l-9 6.5A.7.7 0 0 1 6 16.5Z" /></svg>
         </span>
       </a>
-      <div class="deck-detail" data-workspace-detail>
-        <Picture
-          src={detailPlaceholder}
-          alt="Placeholder for the Lomi workspace detail."
-          formats={['avif', 'webp']}
-          widths={[360, 520, 720, 960]}
-          sizes="(min-width: 1278px) 460px, (min-width: 768px) 33vw, (min-width: 573px) 330px, calc(62vw - 24.8px)"
-          loading="eager"
-          decoding="async"
-          class="deck-detail-image"
-        />
+      <div class="deck-detail" data-workspace-detail data-workspace-mobile>
+        <div class="deck-phone-screen">
+          <Picture
+            src={mobilePlaceholder}
+            alt="Portrait placeholder for the Lomi mobile app."
+            formats={['avif', 'webp']}
+            widths={[180, 310, 430]}
+            sizes="(min-width: 1530px) 296px, (min-width: 768px) 21vw, max(80px, calc(23vw - 17.2px))"
+            loading="eager"
+            decoding="async"
+            class="deck-detail-image"
+          />
+          <span class="deck-phone-camera" aria-hidden="true"></span>
+        </div>
       </div>
     </div>
-    <figcaption class="deck-caption">{caption}</figcaption>
   </figure>
 </div>
 
 <style>
   .deck-root { display: block; width: 100%; min-width: 0; }
   .deck-figure { min-width: 0; margin: 0; }
-  .deck-composition { display: grid; grid-template-areas: 'capture'; min-width: 0; }
-  .deck-frame, .deck-detail { grid-area: capture; align-self: start; min-width: 0; overflow: hidden; border: 1px solid #d5dccd; border-radius: 16px; background: #fff; box-shadow: 0 24px 70px -32px rgb(30 45 19 / 25%); }
-  .deck-frame { position: relative; display: block; width: 86%; aspect-ratio: 8 / 5; }
-  .deck-detail { position: relative; z-index: 1; justify-self: end; width: 36%; max-width: 460px; aspect-ratio: 1.1; margin-top: 104px; transform: translateX(40px); }
-  .deck-frame :global(picture), .deck-detail :global(picture) { display: block; width: 100%; height: 100%; }
+  .deck-composition { --deck-mobile-offset: clamp(24px, 3.2vw, 56px); display: grid; grid-template-areas: 'capture'; min-width: 0; padding-bottom: var(--deck-mobile-offset); }
+  .deck-frame, .deck-detail { grid-area: capture; min-width: 0; }
+  .deck-frame { position: relative; display: block; align-self: start; width: 88%; aspect-ratio: 8 / 5; overflow: hidden; border: 1px solid #d5dccd; border-radius: 16px; background: #000; box-shadow: 0 24px 70px -32px rgb(30 45 19 / 25%); }
+  .deck-detail { --phone-bezel: clamp(3px, .45vw, 6px); --phone-radius: clamp(15px, 2.4vw, 38px); position: relative; z-index: 1; align-self: end; justify-self: end; width: clamp(88px, 23%, 310px); padding: var(--phone-bezel); border: 1px solid #646f59; border-radius: var(--phone-radius); background: #1b2018; box-shadow: 0 20px 40px -18px rgb(30 45 19 / 32%), inset 0 0 0 1px rgb(255 255 255 / 10%); transform: translateY(var(--deck-mobile-offset)); }
+  .deck-detail::before, .deck-detail::after { content: ''; position: absolute; width: 2px; border-radius: 2px; background: #58614d; }
+  .deck-detail::before { left: -3px; top: 21%; height: 10%; }
+  .deck-detail::after { right: -3px; top: 29%; height: 8%; }
+  .deck-phone-screen { position: relative; aspect-ratio: 430 / 932; overflow: hidden; border-radius: calc(var(--phone-radius) - var(--phone-bezel) - 1px); background: #111; }
+  .deck-frame :global(picture), .deck-phone-screen :global(picture) { display: block; width: 100%; height: 100%; }
   .deck-frame :global(.deck-image), .deck-detail :global(.deck-detail-image) { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; }
+  .deck-phone-camera { position: absolute; top: clamp(5px, .7vw, 10px); left: 50%; width: clamp(4px, .45vw, 7px); aspect-ratio: 1; transform: translateX(-50%); border: 1px solid #48513f; border-radius: 50%; background: #080b08; }
   .deck-overlay { position: absolute; inset: 0; background: #050a07; opacity: 0; transition: opacity 180ms ease; }
   .deck-play { position: absolute; left: 50%; top: 50%; display: grid; width: 64px; height: 64px; place-items: center; transform: translate(-50%, -50%) scale(.92); border: 1px solid #e6ffb3; border-radius: 50%; background: linear-gradient(180deg, #dcff91, #bce950); color: #16200e; box-shadow: 0 0 0 10px #c8ff3d12, 0 8px 30px #0005; opacity: 0; transition: opacity 180ms ease, transform 220ms var(--ease-out); }
   .deck-play::before { content: ''; position: absolute; inset: -10px; border: 1px solid #dfff9e30; border-radius: inherit; }
@@ -63,7 +69,6 @@ const { caption, alt } = Astro.props;
   .deck-frame:focus-visible .deck-overlay { opacity: .22; }
   .deck-frame:focus-visible .deck-play { opacity: 1; transform: translate(-50%, -50%) scale(1); }
   .deck-frame:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 5px; }
-  .deck-caption { margin-top: 13px; color: var(--color-text-secondary, #87917f); font-size: 12px; line-height: 1.6; }
   @media (hover: hover) {
     .deck-frame:hover .deck-overlay { opacity: .22; }
     .deck-frame:hover .deck-play { opacity: 1; transform: translate(-50%, -50%) scale(1); }
@@ -71,10 +76,6 @@ const { caption, alt } = Astro.props;
   @media (hover: none) {
     .deck-play { opacity: 1; transform: translate(-50%, -50%) scale(1); }
     .deck-overlay { opacity: .08; }
-  }
-  @media (max-width: 767px) {
-    .deck-frame { width: 100%; aspect-ratio: 8 / 7; }
-    .deck-detail { width: 62%; max-width: 330px; margin-top: 56vw; transform: translateX(12px); }
   }
   @media (prefers-reduced-motion: reduce) {
     .deck-overlay, .deck-play { transition: none; }

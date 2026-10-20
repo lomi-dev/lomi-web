@@ -27,7 +27,10 @@ export const landingSchema = z.object({
     eyebrow: text, title: text, description: text, linkLabel: text,
     items: z.array(item.extend({
       phase: text, status: z.enum(['available', 'next', 'later']),
-      points: z.array(z.object({ label: text })).min(1).max(8),
+      points: z.array(z.object({
+        label: text,
+        status: z.enum(['completed', 'in-progress', 'not-started']).nullish(),
+      })).min(1).max(8),
     })).min(1).max(6),
   }),
   faq: z.object({

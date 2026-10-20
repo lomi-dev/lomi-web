@@ -12,8 +12,8 @@ Official assets copied from the user-supplied `../brandbook/assets/logos` packag
 The document references versioned favicon copies in `public/icons/` (`lomi-v1.3.svg`, `lomi-v1.3.ico`, and `lomi-v1.3-32.png`) so previously cached site icons do not reuse the old URLs. The PNG is the package's original `lomi-favicon-32.png`; root favicon files remain available for browser fallback.
 
 The original SVG geometry is unchanged. Its paths inherit `currentColor`: near-black
-in the white homepage header, white on Devlog, and near-black on the Lime footer. The header wordmark is
-82 px wide on desktop and 79 px on mobile.
+in the white homepage header, white on Devlog, and near-black on the lime footer.
+The header wordmark is 82 px wide on desktop and 79 px on mobile.
 The social preview is a browser capture of the page with this logo.
 
 ## Cloud background
@@ -21,7 +21,7 @@ The social preview is a browser capture of the page with this logo.
 Final workspace source: `src/assets/clouds.png` (1536 × 1024).
 
 The original image and CloudBackdrop component are retained as unused assets.
-The current hero uses a white composition with layered product captures rather than the
+The current hero uses a white composition with desktop and mobile placeholders rather than the
 previous photographic panorama. The source image remains unchanged.
 
 Created using the built-in `image_gen` tool. The two user-supplied landing-page images were visual direction references, not copied into the website. Astro exports responsive AVIF and WebP versions with PNG fallbacks at build time.
@@ -32,18 +32,22 @@ Exact generation prompt:
 
 ## Application screenshots
 
-The hero uses two unchanged, real native captures from the desktop README,
-copied from `../lomi/docs/images/` into `src/assets/product/`:
+The hero uses two local [Placehold](https://placehold.co/) images, optimized by
+Astro, while the final product captures are being prepared:
 
-- `workbench.png`: project explorer, TypeScript editor, and native terminal.
-- `source-control.png`: Git history and a code diff, cropped in the foreground.
+- `src/assets/placeholders/workspace.png`: 1600 × 1000 desktop view.
+- `src/assets/placeholders/mobile.png`: 430 × 932 portrait mobile view.
 
-Both captures are 2880 × 1800. Astro generates responsive AVIF and WebP variants.
-The main caption and alt text use the CMS fields. The captures are shown directly,
-without an additional window header or view selector. It does not execute code
-or run the application. The play control opens the user-selected YouTube video
+The landscape desktop image has no added window header or view selector. A slim,
+generic phone frame holds the portrait image at its original aspect ratio.
+The phone overlaps the desktop's lower-right edge and remains clear of the play
+control, including on narrow screens. Both image slots explicitly identify
+themselves as placeholders in their alt text; the desktop also uses the CMS alt.
+They do not imply that the mobile client is publicly available. The composition
+is static, works without JavaScript and adds no device animation runtime.
+Astro generates responsive AVIF and WebP variants. The play control opens the user-selected YouTube video
 `dQw4w9WgXcQ`; its iframe is created on activation and removed on close.
-The same workbench capture acts as the loading poster inside the dialog. The
+The same desktop placeholder acts as the loading poster inside the dialog. The
 [official YouTube IFrame API](https://developers.google.com/youtube/iframe_api_reference)
 starts playback after muting, retains the native controls, and signals when the
 poster can be replaced by the player. No custom controls cover the playing video.
@@ -54,6 +58,11 @@ no additional React island or animation dependency is loaded.
 The dimmed backdrop remains available when a browser does not render backdrop
 blur.
 The native `browser.png` capture remains a local asset for future sections.
+
+Unchanged desktop captures copied from `../lomi/docs/images/` remain in
+`src/assets/product/`: `workbench.png` (project explorer, TypeScript editor and
+terminal), `source-control.png` (Git history and diff), and `browser.png`.
+They are 2880 × 1800 and remain available for future approved replacements.
 
 The download page reuses the unchanged `src/assets/product/workbench.png`
 capture at its original aspect ratio, without additional window chrome. Its

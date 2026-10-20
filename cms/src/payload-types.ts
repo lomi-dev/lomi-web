@@ -350,6 +350,10 @@ export interface Landing {
       description: string;
       points: {
         label: string;
+        /**
+         * Leave empty to inherit Completed for an available milestone, or Not started for other milestones.
+         */
+        status?: ('completed' | 'in-progress' | 'not-started') | null;
         id?: string | null;
       }[];
       id?: string | null;
@@ -498,6 +502,7 @@ export interface LandingSelect<T extends boolean = true> {
                 | T
                 | {
                     label?: T;
+                    status?: T;
                     id?: T;
                   };
               id?: T;

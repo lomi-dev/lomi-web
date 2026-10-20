@@ -2,10 +2,12 @@
 import Icon from './Icon';
 import { site } from '../data/site';
 import type { Landing } from '../../content/landing-schema';
+import { summarizeRoadmapStage } from '../../content/roadmap-progress';
 
 interface Props { content: Landing['roadmap'] }
 const { content } = Astro.props;
-const statusLabels = { available: 'Current preview', next: 'Proposed next', later: 'Exploring' };
+const taskStatusLabels = { completed: 'Completed', 'in-progress': 'In progress', 'not-started': 'Not started' };
+const stages = content.items.map((item) => ({ ...item, ...summarizeRoadmapStage(item) }));
 ---
 
 <section id="roadmap" class="roadmap-story" aria-labelledby="roadmap-title" data-scroll-surface data-roadmap-mode="static">
@@ -15,19 +17,31 @@ const statusLabels = { available: 'Current preview', next: 'Proposed next', late
         <div class="roadmap-intro">
           <h2 id="roadmap-title">{content.title}</h2>
           <p class="roadmap-intro-description">{content.description}</p>
+          <ul class="roadmap-legend" aria-label="Task statuses">
+            {Object.entries(taskStatusLabels).map(([status, label]) => <li data-task-status={status}>
+              <span class="roadmap-task-marker" aria-hidden="true">{status === 'completed' && <Icon name="check" width={12} height={12} />}{status === 'in-progress' && <span></span>}</span>
+              <span>{label}</span>
+            </li>)}
+          </ul>
           <span class="roadmap-scroll-hint" aria-hidden="true">Scroll to explore <span>→</span></span>
         </div>
         <div class="roadmap-spine" aria-hidden="true"><span></span></div>
         <ol class="roadmap-milestones">
-          {content.items.map((item, index) => <li class="roadmap-milestone" data-roadmap-milestone data-status={item.status} id={`roadmap-stage-${index + 1}`}>
+          {stages.map((item, index) => <li class="roadmap-milestone" data-roadmap-milestone data-status={item.status} id={`roadmap-stage-${index + 1}`}>
             <div class="milestone-stem" aria-hidden="true"><span></span></div>
             <span class="milestone-coordinate" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
             <div class="milestone-copy" data-roadmap-copy>
-              <div class="milestone-kicker"><span class="milestone-status-dot" aria-hidden="true"></span><span>{statusLabels[item.status]}</span></div>
               <p class="milestone-phase">{item.phase}</p>
               <h3>{item.title}</h3>
               <p class="milestone-description">{item.description}</p>
-              <ul>{item.points.map((point) => <li><Icon name={item.status === 'available' ? 'check' : 'plus'} width={14} height={14} /><span>{point.label}</span></li>)}</ul>
+              <div class="roadmap-task-progress">
+                <div class="roadmap-progress-caption"><span>{item.completed} of {item.total} completed</span><span class="roadmap-progress-percent">{item.percent}%</span></div>
+                <progress value={item.completed} max={item.total} aria-label={`${item.phase} progress`} aria-valuetext={`${item.completed} of ${item.total} completed (${item.percent}%)`}>{item.percent}%</progress>
+              </div>
+              <ul class="roadmap-tasks">{item.tasks.map((task) => <li class="roadmap-task" data-task-status={task.status}>
+                <span class="roadmap-task-marker" aria-hidden="true">{task.status === 'completed' && <Icon name="check" width={12} height={12} />}{task.status === 'in-progress' && <span></span>}</span>
+                <span><span class="roadmap-task-label" data-roadmap-task-label>{task.label}</span><span class="roadmap-sr-only"> — {taskStatusLabels[task.status]}</span></span>
+              </li>)}</ul>
             </div>
           </li>)}
         </ol>
@@ -80,15 +94,28 @@ const statusLabels = { available: 'Current preview', next: 'Proposed next', late
   [data-status='available'] .milestone-stem { background: var(--roadmap-accent); }
   .milestone-coordinate { display: none; }
   .milestone-copy { max-width: 640px; }
-  .milestone-kicker { display: flex; align-items: center; gap: 8px; margin-bottom: 18px; color: var(--roadmap-muted); font: 11px/1.6 var(--font-sans); }
-  .milestone-status-dot { width: 5px; height: 5px; border: 1px solid #a9b69b; border-radius: 50%; }
-  [data-status='available'] .milestone-status-dot { border-color: var(--roadmap-accent); background: var(--roadmap-accent); }
-  .milestone-phase { margin-bottom: 20px; font-size: clamp(28px, 3vw, 42px); line-height: 1.08; letter-spacing: -.045em; }
-  h3 { font-size: 19px; font-weight: 500; line-height: 1.3; letter-spacing: -.025em; }
+  .milestone-phase { margin-bottom: 12px; font-size: 13px; line-height: 1.5; font-weight: 500; color: var(--roadmap-muted); }
+  h3 { font-size: 26px; font-weight: 500; line-height: 1.2; letter-spacing: -.035em; }
   .milestone-description { margin-top: 9px; color: var(--roadmap-muted); font-size: 13px; line-height: 1.7; }
-  .milestone-copy ul { list-style: none; display: grid; gap: 8px; margin: 19px 0 0; padding: 0; }
-  .milestone-copy li { display: flex; align-items: flex-start; gap: 9px; color: #c7d0be; font-size: 11px; line-height: 1.65; }
-  .milestone-copy li svg { margin-top: 2px; color: var(--roadmap-accent); }
+  .roadmap-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; margin: 24px 0 0; padding: 0; list-style: none; color: var(--roadmap-muted); font-size: 11px; line-height: 1.5; }
+  .roadmap-legend li { display: flex; align-items: center; gap: 7px; }
+  .roadmap-task-progress { margin-top: 18px; }
+  .roadmap-progress-caption { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 7px; color: var(--roadmap-muted); font-size: 11px; line-height: 1.5; font-variant-numeric: tabular-nums; }
+  .roadmap-progress-percent { color: var(--roadmap-foreground); }
+  .roadmap-task-progress progress { display: block; appearance: none; width: 100%; height: 2px; border: 0; border-radius: 99px; overflow: hidden; background: #34402c; color: var(--roadmap-accent); }
+  .roadmap-task-progress progress::-webkit-progress-bar { background: #34402c; border-radius: inherit; }
+  .roadmap-task-progress progress::-webkit-progress-value { background: var(--roadmap-accent); border-radius: inherit; }
+  .roadmap-task-progress progress::-moz-progress-bar { background: var(--roadmap-accent); border-radius: inherit; }
+  .roadmap-tasks { list-style: none; display: grid; margin: 14px 0 0; padding: 0; }
+  .roadmap-task { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; color: #c7d0be; font-size: 13px; line-height: 1.55; }
+  .roadmap-task + .roadmap-task { border-top: 1px solid #2c3826; }
+  .roadmap-task > span:last-child { min-width: 0; }
+  .roadmap-task-marker { position: relative; display: grid; flex: 0 0 14px; place-items: center; width: 14px; height: 14px; margin-top: 2px; color: var(--roadmap-accent); }
+  [data-task-status='not-started'] > .roadmap-task-marker::before { content: ''; width: 6px; height: 6px; border: 1px solid #819370; border-radius: 50%; }
+  [data-task-status='in-progress'] > .roadmap-task-marker::before { content: ''; position: absolute; inset: 2px; border: 1px solid var(--roadmap-accent); border-radius: 50%; }
+  [data-task-status='in-progress'] > .roadmap-task-marker > span { width: 3px; height: 3px; border-radius: 50%; background: var(--roadmap-accent); }
+  .roadmap-task-marker :global(svg) { stroke-width: 2; }
+  .roadmap-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .roadmap-bottom { display: flex; justify-content: flex-end; align-items: center; gap: 24px; margin-top: 48px; border-top: 1px solid #35402e; padding-top: 18px; }
   .roadmap-controls { display: none; }
   .roadmap-discuss { display: inline-flex; align-items: center; justify-content: space-between; gap: 24px; min-height: 44px; font-size: 12px; }
@@ -116,9 +143,11 @@ const statusLabels = { available: 'Current preview', next: 'Proposed next', late
   [data-roadmap-mode='horizontal'] .roadmap-milestone:nth-child(even) .milestone-coordinate { top: auto; bottom: calc(50% + 12px); }
   [data-roadmap-mode='horizontal'] .milestone-copy { position: absolute; left: 26px; right: 12px; top: 5%; max-width: none; transform: translateY(calc((1 - var(--milestone-reveal, 1)) * 18px)); clip-path: inset(0 0 calc((1 - var(--milestone-reveal, 1)) * 100%) 0); }
   [data-roadmap-mode='horizontal'] .roadmap-milestone:nth-child(even) .milestone-copy { top: calc(50% + 28px); }
-  [data-roadmap-mode='horizontal'] .milestone-phase { font-size: clamp(29px, 2.5vw, 40px); margin-bottom: 17px; }
-  [data-roadmap-mode='horizontal'] .milestone-kicker { margin-bottom: 12px; }
-  [data-roadmap-mode='horizontal'] .milestone-copy ul { margin-top: 15px; gap: 6px; }
+  [data-roadmap-mode='horizontal'] h3 { font-size: 22px; }
+  [data-roadmap-mode='horizontal'] .milestone-phase { margin-bottom: 10px; }
+  [data-roadmap-mode='horizontal'] .roadmap-task-progress { margin-top: 12px; }
+  [data-roadmap-mode='horizontal'] .roadmap-tasks { margin-top: 10px; }
+  [data-roadmap-mode='horizontal'] .roadmap-task { padding-block: 8px; font-size: 12px; }
   [data-roadmap-mode='horizontal'] .roadmap-bottom { margin-top: 18px; padding-top: 14px; min-width: 0; }
   [data-roadmap-mode='horizontal'] .roadmap-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-right: auto; }
   .roadmap-controls button { display: inline-flex; align-items: center; gap: 9px; min-height: 44px; padding: 0 10px; border: 0; background: transparent; color: #b1bba8; font: 12px/1.5 var(--font-sans); cursor: pointer; text-align: left; }
@@ -131,8 +160,6 @@ const statusLabels = { available: 'Current preview', next: 'Proposed next', late
     .roadmap-intro { padding-bottom: 48px; }
     .roadmap-intro-description { font-size: 13px; margin-top: 22px; }
     .roadmap-milestone { padding-left: 26px; }
-    .milestone-phase { font-size: 30px; }
-    .milestone-kicker { margin-bottom: 12px; }
     .roadmap-bottom { margin-top: 34px; }
     .roadmap-discuss { justify-content: space-between; width: 100%; }
   }
