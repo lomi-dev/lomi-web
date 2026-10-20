@@ -1,0 +1,54 @@
+/** Editable subpage copy. Routes, platform IDs and release validation stay in code. */
+export const pageDefaults = {
+  download: {
+    seo: { title: 'Download lomi — macOS, Windows & Linux', description: 'Get lomi for macOS, Windows or Linux. Choose your installer, or install on Arch Linux from the AUR.' },
+    title: 'Download lomi.', description: [{ text: 'Your agents, editor and terminals.' }, { text: 'One workspace, ready for your desktop.' }],
+    chooserLabel: 'Choose your download', systemLabel: 'Operating system', downloadLabel: 'Download for {platform}',
+    platforms: {
+      macos: { label: 'macOS', legend: 'Mac chip' }, windows: { label: 'Windows', legend: 'Installer format' }, linux: { label: 'Linux', legend: 'Installer format' },
+    },
+    packages: {
+      'apple-silicon': { label: 'Apple Silicon', statusLabel: 'Apple Silicon', detail: 'DMG for Macs with an Apple M-series chip.' },
+      intel: { label: 'Intel', statusLabel: 'Intel', detail: 'DMG for Macs with an Intel processor.' },
+      exe: { label: 'EXE', statusLabel: 'EXE installer', detail: 'Standard setup installer for Windows x64.' },
+      msi: { label: 'MSI', statusLabel: 'MSI installer', detail: 'Windows Installer package for Windows x64.' },
+      appimage: { label: 'AppImage', statusLabel: 'AppImage', detail: 'Portable application package for Linux x86_64.' },
+      deb: { label: 'DEB', statusLabel: 'Debian/Ubuntu', detail: 'DEB package for Debian-based distributions on amd64.' },
+      rpm: { label: 'RPM', statusLabel: 'Fedora/RHEL', detail: 'RPM package for RPM-based distributions on x86_64.' },
+    },
+    showWindowsHelp: true, windowsHelp: { title: 'About Windows installers', description: 'Both packages are for Windows x64. EXE is the standard setup; MSI is the Windows Installer package. The installers are not Authenticode-signed.' },
+    noscript: 'JavaScript is off. Browse the installer files on GitHub. Select Linux to see the Arch Linux command.',
+    retryLabel: 'Try again', releasesLabel: 'View releases on GitHub',
+    feedback: { packageError: 'We couldn’t check package availability. Browse releases on GitHub.', packageReady: '{package} is ready to download.', packageMissing: '{package} is not in the latest release. Browse its files on GitHub.', packageFallback: 'This package', releaseReady: 'Latest release {tag} is ready.', releaseError: 'We couldn’t check the latest release. You can still browse releases on GitHub.' },
+    showAur: true,
+    aur: { title: 'On Arch Linux?', href: 'https://aur.archlinux.org/packages/lomi-bin', linkLabel: 'View on AUR', description: 'Install the x86_64 binary with your AUR helper.', command: 'yay -S lomi-bin', copyAriaLabel: 'Copy AUR install command', copyLabel: 'Copy', copiedLabel: 'Copied', copyFallbackLabel: 'Copy command', copiedStatus: 'Command copied.', copyError: 'Couldn’t copy the command. Select the code and copy it manually.' },
+    showScreenshot: true, screenshot: { image: null, alt: 'The lomi desktop app on macOS, with the project explorer, TypeScript editor and terminal in one workspace.', heading: 'Everything in its place.', caption: 'The lomi workspace' },
+    showHelp: true, help: { text: 'Need a hand getting started?', label: 'Read the documentation', href: 'https://docs.lomi.dev' },
+  },
+  remote: {
+    seo: { title: 'lomi remote — A host for your workspace', description: 'Get the lomi remote installation command for macOS, Linux or Windows. A native host in development for your computer or server.' },
+    title: 'Get lomi remote.', description: [{ text: 'A native host for your computer or server.' }, { text: 'Your workspace, running on your machine.' }],
+    installerTitle: 'Install Lomi Remote CLI', systemLabel: 'Operating system',
+    platforms: { unix: { label: 'macOS / Linux', command: 'curl -fsSL https://lomi.dev/download/remote | bash' }, windows: { label: 'Windows', command: 'Invoke-RestMethod "https://lomi.dev/download/remote.ps1" | Invoke-Expression' } },
+    commandAriaLabel: '{platform} installation command. Scroll to read the full command.', copyAriaLabel: 'Copy {platform} install command', manualCopy: 'Select the command and copy it manually.',
+    feedback: { waiting: 'Waiting for clipboard…', copied: '{platform} command copied.', error: 'Couldn’t copy. The command is selected so you can copy it manually.' },
+    showScreenshot: true, screenshot: { image: null, alt: 'The lomi desktop app on macOS, with the project explorer, TypeScript editor and terminal in one workspace.' },
+  },
+  devlog: {
+    seo: { title: 'Devlog — lomi', description: 'Notes from building lomi. Work in progress.' },
+    label: 'Devlog', labelAccent: '/', title: [{ text: 'Work in' }, { text: 'progress' }], accent: '_', description: [{ text: 'Notes from building lomi.' }, { text: 'We’ll have more to share here soon.' }],
+    cta: { label: 'Back to lomi', href: '/' }, footerLabel: 'lomi / devlog', settingsLabel: 'Cookie settings', source: { label: 'Follow the source', href: 'https://github.com/lomi-dev/lomi' },
+  },
+  cookies: {
+    seo: { title: 'Cookies & privacy — lomi', description: 'How this website remembers your privacy choices and handles optional YouTube videos.' },
+    title: 'Cookies & privacy.', description: 'What this website stores, what it loads, and what you can choose.', settingsLabel: 'Open cookie settings',
+    sections: [
+      { title: 'Your choices', paragraphs: [{ text: 'YouTube videos stay off unless you allow external media. You can accept or reject optional media, or change your choice through Cookie settings at any time.' }], showSettings: true, showStorage: false, showNoscript: true, noscript: 'JavaScript is off, so embedded videos stay off and preferences cannot be saved here. You can still follow the video link to watch directly on YouTube.' },
+      { title: 'Remembering your preference', paragraphs: [{ text: 'We save your choice in this browser using local storage. This preference is not an HTTP cookie and is not sent to our server. It contains your external-media choice, the notice version and the time you saved it. It does not contain an email address or a tracking identifier.' }, { text: 'Clearing this website’s browser storage resets your choice. If storage is unavailable, your choice applies only to the current visit. We ask again when it expires or the notice version changes.' }], showSettings: false, showStorage: true, showNoscript: false, noscript: 'JavaScript is off, so embedded videos stay off and preferences cannot be saved here. You can still follow the video link to watch directly on YouTube.' },
+      { title: 'Optional YouTube videos', paragraphs: [{ text: 'With your permission, we load YouTube’s player and player API. This connects your browser to YouTube, which can process information about your browser and device.' }, { text: 'We use YouTube’s privacy-enhanced embed mode. This limits some personalisation; it does not mean that the player is anonymous or makes no external requests. See {embedding} and {privacy}.' }, { text: 'Turning external media off stops the current embedded video and prevents new players from loading. It cannot undo requests already sent or clear storage belonging to another website.' }], showSettings: false, showStorage: false, showNoscript: false, noscript: 'JavaScript is off, so embedded videos stay off and preferences cannot be saved here. You can still follow the video link to watch directly on YouTube.' },
+      { title: 'Other website requests', paragraphs: [{ text: 'The download page requests public release information from GitHub. The newsletter sends the email you provide only when you submit its form. These features are separate from optional YouTube media.' }, { text: 'We do not install separate analytics or advertising tools on this website. Optional YouTube content may include advertising provided by YouTube. Fonts, interface icons and preview images are served with the website. Following an external link takes you to a service with its own privacy practices.' }], showSettings: false, showStorage: false, showNoscript: false, noscript: 'JavaScript is off, so embedded videos stay off and preferences cannot be saved here. You can still follow the video link to watch directly on YouTube.' },
+    ],
+    links: { embedding: { label: 'YouTube’s embedding information', href: 'https://support.google.com/youtube/answer/171780?hl=en' }, privacy: { label: 'Google’s privacy policy', href: 'https://policies.google.com/privacy' } },
+    storage: [{ label: 'Storage key', value: 'lomi.cookie-consent', code: true }, { label: 'Choice expiry', value: '180 days for both acceptance and refusal', code: false }, { label: 'Purpose', value: 'Remembering and applying your privacy choice', code: false }],
+  },
+};

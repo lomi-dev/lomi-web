@@ -1,70 +1,56 @@
 ---
 import Icon from './Icon';
 import logo from '../assets/lomi-wordmark.svg?raw';
-import { site } from '../data/site';
+import { editorDefaults } from '../../content/editor-defaults';
+import { resolveMedia } from '../../content/editor-schema';
 import { activeLandingLinks } from '../data/navigation';
 import type { Landing } from '../../content/landing-schema';
-interface Props { content: Landing['navigation']; theme?: 'light' | 'dark' }
-const { content, theme } = Astro.props;
-const navigationLinks = activeLandingLinks(content.links).filter((link) => !['#newsletter', '/#newsletter'].includes(link.href));
-const roadmapIndex = navigationLinks.findIndex((link) => ['#roadmap', '/#roadmap'].includes(link.href));
-const devlogIndex = navigationLinks.findIndex((link) => link.href.replace(/\/$/, '') === '/devlog');
-const newsletterIndex = roadmapIndex >= 0 ? roadmapIndex + 1 : devlogIndex >= 0 ? devlogIndex : navigationLinks.length;
-navigationLinks.splice(newsletterIndex, 0, { label: 'Newsletter', href: '#newsletter' });
+interface Props { content: Landing['navigation']; site?: Landing['site']; layout?: Landing['layout']; theme?: 'light' | 'dark' }
+const { content, theme, site = editorDefaults.site, layout = editorDefaults.layout } = Astro.props;
+const navigationLinks = activeLandingLinks(content.links, layout);
+const brandLogo = resolveMedia(site.brand.logo, import.meta.env.CMS_URL);
 const isHome = Astro.url.pathname === '/';
 const homeHref = (href: string) => href.startsWith('#') && !isHome ? `/${href}` : href;
 const isPageLink = (href: string) => {
   const target = new URL(homeHref(href), Astro.url);
   return !target.hash || target.origin !== Astro.url.origin || target.pathname !== Astro.url.pathname;
 };
-const productGroups: { label: string; links: { label: string; href: string }[] }[] = [
-  { label: 'Workspace', links: [
-    { label: 'Overview', href: '#workspace' },
-    { label: 'Features', href: '#features' },
-    { label: 'Remote', href: site.remote },
-  ] },
-  { label: 'Project', links: [
-    { label: 'Documentation', href: site.docs },
-    { label: 'Source code', href: site.github },
-  ] },
-  { label: 'Get started', links: [
-    { label: 'Download lomi', href: site.download },
-    { label: 'Release notes', href: site.releases },
-  ] },
-];
+const productGroups = content.productGroups.map((group) => ({ ...group, links: activeLandingLinks(group.links, layout) })).filter((group) => group.links.length);
+const productHref = productGroups[0]?.links[0]?.href ?? '/';
+const action = activeLandingLinks([{ label: content.actionLabel, href: content.actionHref }], layout)[0];
 ---
 
 <header class="site-header" data-theme={theme ?? (isHome ? 'light' : 'dark')}>
   <div class="navigation-backdrop" aria-hidden="true"></div>
   <div class="header-inner shell">
-    <a class="wordmark" href={isHome ? '#top' : '/'} aria-label="lomi home"><Fragment set:html={logo} /></a>
-    <nav class="desktop-navigation" aria-label="Primary navigation">
-      <a class="product-fallback" href={homeHref('#workspace')}>Product{isPageLink('#workspace') && <Icon name="diagonal" width={13} height={13} />}</a>
+    <a class="wordmark" href={isHome ? '#top' : '/'} aria-label={site.brand.logoAlt}>{brandLogo ? <img src={brandLogo.url} alt={site.brand.logoAlt} /> : <Fragment set:html={logo} />}</a>
+    <nav class="desktop-navigation" aria-label={content.primaryAriaLabel}>
+      {productGroups.length > 0 && <><a class="product-fallback" href={homeHref(productHref)}>{content.productLabel}{isPageLink(productHref) && <Icon name="diagonal" width={13} height={13} />}</a>
       <details class="product-menu" id="product-menu">
-        <summary>Product<svg class="menu-chevron" width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m4 6 4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" /></svg></summary>
+        <summary>{content.productLabel}<svg class="menu-chevron" width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m4 6 4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" /></svg></summary>
         <div class="product-panel">
           <div class="product-panel-inner">
             {productGroups.map((group) => <div class="product-group"><p class="product-group-label">{group.label}</p>{group.links.map((link) => <a class="product-link" href={homeHref(link.href)} aria-current={link.href.replace(/\/$/, '') === Astro.url.pathname.replace(/\/$/, '') ? 'page' : undefined}><span class="product-link-title">{link.label}</span>{isPageLink(link.href) && <Icon name="diagonal" width={14} height={14} />}</a>)}</div>)}
           </div>
         </div>
-      </details>
+      </details></>}
       {navigationLinks.map((link) => <a class="navigation-link" href={homeHref(link.href)} aria-current={link.href.replace(/\/$/, '') === Astro.url.pathname.replace(/\/$/, '') ? 'page' : undefined}>{link.label}{isPageLink(link.href) && <Icon name="diagonal" width={13} height={13} />}</a>)}
     </nav>
     <div class="header-actions">
-      <a class="header-source" href={site.github} aria-label="lomi source on GitHub"><Icon name="github" width={17} height={17} /><span>GitHub</span><Icon name="diagonal" width={13} height={13} /></a>
-      <a class="header-action" href={site.download}>{content.actionLabel}<Icon name="diagonal" width={16} height={16} /></a>
+      <a class="header-source" href={site.githubUrl} aria-label={content.sourceAriaLabel}><Icon name="github" width={17} height={17} /><span>{content.sourceLabel}</span><Icon name="diagonal" width={13} height={13} /></a>
+      {action && <a class="header-action" href={homeHref(action.href)}>{action.label}<Icon name="diagonal" width={16} height={16} /></a>}
     </div>
     <details class="mobile-navigation" id="mobile-navigation">
-      <summary><span>Menu</span><span class="menu-symbol" aria-hidden="true"></span></summary>
-      <nav class="mobile-panel" aria-label="Mobile navigation">
-        <details class="mobile-product" id="mobile-product">
-          <summary><span class="mobile-product-enter">Product<Icon name="arrow" width={17} height={17} /></span><span class="mobile-product-back"><Icon name="arrow" width={16} height={16} />Back</span></summary>
+      <summary><span>{content.menuLabel}</span><span class="menu-symbol" aria-hidden="true"></span></summary>
+      <nav class="mobile-panel" aria-label={content.mobileAriaLabel}>
+        {productGroups.length > 0 && <details class="mobile-product" id="mobile-product">
+          <summary><span class="mobile-product-enter">{content.productLabel}<Icon name="arrow" width={17} height={17} /></span><span class="mobile-product-back"><Icon name="arrow" width={16} height={16} />{content.backLabel}</span></summary>
           <div class="mobile-product-panel">
             {productGroups.map((group) => <div class="product-group"><p class="product-group-label">{group.label}</p>{group.links.map((link) => <a class="product-link" href={homeHref(link.href)} aria-current={link.href.replace(/\/$/, '') === Astro.url.pathname.replace(/\/$/, '') ? 'page' : undefined}><span class="product-link-title">{link.label}</span>{isPageLink(link.href) && <Icon name="diagonal" width={14} height={14} />}</a>)}</div>)}
           </div>
-        </details>
+        </details>}
         {navigationLinks.map((link) => <a class="mobile-root-link" href={homeHref(link.href)} aria-current={link.href.replace(/\/$/, '') === Astro.url.pathname.replace(/\/$/, '') ? 'page' : undefined}>{link.label}<Icon name={isPageLink(link.href) ? 'diagonal' : 'arrow'} width={16} height={16} /></a>)}
-        <div class="mobile-utilities"><a href={site.github}>GitHub<Icon name="diagonal" width={15} height={15} /></a><a class="mobile-download" href={site.download}>{content.actionLabel}<Icon name="diagonal" width={15} height={15} /></a></div>
+        <div class="mobile-utilities"><a href={site.githubUrl}>{content.sourceLabel}<Icon name="diagonal" width={15} height={15} /></a>{action && <a class="mobile-download" href={homeHref(action.href)}>{action.label}<Icon name="diagonal" width={15} height={15} /></a>}</div>
       </nav>
     </details>
   </div>
@@ -233,6 +219,7 @@ const productGroups: { label: string; links: { label: string; href: string }[] }
 </script>
 
 <style>
+  .wordmark img { width: 70px; height: auto; max-height: 44px; object-fit: contain; }
   .site-header {
     --header-surface: rgb(15 20 14 / 72%);
     --header-panel: #10150f;
@@ -250,7 +237,7 @@ const productGroups: { label: string; links: { label: string; href: string }[] }
   .site-header[data-scrolled]::before, .site-header:not([data-navigation-ready])::before, .site-header:has(.product-menu[open], .mobile-navigation[open])::before { opacity: 1; }
   .site-header:has(.product-menu[open], .mobile-navigation[open])::before { background: var(--header-panel); -webkit-backdrop-filter: none; backdrop-filter: none; }
   .site-header:not([data-navigation-ready])::before { background: var(--header-surface); }
-  .site-header[data-theme='light'] { --header-surface: rgb(255 255 255 / 72%); --header-panel: #fff; --header-line: #dfe5d8; --header-text: #202c18; --header-muted: #3f4b36; --header-subtle: #5c6b4e; --header-hover: #eef3e8; --header-icon: #4b6c16; --header-focus: var(--color-focus); }
+  .site-header[data-theme='light'] { --header-surface: rgb(255 255 255 / 72%); --header-panel: var(--color-paper); --header-line: #dfe5d8; --header-text: #202c18; --header-muted: #3f4b36; --header-subtle: #5c6b4e; --header-hover: #eef3e8; --header-icon: #4b6c16; --header-focus: var(--color-focus); }
   .site-header [data-contrast] { transition: background-color 150ms ease; }
   .site-header [data-contrast='light'] { --header-text: #fff; --header-muted: #fff; --header-line: rgb(255 255 255 / 30%); --header-hover: rgb(255 255 255 / 12%); --header-focus: var(--color-lime); color: var(--header-text); }
   .site-header [data-contrast='dark'] { --header-text: #000; --header-muted: #000; --header-line: rgb(11 14 11 / 25%); --header-hover: rgb(11 14 11 / 7%); --header-focus: var(--color-focus); color: var(--header-text); }
@@ -281,7 +268,7 @@ const productGroups: { label: string; links: { label: string; href: string }[] }
   .header-actions { display: flex; align-items: center; flex-shrink: 0; gap: 12px; padding-left: 20px; }
   .header-source { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-width: 44px; min-height: 44px; padding-inline: 10px; border-radius: 6px; color: var(--header-muted); font-size: 12px; font-weight: 500; transition: color 150ms ease, background-color 150ms ease; }
   .header-action { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 44px; padding: 0 17px; border: 1px solid #b6e43b; border-radius: 8px; color: #0b0e0b; background: var(--color-lime); font-size: 12px; font-weight: 550; transition: background-color 150ms ease, transform 150ms ease-out; }
-  .header-action:active { transform: scale(.96); }
+  .header-action:active { background: var(--color-lime-pressed); transform: scale(.96); }
   .site-header :focus-visible { outline: 2px solid var(--header-focus); outline-offset: 3px; }
   .mobile-navigation { display: none; }
   .product-menu[open] .product-panel, .mobile-navigation[open] > .mobile-panel { animation: panel-enter 180ms var(--ease-out); }
@@ -302,7 +289,7 @@ const productGroups: { label: string; links: { label: string; href: string }[] }
   }
   @media (max-width: 767px) {
     .header-inner { width: calc(100% - 40px); justify-content: space-between; }
-    .wordmark :global(svg) { width: 64px; }
+    .wordmark :global(svg), .wordmark img { width: 64px; }
     .desktop-navigation, .header-actions { display: none; }
     .site-header[data-navigation-ready] .mobile-navigation { display: flex; align-items: center; align-self: stretch; }
     .site-header:not([data-navigation-ready]) .header-inner { gap: 8px; }

@@ -11,6 +11,7 @@ import { up as addTaskStatuses, down as removeTaskStatuses } from '../src/migrat
 const directory = await mkdtemp(path.join(tmpdir(), 'lomi-cms-test-'))
 process.env.PAYLOAD_SECRET = randomBytes(32).toString('hex')
 process.env.DATABASE_URL = `file:${path.join(directory, 'test.db')}`
+process.env.MEDIA_UPLOAD_DIR = path.join(directory, 'media')
 const seed = () => {
   const result = spawnSync('bun', ['run', 'seed'], { env: process.env, encoding: 'utf8' })
   assert.equal(result.status, 0, result.stdout + result.stderr)
@@ -75,7 +76,7 @@ try {
   await assert.rejects(payload.updateGlobal({ slug: 'landing', data: { hero: { title: 'Unauthorized' } }, overrideAccess: false }))
   await assert.rejects(payload.findGlobalVersions({ slug: 'landing', overrideAccess: false }))
   await assert.rejects(payload.create({ collection: 'users', data: { email: 'public@example.com', password: 'public-registration-disabled' }, overrideAccess: false }))
-  for (const href of ['/devlog', '/devlog/', '/download', '/download/', '/remote', '/remote/', 'https://docs.lomi.dev', '#roadmap']) {
+  for (const href of ['/devlog', '/devlog/', '/download', '/download/', '/remote', '/remote/', 'https://docs.lomi.dev', '#roadmap', '/remote#section', '/cookies/', '/', 'mailto:hello@lomi.dev']) {
     const updated: Landing = await payload.updateGlobal({ slug: 'landing', data: { navigation: { links: [{ label: 'Link', href }] } } })
     assert.equal(updated.navigation.links[0].href, href)
   }
@@ -87,7 +88,7 @@ try {
     '/devlog?draft=true', '/devlog//', '/%64evlog',
     '/download/../admin', '/download?draft=true', '/download//', '/%64ownload',
     '/remote/../admin', '/remote?draft=true', '/remote/?draft=true',
-    '/remote//', '/%72emote', '/remote/%2e%2e/admin', '/remote#section',
+    '/remote//', '/%72emote', '/remote/%2e%2e/admin',
   ]) {
     await assert.rejects(payload.updateGlobal({ slug: 'landing', data: { navigation: { links: [{ label: 'Unsafe', href }] } } }), /href/i, href)
   }

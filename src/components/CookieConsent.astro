@@ -1,43 +1,47 @@
 ---
 import Icon from './Icon';
+import { editorDefaults } from '../../content/editor-defaults';
+import type { Landing } from '../../content/landing-schema';
+interface Props { content?: Landing['site']['cookie'] }
+const { content = editorDefaults.site.cookie } = Astro.props;
 ---
 
-<div data-cookie-consent>
+<div data-cookie-consent data-copy={JSON.stringify(content)}>
   <section class="cookie-banner" data-cookie-banner aria-labelledby="cookie-banner-title" hidden>
     <header class="cookie-heading">
-      <h2 id="cookie-banner-title">Cookie settings</h2>
-      <button type="button" class="cookie-close" data-cookie-close aria-label="Close cookie settings" hidden><Icon name="close" width={18} height={18} /></button>
+      <h2 id="cookie-banner-title">{content.title}</h2>
+      <button type="button" class="cookie-close" data-cookie-close aria-label={content.closeLabel} hidden><Icon name="close" width={18} height={18} /></button>
     </header>
-    <p class="cookie-introduction">We remember your choice on this device. YouTube videos only load with your permission. Read our <a href="/cookies/">cookie information</a>.</p>
+    <p class="cookie-introduction">{content.introduction} <a href={content.informationHref}>{content.informationLabel}</a>{content.introductionSuffix}</p>
 
     <div class="cookie-compact" data-cookie-compact>
       <div class="cookie-actions">
-        <button type="button" class="cookie-button cookie-customize" data-cookie-customize aria-expanded="false" aria-controls="cookie-preferences">Customize</button>
-        <button type="button" class="cookie-button cookie-primary" data-cookie-accept>Accept all</button>
+        <button type="button" class="cookie-button cookie-customize" data-cookie-customize aria-expanded="false" aria-controls="cookie-preferences">{content.customizeLabel}</button>
+        <button type="button" class="cookie-button cookie-primary" data-cookie-accept>{content.acceptLabel}</button>
       </div>
-      <button type="button" class="cookie-reject" data-cookie-reject>Reject optional</button>
+      <button type="button" class="cookie-reject" data-cookie-reject>{content.rejectLabel}</button>
     </div>
 
     <div id="cookie-preferences" class="cookie-preferences" role="region" aria-labelledby="cookie-banner-title" tabindex="-1" hidden>
       <form data-cookie-form>
         <div class="cookie-category">
-          <div class="cookie-category-heading"><h3>Necessary</h3><span class="cookie-necessary-switch" role="img" aria-label="Always on"><span></span></span></div>
-          <p>Remembers your privacy choice on this device. Always on.</p>
+          <div class="cookie-category-heading"><h3>{content.necessaryLabel}</h3><span class="cookie-necessary-switch" role="img" aria-label={content.alwaysOnLabel}><span></span></span></div>
+          <p>{content.necessaryDescription}</p>
         </div>
         <div class="cookie-category">
-          <label class="cookie-media-label" for="cookie-external-media"><span>External media</span><input id="cookie-external-media" type="checkbox" role="switch" aria-describedby="cookie-media-description" /></label>
-          <p id="cookie-media-description">Allows embedded YouTube videos to connect your browser to YouTube.</p>
+          <label class="cookie-media-label" for="cookie-external-media"><span>{content.mediaLabel}</span><input id="cookie-external-media" type="checkbox" role="switch" aria-describedby="cookie-media-description" /></label>
+          <p id="cookie-media-description">{content.mediaDescription}</p>
         </div>
-        <p class="cookie-retention">Your choice lasts 180 days. You can change it anytime in Cookie settings.</p>
-        <button type="submit" class="cookie-button cookie-primary cookie-save" data-cookie-save>Save preferences</button>
-        <button type="button" class="cookie-reject" data-cookie-reject>Reject optional</button>
+        <p class="cookie-retention">{content.retention}</p>
+        <button type="submit" class="cookie-button cookie-primary cookie-save" data-cookie-save>{content.saveLabel}</button>
+        <button type="button" class="cookie-reject" data-cookie-reject>{content.rejectLabel}</button>
       </form>
     </div>
   </section>
 
   <div class="cookie-feedback" data-cookie-feedback hidden>
     <p role="status" aria-live="polite" data-cookie-message></p>
-    <button type="button" class="cookie-close" data-cookie-message-close aria-label="Dismiss privacy notice"><Icon name="close" width={18} height={18} /></button>
+    <button type="button" class="cookie-close" data-cookie-message-close aria-label={content.dismissLabel}><Icon name="close" width={18} height={18} /></button>
   </div>
 </div>
 
@@ -47,7 +51,7 @@ import Icon from './Icon';
 </script>
 
 <style>
-  .cookie-banner, .cookie-feedback { color: #0b0d0c; background: #fff; font-family: var(--font-sans); }
+  .cookie-banner, .cookie-feedback { color: var(--color-ink); background: var(--color-paper); font-family: var(--font-sans); }
   .cookie-banner { position: fixed; z-index: 60; right: max(20px, env(safe-area-inset-right)); bottom: max(20px, env(safe-area-inset-bottom)); width: min(420px, calc(100% - 40px)); max-height: calc(100dvh - 40px); overflow: auto; overscroll-behavior: contain; padding: 24px 24px 12px; border: 1px solid #e5e8e1; border-radius: 16px; box-shadow: 0 12px 48px #13210d1f; }
   .cookie-banner[hidden], .cookie-feedback[hidden], .cookie-preferences[hidden], .cookie-compact[hidden], .cookie-close[hidden] { display: none; }
   .cookie-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 28px; }
@@ -56,8 +60,8 @@ import Icon from './Icon';
   .cookie-introduction { margin-top: 14px; color: #535c56; font-size: 14px; line-height: 1.65; }
   .cookie-introduction a { color: #535c56; text-decoration: underline; text-decoration-color: #9aa392; text-underline-offset: 3px; }
   .cookie-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 20px; }
-  .cookie-button { display: inline-flex; align-items: center; justify-content: center; min-width: 0; min-height: 46px; padding: 11px 12px; border: 1px solid #d8ddd2; border-radius: 9px; background: #f0f1ee; color: #0b0d0c; font: 500 13px/1.5 var(--font-sans); cursor: pointer; }
-  .cookie-primary { border-color: #0b0d0c; background: #0b0d0c; color: #fff; }
+  .cookie-button { display: inline-flex; align-items: center; justify-content: center; min-width: 0; min-height: 46px; padding: 11px 12px; border: 1px solid #d8ddd2; border-radius: 9px; background: #f0f1ee; color: var(--color-ink); font: 500 13px/1.5 var(--font-sans); cursor: pointer; }
+  .cookie-primary { border-color: var(--color-ink); background: var(--color-ink); color: #fff; }
   .cookie-reject { display: flex; align-items: center; justify-content: center; min-height: 44px; width: 100%; margin-top: 4px; padding: 8px 12px; border: 0; border-radius: 8px; background: transparent; color: #46533e; font: 500 12px/1.5 var(--font-sans); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
   .cookie-preferences { padding-top: 20px; }
   .cookie-preferences:focus { outline: none; }
@@ -69,8 +73,8 @@ import Icon from './Icon';
   .cookie-media-label { cursor: pointer; }
   .cookie-media-label input, .cookie-necessary-switch { position: relative; appearance: none; flex-shrink: 0; width: 38px; height: 22px; margin: 0; border: 1px solid #b1b8aa; border-radius: 999px; background: #dce1d7; }
   .cookie-media-label input { border-color: #738067; background: #858d7e; cursor: pointer; }
-  .cookie-media-label input::before, .cookie-necessary-switch > span { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; content: ''; }
-  .cookie-media-label input:checked, .cookie-necessary-switch { border-color: #0b0d0c; background: #0b0d0c; }
+  .cookie-media-label input::before, .cookie-necessary-switch > span { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--color-paper); content: ''; }
+  .cookie-media-label input:checked, .cookie-necessary-switch { border-color: var(--color-ink); background: var(--color-ink); }
   .cookie-media-label input:checked::before, .cookie-necessary-switch > span { left: 18px; }
   .cookie-retention { margin-top: 16px; color: #535c56; font-size: 11px; line-height: 1.65; }
   .cookie-save { width: 100%; margin-top: 16px; }
@@ -81,8 +85,8 @@ import Icon from './Icon';
   @media (hover: hover) {
     .cookie-customize:hover, .cookie-close:hover { background: #e5e8e1; }
     .cookie-primary:hover { background: #26321d; border-color: #26321d; }
-    .cookie-reject:hover { background: #f1f4eb; color: #0b0d0c; }
-    .cookie-introduction a:hover { color: #0b0d0c; }
+    .cookie-reject:hover { background: #f1f4eb; color: var(--color-ink); }
+    .cookie-introduction a:hover { color: var(--color-ink); }
   }
   @media (prefers-reduced-motion: no-preference) {
     .cookie-button, .cookie-close, .cookie-reject { transition: background-color 150ms ease, border-color 150ms ease; }

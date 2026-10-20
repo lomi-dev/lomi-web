@@ -1,3 +1,5 @@
+import type { pageDefaults } from '../../content/page-defaults';
+import type { Editable } from '../../content/editor-schema';
 import {
   downloadPlatforms, fetchLatestRelease, findPackage, releaseFallback,
   type PlatformId, type Release,
@@ -25,6 +27,9 @@ function detectedPlatform(hints?: NavigatorHints): PlatformId {
 
 export function initDownloadPage(root: HTMLElement): void {
   if (root.dataset.downloadReady === 'true') return;
+  if (!root.dataset.downloadCopy) return;
+  const copy = JSON.parse(root.dataset.downloadCopy) as Editable<typeof pageDefaults.download>;
+  const format = (text: string, key: string, value: string) => text.replaceAll(`{${key}}`, value);
   const tabs = Array.from(root.querySelectorAll<HTMLAnchorElement>('[data-platform-tabs] [data-platform]'));
   const panels = Array.from(root.querySelectorAll<HTMLElement>('[data-platform-panel]'));
   const nav = root.querySelector<HTMLElement>('[data-platform-tabs]');
@@ -52,8 +57,8 @@ export function initDownloadPage(root: HTMLElement): void {
       panel.dataset.packageAvailable = String(Boolean(asset));
       if (action) action.href = asset?.url ?? release?.url ?? releaseFallback;
       if (label) label.textContent = asset
-        ? `Download for ${downloadPlatforms.find((entry) => entry.id === platform)?.label ?? platform}`
-        : 'View releases on GitHub';
+        ? format(copy.downloadLabel, 'platform', copy.platforms[platform].label)
+        : copy.releasesLabel;
       if (status) {
         // Fetch results use the shared live region. Announce a package's own
         // availability only when the user changes that package selection.
@@ -61,10 +66,10 @@ export function initDownloadPage(root: HTMLElement): void {
         status.textContent = state === 'loading'
           ? ''
           : state === 'error'
-            ? 'We couldn’t check package availability. Browse releases on GitHub.'
+            ? copy.feedback.packageError
             : asset
-              ? `${option?.label ?? 'This package'} is ready to download.`
-              : `${option?.label ?? 'This package'} is not in the latest release. Browse its files on GitHub.`;
+              ? format(copy.feedback.packageReady, 'package', option ? copy.packages[option.id].statusLabel : copy.feedback.packageFallback)
+              : format(copy.feedback.packageMissing, 'package', option ? copy.packages[option.id].statusLabel : copy.feedback.packageFallback);
       }
     }
   }
@@ -83,7 +88,7 @@ export function initDownloadPage(root: HTMLElement): void {
   }
 
   nav?.setAttribute('role', 'tablist');
-  nav?.setAttribute('aria-label', 'Operating system');
+  nav?.setAttribute('aria-label', copy.systemLabel);
   for (const tab of tabs) {
     const platform = platformId(tab.dataset.platform);
     if (!platform) continue;
@@ -186,11 +191,11 @@ export function initDownloadPage(root: HTMLElement): void {
       if (current !== request) return;
       release = loaded;
       state = 'ready';
-      if (globalStatus) globalStatus.textContent = `Latest release ${release.tag} is ready.`;
+      if (globalStatus) globalStatus.textContent = format(copy.feedback.releaseReady, 'tag', release.tag);
     } catch {
       if (current !== request) return;
       state = 'error';
-      if (globalStatus) globalStatus.textContent = 'We couldn’t check the latest release. You can still browse releases on GitHub.';
+      if (globalStatus) globalStatus.textContent = copy.feedback.releaseError;
     } finally {
       clearTimeout(timeout);
       if (current === request) {
@@ -221,7 +226,7 @@ export function initDownloadPage(root: HTMLElement): void {
   const command = document.getElementById('aur-command');
   if (copyButton && command) {
     copyButton.hidden = false;
-    const originalLabel = copyLabel?.textContent || 'Copy command';
+    const originalLabel = copyLabel?.textContent || copy.aur.copyFallbackLabel;
     let copyRequest = 0;
     let reset: ReturnType<typeof setTimeout> | undefined;
     copyButton.addEventListener('click', async () => {
@@ -233,15 +238,15 @@ export function initDownloadPage(root: HTMLElement): void {
         if (!navigator.clipboard?.writeText) throw new Error('Clipboard is unavailable');
         await navigator.clipboard.writeText(command.textContent?.trim() ?? '');
         if (current !== copyRequest) return;
-        if (copyLabel) copyLabel.textContent = 'Copied';
-        if (copyStatus) copyStatus.textContent = 'Command copied.';
+        if (copyLabel) copyLabel.textContent = copy.aur.copiedLabel;
+        if (copyStatus) copyStatus.textContent = copy.aur.copiedStatus;
         reset = setTimeout(() => {
           if (copyLabel) copyLabel.textContent = originalLabel;
           if (copyStatus) copyStatus.textContent = '';
         }, 2_000);
       } catch {
         if (current !== copyRequest) return;
-        if (copyStatus) copyStatus.textContent = 'Couldn’t copy the command. Select the code and copy it manually.';
+        if (copyStatus) copyStatus.textContent = copy.aur.copyError;
       }
     });
   }

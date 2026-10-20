@@ -1,46 +1,50 @@
 ---
 import Icon from './Icon';
 import CookieSettingsLink from './CookieSettingsLink.astro';
-import { site, footerSocials } from '../data/site';
+import { editorDefaults } from '../../content/editor-defaults';
+import { resolveMedia } from '../../content/editor-schema';
+import { activeLandingLinks } from '../data/navigation';
 import logo from '../assets/lomi-wordmark.svg?raw';
 import type { Landing } from '../../content/landing-schema';
 
-interface Props { content: Landing['footer'] }
-const { content } = Astro.props;
+interface Props { content: Landing['footer']; site?: Landing['site']; layout?: Landing['layout'] }
+const { content, site = editorDefaults.site, layout = editorDefaults.layout } = Astro.props;
+const brandLogo = resolveMedia(site.brand.logo, import.meta.env.CMS_URL);
+const groups = content.groups.map((group) => ({ ...group, links: activeLandingLinks(group.links, layout) })).filter((group) => group.links.length);
 ---
 
-<footer class="site-footer" aria-label="lomi footer" data-scroll-surface>
-  <div class="footer-frame" tabindex="0" role="region" aria-label="Footer content">
+<footer class="site-footer" aria-label={content.ariaLabel} data-scroll-surface>
+  <div class="footer-frame" tabindex="0" role="region" aria-label={content.contentAriaLabel}>
     <div class="footer-body">
       <div class="footer-invitation">
         <h2>{content.signoff}</h2>
         <div class="footer-actions">
-          <a class="footer-github" href={site.github}>
+          <a class="footer-github" href={site.githubUrl}>
             <Icon name="github" width={19} height={19} />
             <span>{content.githubLabel}</span>
             <span class="footer-github-arrow" aria-hidden="true"><Icon name="diagonal" width={19} height={19} /></span>
           </a>
-          <div class="footer-socials" role="group" aria-label="Social media">
-            {footerSocials.map((social) => <a class="footer-social" href={social.href} aria-label={social.label} title={social.label}><Icon name={social.icon} width={20} height={20} /></a>)}
+          <div class="footer-socials" role="group" aria-label={content.socialsAriaLabel}>
+            {content.socials.map((social) => <a class="footer-social" href={social.href} aria-label={social.label} title={social.label}><Icon name={social.icon as 'youtube' | 'x' | 'linkedin' | 'tiktok'} width={20} height={20} /></a>)}
           </div>
         </div>
       </div>
-      <nav class="footer-navigation" aria-label="Footer navigation">
-        {content.groups.map((group) => <div class="footer-link-group">
+      <nav class="footer-navigation" aria-label={content.navigationAriaLabel}>
+        {groups.map((group) => <div class="footer-link-group">
           <h3>{group.title}</h3>
           <ul>{group.links.map((link) => <li><a href={link.href}><span>{link.label}</span><Icon name="diagonal" width={15} height={15} /></a></li>)}</ul>
         </div>)}
       </nav>
     </div>
 
-    <div class="footer-wordmark" data-footer-wordmark aria-hidden="true">
-      <div class="footer-wordmark-source" data-footer-wordmark-source><Fragment set:html={logo} /></div>
+    <div class="footer-wordmark" data-footer-wordmark={!brandLogo || undefined} aria-hidden="true">
+      <div class="footer-wordmark-source" data-footer-wordmark-source>{brandLogo ? <img src={brandLogo.url} alt="" /> : <Fragment set:html={logo} />}</div>
       <canvas class="footer-wordmark-canvas" data-footer-wordmark-canvas></canvas>
     </div>
 
     <div class="footer-bottom">
       <div class="footer-credits">
-        <div class="footer-legal"><a href={`${site.github}/blob/main/LICENSE`}>{content.licenseLabel}</a><span>© {new Date().getUTCFullYear()} lomi</span><CookieSettingsLink /></div>
+        <div class="footer-legal"><a href={content.licenseHref}>{content.licenseLabel}</a><span>{content.copyrightLabel.replace('{year}', String(new Date().getUTCFullYear()))}</span><CookieSettingsLink label={content.cookieSettingsLabel} /></div>
       </div>
       <a class="footer-takeoff" href="#top">{content.backToTopLabel}<span class="footer-takeoff-arrow" aria-hidden="true">↑</span></a>
     </div>
@@ -58,7 +62,7 @@ const { content } = Astro.props;
 <style>
   .site-footer {
     --scroll-surface-color: var(--footer-lime);
-    --footer-ink: #0b0d0c;
+    --footer-ink: var(--color-ink);
     --footer-lime: var(--color-lime);
     --footer-muted: #384526;
     --footer-rule: rgb(11 13 12 / 25%);
@@ -187,6 +191,7 @@ const { content } = Astro.props;
   }
   .footer-wordmark-source, .footer-wordmark-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
   .footer-wordmark-source { pointer-events: none; }
+  .footer-wordmark-source img { width: 100%; height: 100%; object-fit: contain; }
   .footer-wordmark-source :global(svg) { display: block; width: 100%; height: 100%; }
   .footer-wordmark-canvas { display: block; opacity: 0; }
   .footer-wordmark[data-wordmark-ready="true"] .footer-wordmark-source { visibility: hidden; }

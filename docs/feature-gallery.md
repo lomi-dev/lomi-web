@@ -2,21 +2,25 @@
 
 The gallery uses the existing `features` group in Payload: heading, accent,
 description, and 1–12 feature items. Titles, descriptions, and short detail
-labels are rendered at build time. No schema or database migration is needed.
+labels are rendered at build time. The website-editor migration adds image,
+video and alternative-text fields to each feature, plus editable dialog labels.
 
 The first preview occupies two rows beside two smaller previews; the remaining
 features fill the lower grid. Tablet and phone layouts reduce the columns.
 One or two published features use a simpler layout without empty lead cells.
 
-All previews currently use the same local Placehold images as the hero,
-optimized by Astro. There are no feature videos, product screenshots, or
-external media requests. Replace the placeholder selection in
-`src/components/FeatureGallery.astro` when the final renders are available.
+Unconfigured previews use the local Placehold images, optimized by Astro.
+Select images or short uploaded videos directly in Payload. When both are
+selected, the image becomes the video's poster. Feature alternative text
+overrides the media-library description; an empty override falls back to the
+file's description or the feature title. See [the editing guide](cms-editing.md).
 
 With JavaScript, selecting a preview opens a white native dialog. Desktop
 places the media beside a panel containing the title, description, and
 navigation; narrow windows stack the media above the text. Previous/next
-controls, dots, and arrow keys select another feature. The description scrolls
+controls, dots, and arrow keys select another feature. Native video controls
+keep their own keyboard shortcuts. Hidden videos pause when navigating or
+closing, and card previews pause when the modal opens. The description scrolls
 independently while navigation and the close button stay visible. Escape or a
 backdrop click closes the dialog and restores focus to the original preview.
 Resizing keeps that preview reachable.

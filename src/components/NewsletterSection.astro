@@ -2,9 +2,12 @@
 import NewsletterSignup from './NewsletterSignup.astro';
 import logo from '../assets/lomi-wordmark.svg?raw';
 import type { Landing } from '../../content/landing-schema';
+import { editorDefaults } from '../../content/editor-defaults';
+import { resolveMedia } from '../../content/editor-schema';
 
-interface Props { content: Landing['newsletter'] }
-const { content } = Astro.props;
+interface Props { content: Landing['newsletter']; site?: Landing['site'] }
+const { content, site = editorDefaults.site } = Astro.props;
+const brandLogo = resolveMedia(site.brand.logo, import.meta.env.CMS_URL);
 ---
 
 <section class="newsletter-invitation" id="newsletter" aria-labelledby="newsletter-title" data-scroll-surface>
@@ -19,10 +22,10 @@ const { content } = Astro.props;
         <div class="envelope-back" aria-hidden="true"></div>
         <div class="letter-paper">
           <div class="letter-heading" aria-hidden="true">
-            <span class="letter-wordmark"><Fragment set:html={logo} /></span>
+            <span class="letter-wordmark">{brandLogo ? <img src={brandLogo.url} alt="" /> : <Fragment set:html={logo} />}</span>
           </div>
-          <NewsletterSignup />
-          <span class="letter-accepted" aria-hidden="true">You’re on the list <span>✓</span></span>
+          <NewsletterSignup content={content.form} />
+          <span class="letter-accepted" aria-hidden="true">{content.stampLabel} <span>✓</span></span>
         </div>
         <div class="envelope-front" aria-hidden="true"></div>
       </div>
@@ -47,10 +50,10 @@ const { content } = Astro.props;
   .letter-scene { position: relative; isolation: isolate; min-width: 0; width: 100%; max-width: 500px; padding: 12px 16px 24px; margin-inline: auto; }
   .envelope-back { position: absolute; z-index: -2; inset: 68px 0 0; border: 1px solid #91b82d; border-radius: 7px; background: #b8ec38; box-shadow: 0 20px 28px -24px #36422080; }
   .envelope-back::before { content: ''; position: absolute; inset: -62px -1px calc(100% - 2px); background: #b8ec38; clip-path: polygon(0 100%, 47% 5%, 50% 3%, 53% 5%, 100% 100%); }
-  .letter-paper { position: relative; padding: 16px 24px 32px; background: #fffffc; border: 1px solid #d8ddcf; border-radius: 4px; box-shadow: 0 2px 3px #242d1810, 0 12px 26px -12px #242d182e; }
+  .letter-paper { position: relative; padding: 16px 24px 32px; background: var(--color-paper); border: 1px solid #d8ddcf; border-radius: 4px; box-shadow: 0 2px 3px #242d1810, 0 12px 26px -12px #242d182e; }
   .letter-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
   .letter-wordmark { display: block; }
-  .letter-wordmark :global(svg) { display: block; width: 52px; height: auto; }
+  .letter-wordmark img, .letter-wordmark :global(svg) { display: block; width: 52px; height: auto; }
   .envelope-front { position: absolute; z-index: 1; pointer-events: none; inset: auto 0 0; height: 52px; background: var(--color-lime); border: 1px solid #9ac32c; border-top: 0; border-radius: 0 0 7px 7px; clip-path: polygon(0 0, 50% 40%, 100% 0, 100% 100%, 0 100%); }
   .envelope-front::before, .envelope-front::after { content: ''; position: absolute; top: 0; width: 65%; height: 1px; background: #9ac32c; }
   .envelope-front::before { left: 0; transform: rotate(30deg); transform-origin: left; }
@@ -71,7 +74,7 @@ const { content } = Astro.props;
     .letter-scene { max-width: 460px; padding: 8px 12px 20px; }
     .letter-paper { padding: 14px 18px 26px; }
     .letter-heading { margin-bottom: 8px; }
-    .letter-wordmark :global(svg) { width: 44px; }
+    .letter-wordmark img, .letter-wordmark :global(svg) { width: 44px; }
     .letter-accepted { top: 14px; right: 18px; }
     .envelope-front { height: 46px; }
   }

@@ -2,43 +2,52 @@
 import geistFont from '@fontsource-variable/geist/files/geist-latin-wght-normal.woff2?url';
 import '../styles/global.css';
 import CookieConsent from '../components/CookieConsent.astro';
+import type { Landing } from '../../content/landing-schema';
+import { editorDefaults } from '../../content/editor-defaults';
+import { resolveMedia } from '../../content/editor-schema';
 
-interface Props { title: string; description: string; themeColor?: string; edgeColor?: string }
-const { title, description, themeColor = '#0b0e0b', edgeColor = 'var(--color-chalk)' } = Astro.props;
+interface Props { title: string; description: string; themeColor?: string; edgeColor?: string; website?: Landing }
+const { title, description, themeColor, edgeColor = 'var(--color-chalk)', website } = Astro.props;
+const site = website?.site ?? editorDefaults.site;
+const theme = site.theme;
+const favicon = resolveMedia(site.brand.favicon, import.meta.env.CMS_URL);
+const uploadedSocialImage = resolveMedia(site.brand.socialImage, import.meta.env.CMS_URL);
 
 const canonical = Astro.site ? new URL(Astro.url.pathname, Astro.site) : undefined;
-const socialImage = Astro.site ? new URL('/social-card.png', Astro.site) : undefined;
+const socialImage = uploadedSocialImage?.url ?? (Astro.site ? new URL('/social-card.png', Astro.site) : undefined);
 ---
 <!doctype html>
-<html lang="en" style={{ '--page-edge-background': edgeColor }}>
+<html lang={site.language} style={{ '--page-edge-background': edgeColor, '--color-lime': theme.accent, '--color-lime-hover': theme.accentHover, '--color-lime-pressed': theme.accentPressed, '--color-ink': theme.ink, '--color-chalk': theme.background, '--color-paper': theme.paper, '--color-text-secondary': theme.muted, '--color-focus': theme.focus, '--color-dark': theme.dark, '--color-dark-text': theme.darkText, '--line': theme.line }}>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content={themeColor} />
+    <meta name="theme-color" content={themeColor ?? theme.dark} />
     <meta name="description" content={description} />
     <meta name="color-scheme" content="light" />
     <title>{title}</title>
-    <link rel="icon" href="/icons/lomi-v1.3.ico" sizes="any" />
-    <link rel="icon" type="image/png" href="/icons/lomi-v1.3-32.png" sizes="32x32" />
-    <link rel="icon" type="image/svg+xml" href="/icons/lomi-v1.3.svg" sizes="any" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
+    {favicon ? <link rel="icon" href={favicon.url} /> : <>
+      <link rel="icon" href="/icons/lomi-v1.3.ico" sizes="any" />
+      <link rel="icon" type="image/png" href="/icons/lomi-v1.3-32.png" sizes="32x32" />
+      <link rel="icon" type="image/svg+xml" href="/icons/lomi-v1.3.svg" sizes="any" />
+      <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
+    </>}
     <link rel="preload" href={geistFont} as="font" type="font/woff2" crossorigin />
     {canonical && <link rel="canonical" href={canonical} />}
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="lomi" />
+    <meta property="og:site_name" content={site.brand.name} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     {canonical && <meta property="og:url" content={canonical} />}
     {socialImage && <meta property="og:image" content={socialImage} />}
-    {socialImage && <meta property="og:image:width" content="1200" />}
-    {socialImage && <meta property="og:image:height" content="630" />}
+    {socialImage && !uploadedSocialImage && <meta property="og:image:width" content="1200" />}
+    {socialImage && !uploadedSocialImage && <meta property="og:image:height" content="630" />}
     <meta name="twitter:card" content="summary_large_image" />
     <slot name="head" />
   </head>
   <body id="top">
-    <a class="skip-link" href="#main">Skip to content</a>
+    <a class="skip-link" href="#main">{site.skipLabel}</a>
     <slot />
-    <CookieConsent />
+    <CookieConsent content={site.cookie} />
     <script>
       import { initPageBackdrop } from '../components/page-backdrop';
       initPageBackdrop();

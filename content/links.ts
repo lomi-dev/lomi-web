@@ -3,7 +3,15 @@ export function isSafeHref(value: unknown): boolean {
   if (typeof value !== 'string') return false;
   const href = value.trim();
   if (!href || href.length > 2000 || /[\u0000-\u0020\u007f\\]/.test(href)) return false;
-  if (['/devlog', '/devlog/', '/download', '/download/', '/remote', '/remote/'].includes(href)) return true;
+  if (href.startsWith('/') && !href.startsWith('//')) {
+    try {
+      const url = new URL(href, 'https://lomi.invalid');
+      return ['/', '/devlog', '/devlog/', '/download', '/download/', '/remote', '/remote/', '/cookies', '/cookies/'].includes(url.pathname)
+        && !url.search && (!url.hash || /^#[a-z][a-z0-9-]*$/.test(url.hash))
+        && url.origin === 'https://lomi.invalid' && !/%|\.\./.test(href);
+    } catch { return false; }
+  }
+  if (/^mailto:[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9.-]+\.[a-z]{2,}$/i.test(href)) return true;
   if (/^#[a-z][a-z0-9-]*$/.test(href)) return true;
   if (!/^https:\/\/[^/?#]/.test(href)) return false;
   try {

@@ -2,6 +2,7 @@ import { sqliteAdapter } from '@payloadcms/db-sqlite'
 import { buildConfig } from 'payload'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { Media } from './collections/Media'
 import { Users } from './collections/Users'
 import { Landing } from './globals/Landing'
 
@@ -13,8 +14,9 @@ export default buildConfig({
   secret,
   serverURL: process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3001',
   admin: { user: Users.slug, importMap: { baseDir: dirname } },
-  collections: [Users],
+  collections: [Users, Media],
   globals: [Landing],
+  upload: { limits: { fileSize: 50 * 1024 * 1024 } },
   db: sqliteAdapter({ client: { url: process.env.DATABASE_URL || 'file:./data/payload.db' } }),
   typescript: { outputFile: path.resolve(dirname, 'payload-types.ts') },
 })

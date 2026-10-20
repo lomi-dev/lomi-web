@@ -4,7 +4,7 @@ Launch landing page for Lomi, a terminal ADE for coding agents. Work lives on
 `feat/launch-landing`; this task does not deploy the site or change `main`.
 English copy follows the existing website and is a starting point for editing.
 
-## Preview the outline
+## Preview the website
 
 ```sh
 bun install --frozen-lockfile
@@ -12,7 +12,8 @@ bun run dev
 ```
 
 Open <http://localhost:4321>. Without `CMS_URL`, the site uses
-[`content/landing.json`](content/landing.json). A running database or CMS is not
+[`content/landing.json`](content/landing.json), extended with shared editor and
+subpage defaults. A running database or CMS is not
 required to work on the layout.
 
 The page includes:
@@ -71,9 +72,8 @@ section's edge color. The native OS trackpad gesture still needs manual QA.
 Run `bun run verify:backdrop` (or prefix `VERIFY_BROWSER=firefox`) for section,
 edge pixel, navigation, viewport, and fallback regression checks.
 
-Footer social profiles are configured in `footerSocials` in `src/data/site.ts`.
-Entries with a profile URL render as links; entries awaiting a URL remain
-decorative icons.
+Footer social profiles, labels and icons are configured in Payload under
+**Website → Footer → Socials**.
 
 The roadmap is explicitly a draft, with no invented release dates. Product copy
 comes from the desktop application's README. The hero currently uses local
@@ -127,7 +127,7 @@ bun run dev
 ```
 
 Open <http://localhost:3001/admin>, create your administrator account, and edit
-**Launch landing page**. The first seed publishes the checked-in outline; later
+**Website**. The first seed publishes the checked-in content; later
 seed commands preserve both published edits and drafts. No default account is
 created. All CMS accounts are administrators; create the first account locally
 before exposing the CMS publicly.
@@ -142,15 +142,17 @@ bun run preview --port 4322
 ```
 
 Set `CMS_URL` in `.env.local` to keep the connection enabled. The CMS URL is a
-server-side build setting, never a browser-side API dependency. HTTP is allowed
+server-side content-fetch setting. Uploaded files are served by the CMS to
+visitors, so its public media URLs must remain accessible. HTTP is allowed
 only for localhost; a hosted CMS requires HTTPS.
 
 Publishing in Payload requires rebuilding and redeploying Astro to update the
 live page. Configured CMS failures, incomplete content, or drafts fail the build
 instead of silently deploying stale copy. There is no automatic publish hook or
-authenticated draft preview in this first outline.
+authenticated draft preview.
 
-Local SQLite hosting requires one CMS instance and a persistent writable disk.
+Local SQLite hosting requires one CMS instance, a persistent writable database
+and a persistent media directory configured with `MEDIA_UPLOAD_DIR`.
 The static site's host cannot execute Payload. See the CMS README for migrations,
 backups, environment configuration, and production build commands. No CMS host or
 deployment provider is configured by this task.
@@ -158,11 +160,13 @@ deployment provider is configured by this task.
 ## Where to edit
 
 - `content/landing.json`: initial copy for every main page section.
+- `content/editor-defaults.ts` and `content/page-defaults.ts`: defaults for new
+  shared settings, media controls and subpages.
 - `content/landing-schema.ts`: shared build-time content contract.
 - `content/links.ts`: link policy shared by Astro and Payload.
 - `content/load-landing.ts`: optional published-content fetch during rendering.
 - `cms/src/globals/Landing.ts`: matching editor fields and access rules.
-- `src/pages/index.astro`: section order and composition.
+- `src/pages/index.astro`: rendering of the CMS-authored section order.
 - `src/components/FeatureGallery.astro`: feature previews and dialog layout.
 - `src/components/feature-gallery.ts`: dialog navigation, motion, and focus.
 - `src/components/Roadmap.astro`: CMS-driven timeline and responsive layout.
@@ -177,14 +181,12 @@ deployment provider is configured by this task.
 - `src/data/site.ts`: fixed product/repository destinations.
 - `src/layouts/Layout.astro`: metadata and local fonts.
 
-Navigation, headings, descriptions, features, roadmap entries, FAQ, download CTA,
-newsletter introduction, footer links, and SEO copy can be edited in the CMS.
-The screenshots and cloud image remain versioned local assets in this outline.
-Product groups, the Devlog placeholder, form states, dialog instructions, and
-other functional labels live in components. Navigation links and the download
-label remain editable in Payload. Links allow HTTPS, section anchors, and the
-local `/devlog/` and `/download/` routes. On those pages, section links return
-to the homepage.
+Payload's **Website** editor covers navigation and Product groups, footer and
+socials, branding and colors, SEO, homepage layout, media, features, roadmap,
+newsletter and cookie messages, plus all four subpages. Images and videos can
+be uploaded through the Media library. Built-in assets remain fallbacks.
+See [the editing guide](docs/cms-editing.md) for field locations, templates,
+media modes, publishing and the settings intentionally kept in code.
 
 ## Video and download behavior
 
@@ -206,7 +208,7 @@ The official IFrame API mutes the player before any automatic playback. It
 starts once at least half the preview is visible, pauses when it leaves view
 or the tab is hidden, and leaves subsequent playback to the visitor. Reduced
 motion disables automatic playback and spinner motion. Replace the temporary
-video ID in `HeroVideo.astro` before launch. Use `http://localhost:4322` for
+video URL in **Website → Homepage → Hero** before launch. Use `http://localhost:4322` for
 local playback if YouTube rejects a numeric loopback referrer.
 
 The hero, navigation, and legacy CMS download links lead to `/download/`. The
@@ -245,6 +247,7 @@ PUBLIC_NEWSLETTER_ENDPOINT=https://auth.example.com/v1/newsletter/subscribe bun 
 
 ```sh
 bun run test:content
+bun run verify:cms-content
 bun run check
 bun run build
 bun run preview --port 4322

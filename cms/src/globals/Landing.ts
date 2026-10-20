@@ -1,4 +1,8 @@
 import type { Field, GlobalConfig } from 'payload'
+import { editorDefaults } from '../../../content/editor-defaults'
+import { pageDefaults } from '../../../content/page-defaults'
+import { captureWebsitePatch, hydrateWebsiteRead, prepareWebsiteWrite } from '../hooks/editorContent'
+import { fieldsFromDefaults } from '../fields/fromDefaults'
 import { isSafeHref } from '../../../content/links'
 
 const validateText = (value: string | null | undefined) =>
@@ -17,20 +21,22 @@ const link = (): Field[] => [
   {
     name: 'href', type: 'text', required: true, minLength: 1, maxLength: 2000,
     validate: (value: string | null | undefined) =>
-      isSafeHref(value) ? true : 'Enter an HTTPS URL, /devlog/, /download/, /remote/, or a #section anchor.',
+      isSafeHref(value) ? true : 'Enter an HTTPS link, email address, /, /devlog/, /download/, /remote/, /cookies/, or a #section anchor.',
   },
 ]
 
 export const Landing: GlobalConfig = {
   slug: 'landing',
-  label: 'Launch landing page',
+  label: 'Website',
+  admin: { description: 'Save a draft while editing, then publish. Rebuild and redeploy the website to show published changes.' },
   access: {
     read: ({ req }) => req.user ? true : { _status: { equals: 'published' } },
     update: ({ req }) => Boolean(req.user),
     readVersions: ({ req }) => Boolean(req.user),
   },
   versions: { drafts: true, max: 20 },
-  fields: [
+  hooks: { beforeOperation: [captureWebsitePatch], afterRead: [hydrateWebsiteRead], beforeValidate: [prepareWebsiteWrite] },
+  fields: websiteFields([
     group('seo', [text('title'), prose('description')]),
     group('navigation', [rows('links', link()), text('actionLabel')]),
     group('hero', [
@@ -75,5 +81,46 @@ export const Landing: GlobalConfig = {
       text('tagline'), text('githubLabel'), rows('groups', [text('title'), rows('links', link(), 8)], 4),
       text('signoff'), text('backToTopLabel'), text('licenseLabel'), text('colophon'),
     ]),
-  ],
+  ]),
+}
+
+
+function websiteFields(legacy: Field[]): Field[] {
+  const find = (name: string) => legacy.find((field) => 'name' in field && field.name === name) as Extract<Field, { type: 'group' }>
+  const merge = (name: keyof typeof editorDefaults) => {
+    const original = find(name)
+    const extras = fieldsFromDefaults(editorDefaults[name] as Record<string, unknown>, name)
+    return original ? { ...original, fields: [...original.fields, ...extras] } : group(name, extras)
+  }
+  const optional = (field: Field): Field => {
+    const copy = { ...field } as Field & { required?: boolean; minRows?: number; minLength?: number; validate?: unknown; fields?: Field[] }
+    delete copy.required
+    delete copy.minRows
+    delete copy.minLength
+    delete copy.validate
+    if (copy.fields) copy.fields = copy.fields.map(optional)
+    return copy as Field
+  }
+  for (const [name, obsolete] of Object.entries({ hero: ['eyebrow', 'note', 'previewCaption'], features: ['eyebrow'], roadmap: ['eyebrow'], newsletter: ['eyebrow'], footer: ['tagline', 'colophon'] })) {
+    const original = find(name)
+    original.fields = original.fields.map((field) => 'name' in field && obsolete.includes(field.name) ? { ...optional(field), admin: { hidden: true } } as Field : field)
+  }
+  const feature = merge('features') as Extract<Field, { type: 'group' }>
+  feature.fields = feature.fields.map((field) => 'name' in field && field.name === 'items' && field.type === 'array'
+    ? { ...field, admin: { ...field.admin, initCollapsed: true }, fields: [...field.fields, ...fieldsFromDefaults({ image: null, video: null, alt: '' }, 'features.items[]')] } : field)
+  feature.fields = feature.fields.map((field) => field.type === 'array' && field.name === 'items' ? { ...field, fields: field.fields.map((child) => 'name' in child && child.name === 'icon' ? { ...optional(child), admin: { hidden: true } } as Field : child) } : field)
+  const retired = ['workflow', 'principles', 'faq', 'download'].map((name) => ({ ...optional(find(name)), admin: { hidden: true } } as Field))
+  const collapse = (label: string, field: Field): Field => ({
+    type: 'collapsible', label, admin: { initCollapsed: true }, fields: [{ ...field, label: false } as Field],
+  })
+  const pages = fieldsFromDefaults(pageDefaults, 'pages').map((field) => collapse(
+    ({ download: 'Download page', remote: 'Remote page', devlog: 'Devlog page', cookies: 'Cookies and privacy page' } as Record<string, string>)[('name' in field && field.name) || ''] ?? 'Page content', field,
+  ))
+  return [{ name: 'editorVersion', type: 'number', admin: { hidden: true } }, { type: 'tabs', tabs: [
+    { label: 'Navigation', fields: [merge('navigation')] },
+    { label: 'Footer', fields: [merge('footer')] },
+    { label: 'Site settings', fields: [find('seo'), merge('site')] },
+    { label: 'Homepage', fields: [collapse('Hero', merge('hero')), collapse('Features', feature), collapse('Roadmap', merge('roadmap')), collapse('Newsletter', merge('newsletter')), collapse('Section order and visibility', fieldsFromDefaults({ layout: editorDefaults.layout })[0])] },
+    { label: 'Page content', fields: [group('pages', pages)] },
+  ] }, ...retired]
 }

@@ -13,6 +13,7 @@ export function initCookieConsent(root: HTMLElement): void {
   const message = root.querySelector<HTMLElement>('[data-cookie-message]');
   if (!banner || !preferences || !compact || !customize || !close || !form || !media || !feedback || !message) return;
   root.dataset.cookieReady = 'true';
+  const copy = JSON.parse(root.dataset.copy || '{}') as import('../../content/landing-schema').Landing['site']['cookie'];
   let expanded = false;
   let returnFocus: HTMLElement | null = null;
   let feedbackTimer = 0;
@@ -125,7 +126,7 @@ export function initCookieConsent(root: HTMLElement): void {
   window.addEventListener('lomi:consent-storage-error', () => {
     clearTimeout(feedbackTimer);
     feedback.hidden = false;
-    message.textContent = 'Your choice applies to this visit. Your browser couldn’t save it for next time.';
+    message.textContent = copy.storageError;
     feedbackTimer = window.setTimeout(() => { feedback.hidden = true; }, 10000);
   });
   root.querySelector('[data-cookie-message-close]')?.addEventListener('click', () => {

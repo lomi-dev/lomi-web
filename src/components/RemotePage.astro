@@ -1,25 +1,30 @@
 ---
-import { Picture } from 'astro:assets';
+import ContentMedia from './ContentMedia.astro';
+import type { Editable } from '../../content/editor-schema';
+import { pageDefaults } from '../../content/page-defaults';
 import Icon from './Icon';
 import { remoteInstallPlatforms } from '../data/remote';
 import workbench from '../assets/product/workbench.png';
+interface Props { content: Editable<typeof pageDefaults.remote> }
+const { content } = Astro.props;
+const platforms = remoteInstallPlatforms.map((platform) => ({ ...platform, ...content.platforms[platform.id] }));
 ---
 
 <section class="remote-page" data-remote-page data-scroll-surface aria-labelledby="remote-title">
   <div class="remote-shell">
     <header class="remote-opening">
-      <h1 id="remote-title">Get lomi remote.</h1>
-      <p>A native host for your computer or server.<br />Your workspace, running on your machine.</p>
+      <h1 id="remote-title">{content.title}</h1>
+      <p>{content.description.map((line, index) => <>{index > 0 && <br />}{line.text}</>)}</p>
     </header>
 
-    <div class="remote-installer" data-remote-installer>
+    <div class="remote-installer" data-remote-installer data-remote-copy={JSON.stringify(content.feedback)}>
       <div class="command-box">
         <div class="command-toolbar">
-          <h2 class="command-title">Install Lomi Remote CLI</h2>
+          <h2 class="command-title">{content.installerTitle}</h2>
           <fieldset class="remote-system-picker">
-            <legend class="visually-hidden">Operating system</legend>
+            <legend class="visually-hidden">{content.systemLabel}</legend>
             <div class="remote-system-options">
-              {remoteInstallPlatforms.map((platform, index) => <label class="remote-system-option">
+              {platforms.map((platform, index) => <label class="remote-system-option">
                 <input type="radio" name="remote-system" value={platform.id} checked={index === 0} />
                 <span class="system-icons" aria-hidden="true">{platform.icons.map((icon) => <img src={`/icons/download-${icon}.svg`} width="16" height="16" alt="" />)}</span>
                 <span>{platform.label}</span>
@@ -28,13 +33,13 @@ import workbench from '../assets/product/workbench.png';
           </fieldset>
         </div>
         <div class="command-panels">
-          {remoteInstallPlatforms.map((platform) => <div class={`command-panel command-${platform.id}`} data-remote-platform={platform.id} data-platform-label={platform.label}>
+          {platforms.map((platform) => <div class={`command-panel command-${platform.id}`} data-remote-platform={platform.id} data-platform-label={platform.label}>
             <div class="command-bar">
               <span class="command-prompt" aria-hidden="true">{platform.id === 'windows' ? 'PS' : '$'}</span>
-              <div class="command-scroll" tabindex="0" role="region" aria-label={`${platform.label} installation command. Scroll to read the full command.`}>
+              <div class="command-scroll" tabindex="0" role="region" aria-label={content.commandAriaLabel.replaceAll('{platform}', platform.label)}>
                 <code data-remote-command>{platform.command}</code>
               </div>
-              <button class="copy-command" type="button" data-copy-remote disabled aria-label={`Copy ${platform.label} install command`} title={`Copy ${platform.label} install command`}>
+              <button class="copy-command" type="button" data-copy-remote disabled aria-label={content.copyAriaLabel.replaceAll('{platform}', platform.label)} title={content.copyAriaLabel.replaceAll('{platform}', platform.label)}>
                 <span data-copy-icon><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4V3h13v13h-1" /><rect x="4" y="7" width="13" height="14" rx="1" /></svg></span>
                 <span data-copied-icon hidden><Icon name="check" width={20} height={20} /></span>
               </button>
@@ -44,23 +49,22 @@ import workbench from '../assets/product/workbench.png';
       </div>
 
       <p class="copy-feedback" data-remote-copy-status role="status" aria-live="polite" aria-atomic="true"></p>
-      <noscript><p class="manual-copy-note">Select the command and copy it manually.</p></noscript>
+      <noscript><p class="manual-copy-note">{content.manualCopy}</p></noscript>
     </div>
 
-    <figure class="remote-showcase">
+    {content.showScreenshot && <figure class="remote-showcase">
       <div class="remote-preview-stage">
-        <Picture
-          src={workbench}
-          alt="The lomi desktop app on macOS, with the project explorer, TypeScript editor and terminal in one workspace."
-          formats={['avif', 'webp']}
+        <ContentMedia
+          image={content.screenshot.image}
+          fallback={workbench}
+          alt={content.screenshot.alt}
           widths={[640, 960, 1440, 1920, 2400]}
           sizes="(min-width: 1280px) 1104px, (min-width: 1000px) calc(100vw - 160px), (min-width: 768px) calc(100vw - 112px), calc(100vw - 72px)"
           loading="lazy"
-          decoding="async"
           class="remote-capture"
         />
       </div>
-    </figure>
+    </figure>}
   </div>
 </section>
 
@@ -70,13 +74,13 @@ import workbench from '../assets/product/workbench.png';
 </script>
 
 <style>
-  .remote-page { --scroll-surface-color: #fff; --remote-muted: #5b6355; --remote-line: #dfe4d8; min-height: min(800px, 100svh); padding: 132px 0 80px; background: #fff; color: var(--color-ink); }
+  .remote-page { --scroll-surface-color: var(--color-paper); --remote-muted: #5b6355; --remote-line: #dfe4d8; min-height: min(800px, 100svh); padding: 132px 0 80px; background: var(--color-paper); color: var(--color-ink); }
   .remote-shell { width: min(1200px, calc(100% - 80px)); margin-inline: auto; }
   .remote-opening { max-width: 640px; margin: 0 auto 48px; text-align: center; }
   h1 { margin: 0; font-size: clamp(54px, 5vw, 72px); font-weight: 500; line-height: 1.06; letter-spacing: -.055em; text-wrap: balance; }
   .remote-opening > p { margin-top: 20px; color: var(--remote-muted); font-size: 17px; line-height: 1.65; }
   .remote-installer { max-width: 960px; margin-inline: auto; text-align: center; }
-  .command-box { min-width: 0; border: 1px solid var(--remote-line); border-radius: 12px; background: #fff; }
+  .command-box { min-width: 0; border: 1px solid var(--remote-line); border-radius: 12px; background: var(--color-paper); }
   .command-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 24px; padding: 12px 24px; border-bottom: 1px solid #edf0e9; }
   .command-title { margin: 0; color: #35412c; font-size: 13px; font-weight: 500; line-height: 1.5; letter-spacing: -.01em; text-align: left; }
   .command-panel { display: none; min-width: 0; }

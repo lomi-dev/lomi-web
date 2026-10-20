@@ -11,7 +11,7 @@ export async function loadLanding(cmsUrl?: string): Promise<Landing> {
     throw new Error('CMS_URL must be an HTTPS origin (HTTP is allowed on localhost).');
   }
 
-  const url = new URL('/api/globals/landing?depth=0&draft=false', origin);
+  const url = new URL('/api/globals/landing?depth=1&draft=false', origin);
   const response = await fetch(url, {
     headers: { Accept: 'application/json' },
     redirect: 'error',

@@ -7,61 +7,52 @@ import { activeLandingLinks } from '../data/navigation';
 import { loadLanding } from '../../content/load-landing';
 
 const content = await loadLanding(import.meta.env.CMS_URL);
+const page = content.pages.cookies;
 const footerContent = {
   ...content.footer,
   groups: content.footer.groups.map((group) => ({
     ...group,
-    links: activeLandingLinks(group.links).map((link) => ({ ...link, href: link.href.startsWith('#') ? `/${link.href}` : link.href })),
+    links: activeLandingLinks(group.links, content.layout).map((link) => ({ ...link, href: link.href.startsWith('#') ? `/${link.href}` : link.href })),
   })).filter((group) => group.links.length > 0),
 };
 ---
 
-<Layout title="Cookies & privacy — lomi" description="How this website remembers your privacy choices and handles optional YouTube videos." themeColor="#ffffff" edgeColor="var(--color-lime)">
-  <Header content={content.navigation} theme="light" />
+<Layout title={page.seo.title} description={page.seo.description} website={content} themeColor={content.site.theme.paper} edgeColor="var(--color-lime)">
+  <Header content={content.navigation} site={content.site} layout={content.layout} theme="light" />
   <main class="cookies-page" id="main" tabindex="-1" data-scroll-surface>
     <div class="cookies-shell">
-      <header><h1>Cookies &amp; privacy.</h1><p>What this website stores, what it loads, and what you can choose.</p></header>
-      <section id="preferences" aria-labelledby="choices-title">
-        <h2 id="choices-title">Your choices</h2>
-        <p>YouTube videos stay off unless you allow external media. You can accept or reject optional media, or change your choice through Cookie settings at any time.</p>
-        <CookieSettingsLink label="Open cookie settings" />
-        <noscript><p>JavaScript is off, so embedded videos stay off and preferences cannot be saved here. You can still follow the video link to watch directly on YouTube.</p></noscript>
-      </section>
-      <section aria-labelledby="storage-title">
-        <h2 id="storage-title">Remembering your preference</h2>
-        <p>We save your choice in this browser using local storage. This preference is not an HTTP cookie and is not sent to our server. It contains your external-media choice, the notice version and the time you saved it. It does not contain an email address or a tracking identifier.</p>
-        <dl><div><dt>Storage key</dt><dd><code>lomi.cookie-consent</code></dd></div><div><dt>Choice expiry</dt><dd>180 days for both acceptance and refusal</dd></div><div><dt>Purpose</dt><dd>Remembering and applying your privacy choice</dd></div></dl>
-        <p>Clearing this website’s browser storage resets your choice. If storage is unavailable, your choice applies only to the current visit. We ask again when it expires or the notice version changes.</p>
-      </section>
-      <section aria-labelledby="media-title">
-        <h2 id="media-title">Optional YouTube videos</h2>
-        <p>With your permission, we load YouTube’s player and player API. This connects your browser to YouTube, which can process information about your browser and device.</p>
-        <p>We use YouTube’s privacy-enhanced embed mode. This limits some personalisation; it does not mean that the player is anonymous or makes no external requests. See <a href="https://support.google.com/youtube/answer/171780?hl=en">YouTube’s embedding information</a> and <a href="https://policies.google.com/privacy">Google’s privacy policy</a>.</p>
-        <p>Turning external media off stops the current embedded video and prevents new players from loading. It cannot undo requests already sent or clear storage belonging to another website.</p>
-      </section>
-      <section aria-labelledby="requests-title">
-        <h2 id="requests-title">Other website requests</h2>
-        <p>The download page requests public release information from GitHub. The newsletter sends the email you provide only when you submit its form. These features are separate from optional YouTube media.</p>
-        <p>We do not install separate analytics or advertising tools on this website. Optional YouTube content may include advertising provided by YouTube. Fonts, interface icons and preview images are served with the website. Following an external link takes you to a service with its own privacy practices.</p>
-      </section>
+      <header><h1>{page.title}</h1><p>{page.description}</p></header>
+      {page.sections.map((section, sectionIndex) => <section id={sectionIndex === 0 ? 'preferences' : undefined} aria-labelledby={`policy-title-${sectionIndex}`}>
+        <h2 id={`policy-title-${sectionIndex}`}>{section.title}</h2>
+        {section.paragraphs.map((paragraph, paragraphIndex) => <>
+          <p>{paragraph.text.split(/(\{embedding\}|\{privacy\})/).map((part) => {
+            const link = part === '{embedding}' ? page.links.embedding : part === '{privacy}' ? page.links.privacy : null;
+            return link ? <a href={link.href}>{link.label}</a> : part;
+          })}</p>
+          {section.showStorage && paragraphIndex === 0 && <dl>{page.storage.map((row) => <div><dt>{row.label}</dt><dd>{row.code ? <code>{row.value}</code> : row.value}</dd></div>)}</dl>}
+        </>)}
+        {section.showStorage && section.paragraphs.length === 0 && <dl>{page.storage.map((row) => <div><dt>{row.label}</dt><dd>{row.code ? <code>{row.value}</code> : row.value}</dd></div>)}</dl>}
+        {section.showSettings && <CookieSettingsLink label={page.settingsLabel} />}
+        {section.showNoscript && <noscript><p>{section.noscript}</p></noscript>}
+      </section>)}
     </div>
   </main>
-  <Footer content={footerContent} />
+  <Footer content={footerContent} site={content.site} layout={content.layout} />
 </Layout>
 
 <style>
-  .cookies-page { --scroll-surface-color: #fff; padding: 132px 0 80px; color: var(--color-ink); background: #fff; }
+  .cookies-page { --scroll-surface-color: var(--color-paper); padding: 132px 0 80px; color: var(--color-ink); background: var(--color-paper); }
   .cookies-shell { width: min(760px, calc(100% - 80px)); margin-inline: auto; }
   h1 { margin: 0; font-size: clamp(46px, 5vw, 64px); font-weight: 500; line-height: 1.06; letter-spacing: -.055em; text-wrap: balance; }
-  header > p { margin-top: 20px; color: #535c56; font-size: 17px; line-height: 1.65; }
+  header > p { margin-top: 20px; color: var(--color-text-secondary); font-size: 17px; line-height: 1.65; }
   section { margin-top: 40px; padding-top: 24px; border-top: 1px solid #dfe4d8; }
   h2 { font-size: 24px; font-weight: 500; line-height: 1.25; letter-spacing: -.035em; }
-  section p { margin-top: 16px; color: #535c56; font-size: 14px; line-height: 1.8; }
+  section p { margin-top: 16px; color: var(--color-text-secondary); font-size: 14px; line-height: 1.8; }
   section p a { color: #263b15; text-decoration: underline; text-underline-offset: 3px; }
   section :global(.cookie-settings-link) { margin-top: 16px; padding: 0 18px; border: 1px solid #b6e43b; border-radius: 999px; background: var(--color-lime); font-size: 13px; font-weight: 500; }
   dl { margin: 20px 0; font-size: 13px; line-height: 1.65; }
   dl > div { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 8px 24px; padding-block: 12px; border-bottom: 1px solid #edf0e9; }
-  dt { color: #535c56; }
+  dt { color: var(--color-text-secondary); }
   dd { margin: 0; overflow-wrap: anywhere; }
   code { font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace; font-size: 12px; }
   @media (max-width: 767px) {

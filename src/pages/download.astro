@@ -7,11 +7,12 @@ import { activeLandingLinks } from '../data/navigation';
 import { loadLanding } from '../../content/load-landing';
 
 const content = await loadLanding(import.meta.env.CMS_URL);
+const page = content.pages.download;
 const footerContent = {
   ...content.footer,
   groups: content.footer.groups.map((group) => ({
     ...group,
-    links: activeLandingLinks(group.links).map((link) => ({
+    links: activeLandingLinks(group.links, content.layout).map((link) => ({
       ...link,
       href: link.href.startsWith('#') ? `/${link.href}` : link.href,
     })),
@@ -19,10 +20,10 @@ const footerContent = {
 };
 ---
 
-<Layout title="Download lomi — macOS, Windows & Linux" description="Get lomi for macOS, Windows or Linux. Choose your installer, or install on Arch Linux from the AUR." themeColor="#ffffff" edgeColor="var(--color-lime)">
-  <Header content={content.navigation} theme="light" />
+<Layout title={page.seo.title} description={page.seo.description} website={content} themeColor={content.site.theme.paper} edgeColor="var(--color-lime)">
+  <Header content={content.navigation} site={content.site} layout={content.layout} theme="light" />
   <main id="main" tabindex="-1">
-    <DownloadPage />
+    <DownloadPage content={page} />
   </main>
-  <Footer content={footerContent} />
+  <Footer content={footerContent} site={content.site} layout={content.layout} />
 </Layout>

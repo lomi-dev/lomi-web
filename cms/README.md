@@ -1,9 +1,9 @@
 # Lomi content admin
 
-A separate Payload CMS app for the launch landing page. The Astro site has its
+A separate Payload CMS app for the complete website. The Astro site has its
 own dependencies and build; run the following commands from `cms/` using Node
-22.16+ (Node 22 LTS) and Bun. The CMS build also needs `../content/links.ts`,
-the pure link policy shared with Astro. Deploy from a checkout containing both
+22.16+ (Node 22 LTS) and Bun. The CMS build also needs the shared
+`../content/` schemas and defaults. Deploy from a checkout containing both
 `cms/` and `content/`; the Turbopack root includes their common parent.
 
 ```sh
@@ -21,22 +21,37 @@ can create or manage users. Finish account creation before exposing the service
 to the public. Configure `NEXT_PUBLIC_SERVER_URL` with the CMS's HTTPS origin
 when hosting it.
 
-The **Launch landing page** global contains all fields from
-`../content/landing.json`. Navigation and footer destinations accept HTTPS URLs,
-simple section anchors such as `#roadmap`, or the local `/devlog/` route.
-Feature icons and roadmap statuses have fixed choices matching the site. Save drafts while editing, then publish
-when ready. The CMS retains up to 20 versions. Authenticated administrators can
-read drafts and history; public requests see only published content.
+The **Website** global keeps its existing `landing` API slug and version history.
+Its unnamed tabs organize Navigation, Footer, Site settings, Homepage, and Page
+content. Edit the homepage section order and visibility in Layout; each section
+can appear once. Page content includes Download, Remote, Devlog, and Cookies.
+Images, uploaded videos, YouTube URLs, theme colors, SEO, links, labels, and
+accessibility text are editable. Upload a poster and choose the hero media mode
+to display an image, a YouTube player, or an uploaded video.
 
-The current page renders Hero, Roadmap, and Footer. Retired section fields remain
-in the CMS for future use; editing them does not add those sections to the page.
-Links to retired sections are omitted when rendering, and old `#download` links
-point to the releases page.
+Legacy unused fields are hidden, retained in storage, and optional. New optional
+fields receive the shared website defaults when older documents are read. Saving
+records a hidden editor version so intentionally empty new lists stay empty.
+Existing text, media, published content, and drafts are never replaced by seeding.
+Navigation and footer destinations accept HTTPS URLs, simple section anchors,
+and supported local routes. Theme colors require six-digit hexadecimal values.
+Save drafts while editing, then publish when ready. The CMS retains up to 20
+versions. Public requests see only published content; authenticated administrators
+can read drafts and history and update website content.
+
+The **Media library** accepts PNG, JPEG, WebP, AVIF, GIF, MP4, and WebM originals
+up to 50 MiB per file. SVG and executable formats are excluded. Image fields
+filter to images; video fields filter to videos. Add meaningful alternative text
+for informative images (decorative images can use an empty value). Contextual
+alternative text on a page or feature overrides the library text; when empty,
+the website uses the media library text. Media files
+are public; only authenticated administrators can upload, edit, or delete them.
+An image field left empty uses its built-in website asset where available.
 
 The public REST endpoint is:
 
 ```text
-http://localhost:3001/api/globals/landing?depth=0&draft=false
+http://localhost:3001/api/globals/landing?depth=1&draft=false
 ```
 
 Set the Astro site's `CMS_URL` to the CMS origin to use this content during
@@ -60,14 +75,22 @@ bun run start          # Serve the production build on port 3001
 stable and private. Local SQLite defaults to `file:./data/payload.db` relative to
 `cms/`; `data/` is ignored by Git. Hosting requires a persistent, writable volume
 and a single CMS instance for this local database. Set `DATABASE_URL` to a
-`file:` URL on that volume. Back up the SQLite database and protect the secret.
-Do not use an ephemeral/serverless filesystem for production storage.
+`file:` URL on that volume. Set `MEDIA_UPLOAD_DIR` to a persistent writable
+directory (default
+`./data/media` relative to `cms/`). Back up both the SQLite database and media
+directory, and protect the secret. Uploads are original files with no generated
+variants; no image processor is required. Do not use an ephemeral/serverless filesystem for production storage.
 
 Payload's SQLite adapter applies the schema automatically in development.
 Before changing an existing production schema, create and apply Payload database
 migrations (`bunx payload migrate:create`, then `bunx payload migrate`). The
-initial schema migration is checked in and must be applied before the first
-production start. Run `bunx payload migrate` with the production environment.
+checked-in migrations include the initial schema, task statuses, complete website
+fields, published and draft/version tables, and media relationships. Apply them
+in order before production start. The website migration preserves existing
+edited fields; its rollback removes the new editor fields and media database
+records, so back up first. Rollback does not remove uploaded files. Run
+`NODE_ENV=production bunx payload migrate` with the production environment.
+Do not use development schema push against a migrated production database.
 
 No email transport is configured: Payload logs emails locally. Configure a
 production email adapter before relying on password-reset email delivery.

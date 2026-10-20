@@ -1,17 +1,21 @@
 ---
-import { Picture } from 'astro:assets';
+import ContentMedia from './ContentMedia.astro';
+import { youtubeVideoId } from '../../content/editor-schema';
+import type { Landing } from '../../content/landing-schema';
 import workspacePlaceholder from '../assets/placeholders/workspace.png';
 
-interface Props { alt: string }
-const { alt } = Astro.props;
+interface Props { content: Landing['hero'] }
+const { content } = Astro.props;
+const videoId = youtubeVideoId(content.videoUrl)!;
+const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
 ---
 
-<div class="hero-video" data-hero-video data-video-status="poster">
-  <div class="video-player" data-video-player role="group" aria-label="Lomi video player" aria-busy="false" data-scroll-surface>
-    <a class="video-poster" data-video-poster href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" target="_blank" rel="noopener noreferrer" aria-label="Watch the Lomi walkthrough on YouTube">
-      <Picture src={workspacePlaceholder} alt={`Placeholder: ${alt}`} formats={['avif', 'webp']}
+<div class="hero-video" data-hero-video data-video-status="poster" data-video-id={videoId} data-video-copy={JSON.stringify(content.player)}>
+  <div class="video-player" data-video-player role="group" aria-label={content.player.videoTitle} aria-busy="false" data-scroll-surface>
+    <a class="video-poster" data-video-poster href={watchUrl} target="_blank" rel="noopener noreferrer" aria-label={content.player.watchLabel}>
+      <ContentMedia image={content.poster} fallback={workspacePlaceholder} alt={content.previewAlt}
         widths={[480, 800, 1200, 1600]} sizes="(min-width: 1608px) 1440px, (min-width: 385px) 89.6vw, calc(100vw - 40px)"
-        loading="eager" decoding="async" />
+        loading="eager" />
       <span class="video-loading" aria-hidden="true"></span>
     </a>
     <div class="video-mount" data-video-mount></div>
@@ -32,6 +36,8 @@ const { alt } = Astro.props;
   } }) => Player };
 
   const root = document.querySelector<HTMLElement>('[data-hero-video]');
+  const copy = JSON.parse(root?.dataset.videoCopy ?? '{}') as import('../../content/landing-schema').Landing['hero']['player'];
+  const videoId = root?.dataset.videoId ?? '';
   const surface = root?.querySelector<HTMLElement>('[data-video-player]');
   const mount = root?.querySelector<HTMLElement>('[data-video-mount]');
   const poster = root?.querySelector<HTMLAnchorElement>('[data-video-poster]');
@@ -75,7 +81,7 @@ const { alt } = Astro.props;
     apiScript?.remove();
     apiScript = null;
     status('consent');
-    poster?.setAttribute('aria-label', 'Video privacy settings');
+    poster?.setAttribute('aria-label', copy.privacyLabel);
     if (hadFocus) poster?.focus({ preventScroll: true });
   }
 
@@ -122,7 +128,7 @@ const { alt } = Astro.props;
   function fallback(session: number, error = false) {
     if (!current(session)) return;
     clearTimeout(timeout);
-    status(error ? 'error' : 'ready', error ? 'The video could not load.' : 'Video controls are ready.');
+    status(error ? 'error' : 'ready', error ? copy.errorLabel : copy.readyLabel);
   }
 
   function start() {
@@ -131,15 +137,15 @@ const { alt } = Astro.props;
     clearPlayer();
     const session = version;
     pending = true;
-    status('loading', 'Loading video.');
-    poster?.setAttribute('aria-label', 'Watch the Lomi walkthrough on YouTube');
+    status('loading', copy.loadingLabel);
+    poster?.setAttribute('aria-label', copy.watchLabel);
     void loadAPI(session).then((api) => {
       if (!current(session)) return;
       const iframe = document.createElement('iframe');
-      const source = new URL('https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ');
+      const source = new URL(`https://www.youtube-nocookie.com/embed/${videoId}`);
       source.search = new URLSearchParams({ autoplay: '0', controls: '1', playsinline: '1', enablejsapi: '1', origin: location.origin }).toString();
       iframe.src = source.href;
-      iframe.title = 'Lomi product walkthrough';
+      iframe.title = copy.videoTitle;
       iframe.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
       iframe.allowFullscreen = true;
       iframe.referrerPolicy = 'strict-origin-when-cross-origin';
@@ -157,7 +163,7 @@ const { alt } = Astro.props;
           pending = false;
           target.mute();
           ready = true;
-          status('ready', 'Video controls are ready.');
+          status('ready', copy.readyLabel);
           autoplay();
         },
         onStateChange: ({ data, target }) => {

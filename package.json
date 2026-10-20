@@ -16,6 +16,7 @@
     "verify:remote": "node scripts/verify-remote.mjs",
     "verify:backdrop": "node scripts/verify-backdrop.mjs",
     "verify:cookies": "node scripts/verify-cookies.mjs",
+    "verify:cms-content": "node scripts/verify-cms-content.mjs",
     "test:consent": "bun test tests/consent.test.ts",
     "test:downloads": "bun test tests/downloads.test.ts",
     "test:content": "bun test tests/content.test.ts",

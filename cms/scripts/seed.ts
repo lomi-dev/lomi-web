@@ -1,6 +1,7 @@
 import nextEnv from '@next/env'
 import { readFile } from 'node:fs/promises'
 import { getPayload } from 'payload'
+import { hydrateEditorContent } from '../../content/editor-content'
 
 nextEnv.loadEnvConfig(process.cwd())
 const { default: config } = await import('../src/payload.config')
@@ -14,7 +15,7 @@ try {
     console.log('Landing content already exists; seed skipped without changes.')
   } else {
     const data = JSON.parse(await readFile(new URL('../../content/landing.json', import.meta.url), 'utf8'))
-    await payload.updateGlobal({ slug: 'landing', data: { ...data, _status: 'published' }, draft: false })
+    await payload.updateGlobal({ slug: 'landing', data: { ...hydrateEditorContent(data), _status: 'published' }, draft: false })
     console.log('Published initial landing content. Create your administrator at /admin.')
   }
 } finally {

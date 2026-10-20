@@ -68,6 +68,7 @@ export interface Config {
   blocks: {};
   collections: {
     users: User;
+    media: Media;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -76,6 +77,7 @@ export interface Config {
   collectionsJoins: {};
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
+    media: MediaSelect<false> | MediaSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -146,6 +148,30 @@ export interface User {
   collection: 'users';
 }
 /**
+ * Upload images and videos used throughout the website. Add useful alternative text for meaningful images.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "media".
+ */
+export interface Media {
+  id: number;
+  /**
+   * Describe the image for people using screen readers. Leave empty only for decorative assets.
+   */
+  alt?: string | null;
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+  focalX?: number | null;
+  focalY?: number | null;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
@@ -168,10 +194,15 @@ export interface PayloadKv {
  */
 export interface PayloadLockedDocument {
   id: number;
-  document?: {
-    relationTo: 'users';
-    value: number | User;
-  } | null;
+  document?:
+    | ({
+        relationTo: 'users';
+        value: number | User;
+      } | null)
+    | ({
+        relationTo: 'media';
+        value: number | Media;
+      } | null);
   globalSlug?: string | null;
   user: {
     relationTo: 'users';
@@ -239,6 +270,24 @@ export interface UsersSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "media_select".
+ */
+export interface MediaSelect<T extends boolean = true> {
+  alt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  url?: T;
+  thumbnailURL?: T;
+  filename?: T;
+  mimeType?: T;
+  filesize?: T;
+  width?: T;
+  height?: T;
+  focalX?: T;
+  focalY?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv_select".
  */
 export interface PayloadKvSelect<T extends boolean = true> {
@@ -278,15 +327,14 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
   createdAt?: T;
 }
 /**
+ * Save a draft while editing, then publish. Rebuild and redeploy the website to show published changes.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "landing".
  */
 export interface Landing {
   id: number;
-  seo: {
-    title: string;
-    description: string;
-  };
+  editorVersion?: number | null;
   navigation: {
     links: {
       label: string;
@@ -294,53 +342,202 @@ export interface Landing {
       id?: string | null;
     }[];
     actionLabel: string;
+    productLabel?: string | null;
+    menuLabel?: string | null;
+    backLabel?: string | null;
+    sourceLabel?: string | null;
+    sourceAriaLabel?: string | null;
+    primaryAriaLabel?: string | null;
+    mobileAriaLabel?: string | null;
+    actionHref?: string | null;
+    /**
+     * Drag rows to change their order. Remove rows to hide them.
+     */
+    productGroups?:
+      | {
+          label?: string | null;
+          /**
+           * Drag rows to change their order. Remove rows to hide them.
+           */
+          links?:
+            | {
+                label?: string | null;
+                href?: string | null;
+                id?: string | null;
+              }[]
+            | null;
+          id?: string | null;
+        }[]
+      | null;
+  };
+  footer: {
+    tagline?: string | null;
+    githubLabel: string;
+    groups: {
+      title: string;
+      links: {
+        label: string;
+        href: string;
+        id?: string | null;
+      }[];
+      id?: string | null;
+    }[];
+    signoff: string;
+    backToTopLabel: string;
+    licenseLabel: string;
+    colophon?: string | null;
+    /**
+     * Drag rows to change their order. Remove rows to hide them.
+     */
+    socials?:
+      | {
+          label?: string | null;
+          icon?: ('youtube' | 'x' | 'linkedin' | 'tiktok') | null;
+          href?: string | null;
+          id?: string | null;
+        }[]
+      | null;
+    licenseHref?: string | null;
+    /**
+     * Keep {year} in the text; the website replaces it automatically.
+     */
+    copyrightLabel?: string | null;
+    cookieSettingsLabel?: string | null;
+    ariaLabel?: string | null;
+    contentAriaLabel?: string | null;
+    navigationAriaLabel?: string | null;
+    socialsAriaLabel?: string | null;
+  };
+  seo: {
+    title: string;
+    description: string;
+  };
+  site?: {
+    brand?: {
+      name?: string | null;
+      /**
+       * Optional uploaded image. The website uses its built-in image when empty.
+       */
+      logo?: (number | null) | Media;
+      logoAlt?: string | null;
+      /**
+       * Optional uploaded image. The website uses its built-in image when empty.
+       */
+      favicon?: (number | null) | Media;
+      /**
+       * Optional uploaded image. The website uses its built-in image when empty.
+       */
+      socialImage?: (number | null) | Media;
+    };
+    theme?: {
+      accent?: string | null;
+      accentHover?: string | null;
+      accentPressed?: string | null;
+      ink?: string | null;
+      background?: string | null;
+      paper?: string | null;
+      muted?: string | null;
+      line?: string | null;
+      focus?: string | null;
+      dark?: string | null;
+      darkText?: string | null;
+    };
+    githubUrl?: string | null;
+    docsUrl?: string | null;
+    language?: string | null;
+    skipLabel?: string | null;
+    cookie?: {
+      title?: string | null;
+      closeLabel?: string | null;
+      introduction?: string | null;
+      informationLabel?: string | null;
+      informationHref?: string | null;
+      introductionSuffix?: string | null;
+      customizeLabel?: string | null;
+      acceptLabel?: string | null;
+      rejectLabel?: string | null;
+      necessaryLabel?: string | null;
+      alwaysOnLabel?: string | null;
+      necessaryDescription?: string | null;
+      mediaLabel?: string | null;
+      mediaDescription?: string | null;
+      retention?: string | null;
+      saveLabel?: string | null;
+      dismissLabel?: string | null;
+      storageError?: string | null;
+    };
   };
   hero: {
-    eyebrow: string;
+    eyebrow?: string | null;
     title: string;
     description: string;
     accent: string;
     primaryLabel: string;
     secondaryLabel: string;
-    note: string;
-    previewCaption: string;
+    note?: string | null;
+    previewCaption?: string | null;
     previewAlt: string;
-  };
-  workflow: {
-    eyebrow: string;
-    title: string;
-    description: string;
-    items: {
-      title: string;
-      description: string;
-      id?: string | null;
-    }[];
+    /**
+     * Optional uploaded image. The website uses its built-in image when empty.
+     */
+    poster?: (number | null) | Media;
+    /**
+     * Optional uploaded MP4 or WebM video.
+     */
+    video?: (number | null) | Media;
+    /**
+     * Image shows the poster. YouTube uses the video URL. Uploaded video uses the video file; the poster is its preview and fallback.
+     */
+    mediaMode?: ('image' | 'youtube' | 'video') | null;
+    /**
+     * HTTPS YouTube watch, share, shorts, or embed URL.
+     */
+    videoUrl?: string | null;
+    primaryHref?: string | null;
+    secondaryHref?: string | null;
+    player?: {
+      videoTitle?: string | null;
+      privacyLabel?: string | null;
+      watchLabel?: string | null;
+      loadingLabel?: string | null;
+      readyLabel?: string | null;
+      errorLabel?: string | null;
+    };
   };
   features: {
-    eyebrow: string;
+    eyebrow?: string | null;
     title: string;
     description: string;
     accent: string;
     items: {
-      icon: 'terminal' | 'panels' | 'code' | 'expand' | 'git' | 'spark';
+      icon?: ('terminal' | 'panels' | 'code' | 'expand' | 'git' | 'spark') | null;
       title: string;
       description: string;
       detail: string;
+      /**
+       * Optional uploaded image. The website uses its built-in image when empty.
+       */
+      image?: (number | null) | Media;
+      /**
+       * Optional uploaded MP4 or WebM video.
+       */
+      video?: (number | null) | Media;
+      alt?: string | null;
       id?: string | null;
     }[];
-  };
-  principles: {
-    eyebrow: string;
-    title: string;
-    description: string;
-    items: {
-      title: string;
-      description: string;
-      id?: string | null;
-    }[];
+    controls?: {
+      closeLabel?: string | null;
+      previousLabel?: string | null;
+      nextLabel?: string | null;
+      chooseLabel?: string | null;
+      /**
+       * Keep {title} in the text; the website replaces it automatically.
+       */
+      showLabel?: string | null;
+    };
   };
   roadmap: {
-    eyebrow: string;
+    eyebrow?: string | null;
     title: string;
     description: string;
     items: {
@@ -359,46 +556,376 @@ export interface Landing {
       id?: string | null;
     }[];
     linkLabel: string;
-  };
-  faq: {
-    eyebrow: string;
-    title: string;
-    items: {
-      question: string;
-      answer: string;
-      id?: string | null;
-    }[];
-  };
-  download: {
-    eyebrow: string;
-    title: string;
-    description: string;
-    accent: string;
-    primaryLabel: string;
-    secondaryLabel: string;
-    note: string;
+    href?: string | null;
+    ui?: {
+      legendCompleted?: string | null;
+      legendProgress?: string | null;
+      legendPlanned?: string | null;
+      legendLabel?: string | null;
+      /**
+       * Keep {completed}, {total} in the text; the website replaces them automatically.
+       */
+      progressTemplate?: string | null;
+      /**
+       * Keep {phase} in the text; the website replaces it automatically.
+       */
+      progressLabel?: string | null;
+      scrollHint?: string | null;
+      previousLabel?: string | null;
+      nextLabel?: string | null;
+      stagesLabel?: string | null;
+      /**
+       * Keep {phase} in the text; the website replaces it automatically.
+       */
+      exploreLabel?: string | null;
+    };
   };
   newsletter: {
-    eyebrow: string;
+    eyebrow?: string | null;
     title: string;
     description: string;
+    form?: {
+      ariaLabel?: string | null;
+      emailLabel?: string | null;
+      placeholder?: string | null;
+      submitLabel?: string | null;
+      pendingLabel?: string | null;
+      successLabel?: string | null;
+      unavailableMessage?: string | null;
+      pendingMessage?: string | null;
+      successMessage?: string | null;
+      rateLimitMessage?: string | null;
+      errorMessage?: string | null;
+      note?: string | null;
+      noscript?: string | null;
+    };
+    stampLabel?: string | null;
   };
-  footer: {
-    tagline: string;
-    githubLabel: string;
-    groups: {
-      title: string;
-      links: {
-        label: string;
-        href: string;
+  /**
+   * Drag to reorder homepage sections. Each section may appear only once.
+   */
+  layout?:
+    | {
+        section?: ('hero' | 'features' | 'roadmap' | 'newsletter') | null;
+        enabled?: boolean | null;
         id?: string | null;
-      }[];
-      id?: string | null;
-    }[];
-    signoff: string;
-    backToTopLabel: string;
-    licenseLabel: string;
-    colophon: string;
+      }[]
+    | null;
+  pages?: {
+    download?: {
+      seo?: {
+        title?: string | null;
+        description?: string | null;
+      };
+      title?: string | null;
+      /**
+       * Drag rows to change their order. Remove rows to hide them.
+       */
+      description?:
+        | {
+            text?: string | null;
+            id?: string | null;
+          }[]
+        | null;
+      chooserLabel?: string | null;
+      systemLabel?: string | null;
+      /**
+       * Keep {platform} in the text; the website replaces it automatically.
+       */
+      downloadLabel?: string | null;
+      platforms?: {
+        macos?: {
+          label?: string | null;
+          legend?: string | null;
+        };
+        windows?: {
+          label?: string | null;
+          legend?: string | null;
+        };
+        linux?: {
+          label?: string | null;
+          legend?: string | null;
+        };
+      };
+      packages?: {
+        'apple-silicon'?: {
+          label?: string | null;
+          statusLabel?: string | null;
+          detail?: string | null;
+        };
+        intel?: {
+          label?: string | null;
+          statusLabel?: string | null;
+          detail?: string | null;
+        };
+        exe?: {
+          label?: string | null;
+          statusLabel?: string | null;
+          detail?: string | null;
+        };
+        msi?: {
+          label?: string | null;
+          statusLabel?: string | null;
+          detail?: string | null;
+        };
+        appimage?: {
+          label?: string | null;
+          statusLabel?: string | null;
+          detail?: string | null;
+        };
+        deb?: {
+          label?: string | null;
+          statusLabel?: string | null;
+          detail?: string | null;
+        };
+        rpm?: {
+          label?: string | null;
+          statusLabel?: string | null;
+          detail?: string | null;
+        };
+      };
+      showWindowsHelp?: boolean | null;
+      windowsHelp?: {
+        title?: string | null;
+        description?: string | null;
+      };
+      noscript?: string | null;
+      retryLabel?: string | null;
+      releasesLabel?: string | null;
+      feedback?: {
+        packageError?: string | null;
+        /**
+         * Keep {package} in the text; the website replaces it automatically.
+         */
+        packageReady?: string | null;
+        /**
+         * Keep {package} in the text; the website replaces it automatically.
+         */
+        packageMissing?: string | null;
+        packageFallback?: string | null;
+        /**
+         * Keep {tag} in the text; the website replaces it automatically.
+         */
+        releaseReady?: string | null;
+        releaseError?: string | null;
+      };
+      showAur?: boolean | null;
+      aur?: {
+        title?: string | null;
+        href?: string | null;
+        linkLabel?: string | null;
+        description?: string | null;
+        command?: string | null;
+        copyAriaLabel?: string | null;
+        copyLabel?: string | null;
+        copiedLabel?: string | null;
+        copyFallbackLabel?: string | null;
+        copiedStatus?: string | null;
+        copyError?: string | null;
+      };
+      showScreenshot?: boolean | null;
+      screenshot?: {
+        /**
+         * Optional uploaded image. The website uses its built-in image when empty.
+         */
+        image?: (number | null) | Media;
+        alt?: string | null;
+        heading?: string | null;
+        caption?: string | null;
+      };
+      showHelp?: boolean | null;
+      help?: {
+        text?: string | null;
+        label?: string | null;
+        href?: string | null;
+      };
+    };
+    remote?: {
+      seo?: {
+        title?: string | null;
+        description?: string | null;
+      };
+      title?: string | null;
+      /**
+       * Drag rows to change their order. Remove rows to hide them.
+       */
+      description?:
+        | {
+            text?: string | null;
+            id?: string | null;
+          }[]
+        | null;
+      installerTitle?: string | null;
+      systemLabel?: string | null;
+      platforms?: {
+        unix?: {
+          label?: string | null;
+          command?: string | null;
+        };
+        windows?: {
+          label?: string | null;
+          command?: string | null;
+        };
+      };
+      /**
+       * Keep {platform} in the text; the website replaces it automatically.
+       */
+      commandAriaLabel?: string | null;
+      /**
+       * Keep {platform} in the text; the website replaces it automatically.
+       */
+      copyAriaLabel?: string | null;
+      manualCopy?: string | null;
+      feedback?: {
+        waiting?: string | null;
+        /**
+         * Keep {platform} in the text; the website replaces it automatically.
+         */
+        copied?: string | null;
+        error?: string | null;
+      };
+      showScreenshot?: boolean | null;
+      screenshot?: {
+        /**
+         * Optional uploaded image. The website uses its built-in image when empty.
+         */
+        image?: (number | null) | Media;
+        alt?: string | null;
+      };
+    };
+    devlog?: {
+      seo?: {
+        title?: string | null;
+        description?: string | null;
+      };
+      label?: string | null;
+      labelAccent?: string | null;
+      /**
+       * Drag rows to change their order. Remove rows to hide them.
+       */
+      title?:
+        | {
+            text?: string | null;
+            id?: string | null;
+          }[]
+        | null;
+      accent?: string | null;
+      /**
+       * Drag rows to change their order. Remove rows to hide them.
+       */
+      description?:
+        | {
+            text?: string | null;
+            id?: string | null;
+          }[]
+        | null;
+      cta?: {
+        label?: string | null;
+        href?: string | null;
+      };
+      footerLabel?: string | null;
+      settingsLabel?: string | null;
+      source?: {
+        label?: string | null;
+        href?: string | null;
+      };
+    };
+    cookies?: {
+      seo?: {
+        title?: string | null;
+        description?: string | null;
+      };
+      title?: string | null;
+      description?: string | null;
+      settingsLabel?: string | null;
+      /**
+       * Drag rows to change their order. Remove rows to hide them.
+       */
+      sections?:
+        | {
+            title?: string | null;
+            /**
+             * Drag rows to change their order. Remove rows to hide them.
+             */
+            paragraphs?:
+              | {
+                  text?: string | null;
+                  id?: string | null;
+                }[]
+              | null;
+            showSettings?: boolean | null;
+            showStorage?: boolean | null;
+            showNoscript?: boolean | null;
+            noscript?: string | null;
+            id?: string | null;
+          }[]
+        | null;
+      links?: {
+        embedding?: {
+          label?: string | null;
+          href?: string | null;
+        };
+        privacy?: {
+          label?: string | null;
+          href?: string | null;
+        };
+      };
+      /**
+       * Drag rows to change their order. Remove rows to hide them.
+       */
+      storage?:
+        | {
+            label?: string | null;
+            value?: string | null;
+            code?: boolean | null;
+            id?: string | null;
+          }[]
+        | null;
+    };
+  };
+  workflow?: {
+    eyebrow?: string | null;
+    title?: string | null;
+    description?: string | null;
+    items?:
+      | {
+          title?: string | null;
+          description?: string | null;
+          id?: string | null;
+        }[]
+      | null;
+  };
+  principles?: {
+    eyebrow?: string | null;
+    title?: string | null;
+    description?: string | null;
+    items?:
+      | {
+          title?: string | null;
+          description?: string | null;
+          id?: string | null;
+        }[]
+      | null;
+  };
+  faq?: {
+    eyebrow?: string | null;
+    title?: string | null;
+    items?:
+      | {
+          question?: string | null;
+          answer?: string | null;
+          id?: string | null;
+        }[]
+      | null;
+  };
+  download?: {
+    eyebrow?: string | null;
+    title?: string | null;
+    description?: string | null;
+    accent?: string | null;
+    primaryLabel?: string | null;
+    secondaryLabel?: string | null;
+    note?: string | null;
   };
   _status?: ('draft' | 'published') | null;
   updatedAt?: string | null;
@@ -409,12 +936,7 @@ export interface Landing {
  * via the `definition` "landing_select".
  */
 export interface LandingSelect<T extends boolean = true> {
-  seo?:
-    | T
-    | {
-        title?: T;
-        description?: T;
-      };
+  editorVersion?: T;
   navigation?:
     | T
     | {
@@ -426,6 +948,125 @@ export interface LandingSelect<T extends boolean = true> {
               id?: T;
             };
         actionLabel?: T;
+        productLabel?: T;
+        menuLabel?: T;
+        backLabel?: T;
+        sourceLabel?: T;
+        sourceAriaLabel?: T;
+        primaryAriaLabel?: T;
+        mobileAriaLabel?: T;
+        actionHref?: T;
+        productGroups?:
+          | T
+          | {
+              label?: T;
+              links?:
+                | T
+                | {
+                    label?: T;
+                    href?: T;
+                    id?: T;
+                  };
+              id?: T;
+            };
+      };
+  footer?:
+    | T
+    | {
+        tagline?: T;
+        githubLabel?: T;
+        groups?:
+          | T
+          | {
+              title?: T;
+              links?:
+                | T
+                | {
+                    label?: T;
+                    href?: T;
+                    id?: T;
+                  };
+              id?: T;
+            };
+        signoff?: T;
+        backToTopLabel?: T;
+        licenseLabel?: T;
+        colophon?: T;
+        socials?:
+          | T
+          | {
+              label?: T;
+              icon?: T;
+              href?: T;
+              id?: T;
+            };
+        licenseHref?: T;
+        copyrightLabel?: T;
+        cookieSettingsLabel?: T;
+        ariaLabel?: T;
+        contentAriaLabel?: T;
+        navigationAriaLabel?: T;
+        socialsAriaLabel?: T;
+      };
+  seo?:
+    | T
+    | {
+        title?: T;
+        description?: T;
+      };
+  site?:
+    | T
+    | {
+        brand?:
+          | T
+          | {
+              name?: T;
+              logo?: T;
+              logoAlt?: T;
+              favicon?: T;
+              socialImage?: T;
+            };
+        theme?:
+          | T
+          | {
+              accent?: T;
+              accentHover?: T;
+              accentPressed?: T;
+              ink?: T;
+              background?: T;
+              paper?: T;
+              muted?: T;
+              line?: T;
+              focus?: T;
+              dark?: T;
+              darkText?: T;
+            };
+        githubUrl?: T;
+        docsUrl?: T;
+        language?: T;
+        skipLabel?: T;
+        cookie?:
+          | T
+          | {
+              title?: T;
+              closeLabel?: T;
+              introduction?: T;
+              informationLabel?: T;
+              informationHref?: T;
+              introductionSuffix?: T;
+              customizeLabel?: T;
+              acceptLabel?: T;
+              rejectLabel?: T;
+              necessaryLabel?: T;
+              alwaysOnLabel?: T;
+              necessaryDescription?: T;
+              mediaLabel?: T;
+              mediaDescription?: T;
+              retention?: T;
+              saveLabel?: T;
+              dismissLabel?: T;
+              storageError?: T;
+            };
       };
   hero?:
     | T
@@ -439,19 +1080,21 @@ export interface LandingSelect<T extends boolean = true> {
         note?: T;
         previewCaption?: T;
         previewAlt?: T;
-      };
-  workflow?:
-    | T
-    | {
-        eyebrow?: T;
-        title?: T;
-        description?: T;
-        items?:
+        poster?: T;
+        video?: T;
+        mediaMode?: T;
+        videoUrl?: T;
+        primaryHref?: T;
+        secondaryHref?: T;
+        player?:
           | T
           | {
-              title?: T;
-              description?: T;
-              id?: T;
+              videoTitle?: T;
+              privacyLabel?: T;
+              watchLabel?: T;
+              loadingLabel?: T;
+              readyLabel?: T;
+              errorLabel?: T;
             };
       };
   features?:
@@ -468,21 +1111,19 @@ export interface LandingSelect<T extends boolean = true> {
               title?: T;
               description?: T;
               detail?: T;
+              image?: T;
+              video?: T;
+              alt?: T;
               id?: T;
             };
-      };
-  principles?:
-    | T
-    | {
-        eyebrow?: T;
-        title?: T;
-        description?: T;
-        items?:
+        controls?:
           | T
           | {
-              title?: T;
-              description?: T;
-              id?: T;
+              closeLabel?: T;
+              previousLabel?: T;
+              nextLabel?: T;
+              chooseLabel?: T;
+              showLabel?: T;
             };
       };
   roadmap?:
@@ -508,6 +1149,378 @@ export interface LandingSelect<T extends boolean = true> {
               id?: T;
             };
         linkLabel?: T;
+        href?: T;
+        ui?:
+          | T
+          | {
+              legendCompleted?: T;
+              legendProgress?: T;
+              legendPlanned?: T;
+              legendLabel?: T;
+              progressTemplate?: T;
+              progressLabel?: T;
+              scrollHint?: T;
+              previousLabel?: T;
+              nextLabel?: T;
+              stagesLabel?: T;
+              exploreLabel?: T;
+            };
+      };
+  newsletter?:
+    | T
+    | {
+        eyebrow?: T;
+        title?: T;
+        description?: T;
+        form?:
+          | T
+          | {
+              ariaLabel?: T;
+              emailLabel?: T;
+              placeholder?: T;
+              submitLabel?: T;
+              pendingLabel?: T;
+              successLabel?: T;
+              unavailableMessage?: T;
+              pendingMessage?: T;
+              successMessage?: T;
+              rateLimitMessage?: T;
+              errorMessage?: T;
+              note?: T;
+              noscript?: T;
+            };
+        stampLabel?: T;
+      };
+  layout?:
+    | T
+    | {
+        section?: T;
+        enabled?: T;
+        id?: T;
+      };
+  pages?:
+    | T
+    | {
+        download?:
+          | T
+          | {
+              seo?:
+                | T
+                | {
+                    title?: T;
+                    description?: T;
+                  };
+              title?: T;
+              description?:
+                | T
+                | {
+                    text?: T;
+                    id?: T;
+                  };
+              chooserLabel?: T;
+              systemLabel?: T;
+              downloadLabel?: T;
+              platforms?:
+                | T
+                | {
+                    macos?:
+                      | T
+                      | {
+                          label?: T;
+                          legend?: T;
+                        };
+                    windows?:
+                      | T
+                      | {
+                          label?: T;
+                          legend?: T;
+                        };
+                    linux?:
+                      | T
+                      | {
+                          label?: T;
+                          legend?: T;
+                        };
+                  };
+              packages?:
+                | T
+                | {
+                    'apple-silicon'?:
+                      | T
+                      | {
+                          label?: T;
+                          statusLabel?: T;
+                          detail?: T;
+                        };
+                    intel?:
+                      | T
+                      | {
+                          label?: T;
+                          statusLabel?: T;
+                          detail?: T;
+                        };
+                    exe?:
+                      | T
+                      | {
+                          label?: T;
+                          statusLabel?: T;
+                          detail?: T;
+                        };
+                    msi?:
+                      | T
+                      | {
+                          label?: T;
+                          statusLabel?: T;
+                          detail?: T;
+                        };
+                    appimage?:
+                      | T
+                      | {
+                          label?: T;
+                          statusLabel?: T;
+                          detail?: T;
+                        };
+                    deb?:
+                      | T
+                      | {
+                          label?: T;
+                          statusLabel?: T;
+                          detail?: T;
+                        };
+                    rpm?:
+                      | T
+                      | {
+                          label?: T;
+                          statusLabel?: T;
+                          detail?: T;
+                        };
+                  };
+              showWindowsHelp?: T;
+              windowsHelp?:
+                | T
+                | {
+                    title?: T;
+                    description?: T;
+                  };
+              noscript?: T;
+              retryLabel?: T;
+              releasesLabel?: T;
+              feedback?:
+                | T
+                | {
+                    packageError?: T;
+                    packageReady?: T;
+                    packageMissing?: T;
+                    packageFallback?: T;
+                    releaseReady?: T;
+                    releaseError?: T;
+                  };
+              showAur?: T;
+              aur?:
+                | T
+                | {
+                    title?: T;
+                    href?: T;
+                    linkLabel?: T;
+                    description?: T;
+                    command?: T;
+                    copyAriaLabel?: T;
+                    copyLabel?: T;
+                    copiedLabel?: T;
+                    copyFallbackLabel?: T;
+                    copiedStatus?: T;
+                    copyError?: T;
+                  };
+              showScreenshot?: T;
+              screenshot?:
+                | T
+                | {
+                    image?: T;
+                    alt?: T;
+                    heading?: T;
+                    caption?: T;
+                  };
+              showHelp?: T;
+              help?:
+                | T
+                | {
+                    text?: T;
+                    label?: T;
+                    href?: T;
+                  };
+            };
+        remote?:
+          | T
+          | {
+              seo?:
+                | T
+                | {
+                    title?: T;
+                    description?: T;
+                  };
+              title?: T;
+              description?:
+                | T
+                | {
+                    text?: T;
+                    id?: T;
+                  };
+              installerTitle?: T;
+              systemLabel?: T;
+              platforms?:
+                | T
+                | {
+                    unix?:
+                      | T
+                      | {
+                          label?: T;
+                          command?: T;
+                        };
+                    windows?:
+                      | T
+                      | {
+                          label?: T;
+                          command?: T;
+                        };
+                  };
+              commandAriaLabel?: T;
+              copyAriaLabel?: T;
+              manualCopy?: T;
+              feedback?:
+                | T
+                | {
+                    waiting?: T;
+                    copied?: T;
+                    error?: T;
+                  };
+              showScreenshot?: T;
+              screenshot?:
+                | T
+                | {
+                    image?: T;
+                    alt?: T;
+                  };
+            };
+        devlog?:
+          | T
+          | {
+              seo?:
+                | T
+                | {
+                    title?: T;
+                    description?: T;
+                  };
+              label?: T;
+              labelAccent?: T;
+              title?:
+                | T
+                | {
+                    text?: T;
+                    id?: T;
+                  };
+              accent?: T;
+              description?:
+                | T
+                | {
+                    text?: T;
+                    id?: T;
+                  };
+              cta?:
+                | T
+                | {
+                    label?: T;
+                    href?: T;
+                  };
+              footerLabel?: T;
+              settingsLabel?: T;
+              source?:
+                | T
+                | {
+                    label?: T;
+                    href?: T;
+                  };
+            };
+        cookies?:
+          | T
+          | {
+              seo?:
+                | T
+                | {
+                    title?: T;
+                    description?: T;
+                  };
+              title?: T;
+              description?: T;
+              settingsLabel?: T;
+              sections?:
+                | T
+                | {
+                    title?: T;
+                    paragraphs?:
+                      | T
+                      | {
+                          text?: T;
+                          id?: T;
+                        };
+                    showSettings?: T;
+                    showStorage?: T;
+                    showNoscript?: T;
+                    noscript?: T;
+                    id?: T;
+                  };
+              links?:
+                | T
+                | {
+                    embedding?:
+                      | T
+                      | {
+                          label?: T;
+                          href?: T;
+                        };
+                    privacy?:
+                      | T
+                      | {
+                          label?: T;
+                          href?: T;
+                        };
+                  };
+              storage?:
+                | T
+                | {
+                    label?: T;
+                    value?: T;
+                    code?: T;
+                    id?: T;
+                  };
+            };
+      };
+  workflow?:
+    | T
+    | {
+        eyebrow?: T;
+        title?: T;
+        description?: T;
+        items?:
+          | T
+          | {
+              title?: T;
+              description?: T;
+              id?: T;
+            };
+      };
+  principles?:
+    | T
+    | {
+        eyebrow?: T;
+        title?: T;
+        description?: T;
+        items?:
+          | T
+          | {
+              title?: T;
+              description?: T;
+              id?: T;
+            };
       };
   faq?:
     | T
@@ -532,36 +1545,6 @@ export interface LandingSelect<T extends boolean = true> {
         primaryLabel?: T;
         secondaryLabel?: T;
         note?: T;
-      };
-  newsletter?:
-    | T
-    | {
-        eyebrow?: T;
-        title?: T;
-        description?: T;
-      };
-  footer?:
-    | T
-    | {
-        tagline?: T;
-        githubLabel?: T;
-        groups?:
-          | T
-          | {
-              title?: T;
-              links?:
-                | T
-                | {
-                    label?: T;
-                    href?: T;
-                    id?: T;
-                  };
-              id?: T;
-            };
-        signoff?: T;
-        backToTopLabel?: T;
-        licenseLabel?: T;
-        colophon?: T;
       };
   _status?: T;
   updatedAt?: T;

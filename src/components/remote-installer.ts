@@ -1,7 +1,11 @@
+import type { pageDefaults } from '../../content/page-defaults';
+
 /** Native system choices work without JavaScript; this adds detection and copy. */
 export function initRemoteInstaller(root: HTMLElement): void {
   if (root.dataset.remoteReady !== undefined) return;
+  if (!root.dataset.remoteCopy) return;
   root.dataset.remoteReady = '';
+  const copy = JSON.parse(root.dataset.remoteCopy) as typeof pageDefaults.remote.feedback;
   const choices = [...root.querySelectorAll<HTMLInputElement>('input[name="remote-system"]')];
   const panels = [...root.querySelectorAll<HTMLElement>('[data-remote-platform]')];
   const copyButtons = [...root.querySelectorAll<HTMLButtonElement>('[data-copy-remote]')];
@@ -20,7 +24,7 @@ export function initRemoteInstaller(root: HTMLElement): void {
 
   const resetFeedback = () => {
     feedbackVersion++;
-    status.textContent = copying ? 'Waiting for clipboard…' : '';
+    status.textContent = copying ? copy.waiting : '';
     panels.forEach((panel) => {
       panel.querySelector('[data-copy-remote]')?.removeAttribute('data-copied');
       panel.querySelector<HTMLElement>('[data-copy-icon]')!.hidden = false;
@@ -46,7 +50,7 @@ export function initRemoteInstaller(root: HTMLElement): void {
       button.removeAttribute('data-copied');
       panel.querySelector<HTMLElement>('[data-copy-icon]')!.hidden = false;
       panel.querySelector<HTMLElement>('[data-copied-icon]')!.hidden = true;
-      status.textContent = 'Waiting for clipboard…';
+      status.textContent = copy.waiting;
       try {
         if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
         await navigator.clipboard.writeText(command.textContent ?? '');
@@ -54,7 +58,7 @@ export function initRemoteInstaller(root: HTMLElement): void {
         button.dataset.copied = '';
         panel.querySelector<HTMLElement>('[data-copy-icon]')!.hidden = true;
         panel.querySelector<HTMLElement>('[data-copied-icon]')!.hidden = false;
-        status.textContent = `${panel.dataset.platformLabel} command copied.`;
+        status.textContent = copy.copied.replaceAll('{platform}', panel.dataset.platformLabel ?? '');
       } catch {
         if (version !== feedbackVersion) return;
         const selection = window.getSelection();
@@ -62,7 +66,7 @@ export function initRemoteInstaller(root: HTMLElement): void {
         range.selectNodeContents(command);
         selection?.removeAllRanges();
         selection?.addRange(range);
-        status.textContent = 'Couldn’t copy. The command is selected so you can copy it manually.';
+        status.textContent = copy.error;
       } finally {
         copying = false;
         copyButtons.forEach((control) => { control.removeAttribute('aria-disabled'); });

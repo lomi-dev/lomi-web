@@ -33,6 +33,7 @@ export function initFeatureGallery(root: HTMLElement) {
   let savedStyles: SavedProperty[] | null = null;
   let scrollPosition = { x: 0, y: 0 };
   let backdropPointer = false;
+  const pauseVideos = (scope: ParentNode) => scope.querySelectorAll<HTMLVideoElement>('video').forEach((video) => video.pause());
 
   function cancelAnimations() {
     generation++;
@@ -124,6 +125,7 @@ export function initFeatureGallery(root: HTMLElement) {
   }
 
   function cleanup() {
+    pauseVideos(dialog!);
     cancelAnimations();
     requested = selected;
     closing = false;
@@ -143,7 +145,10 @@ export function initFeatureGallery(root: HTMLElement) {
     selected = (index + slides.length) % slides.length;
     // Keep one live set of controls inside the moving feature, with its handlers.
     if (navigation!.parentElement !== slides[selected]) slides[selected]!.append(navigation!);
-    slides.forEach((slide, slideIndex) => { slide.hidden = slideIndex !== selected; });
+    slides.forEach((slide, slideIndex) => {
+      slide.hidden = slideIndex !== selected;
+      if (slide.hidden) pauseVideos(slide);
+    });
     const copy = slides[selected]?.querySelector<HTMLElement>('[data-feature-copy]');
     if (copy) copy.scrollTop = 0;
     dialog!.setAttribute('aria-labelledby', `feature-dialog-title-${selected}`);
@@ -250,6 +255,7 @@ export function initFeatureGallery(root: HTMLElement) {
 
   function requestClose() {
     if (!dialog!.open || closing) return;
+    pauseVideos(dialog!);
     // Read the animated surface before cancellation, including an interrupted entry.
     const current = dialog!.getBoundingClientRect();
     const opacity = getComputedStyle(dialog!).opacity;
@@ -287,6 +293,9 @@ export function initFeatureGallery(root: HTMLElement) {
       delete root.dataset.featureReady;
       return false;
     }
+    document.querySelectorAll<HTMLVideoElement>('video').forEach((video) => {
+      if (!dialog!.contains(video)) video.pause();
+    });
     root.dataset.featureReady = 'true';
     closing = false;
     dialog!.dataset.state = 'opening';
@@ -335,7 +344,7 @@ export function initFeatureGallery(root: HTMLElement) {
   dialog.addEventListener('keydown', (event) => {
     if (!dialog.open || closing || event.altKey || event.ctrlKey || event.metaKey || event.defaultPrevented) return;
     if (event.key === 'Tab') {
-      const controls = Array.from(dialog.querySelectorAll<HTMLElement>('a[href], button, input, select, textarea, [tabindex]'))
+      const controls = Array.from(dialog.querySelectorAll<HTMLElement>('a[href], button, input, select, textarea, video[controls], audio[controls], [tabindex]'))
         .filter((element) => element.tabIndex >= 0 && !element.matches(':disabled')
           && !element.closest('[inert]')
           && element.getClientRects().length > 0 && getComputedStyle(element).visibility === 'visible');
@@ -351,7 +360,7 @@ export function initFeatureGallery(root: HTMLElement) {
     }
     if (event.shiftKey) return;
     const target = event.target;
-    if (target instanceof HTMLElement && (target.isContentEditable || target.closest('input, select, textarea, [contenteditable]:not([contenteditable="false"])'))) return;
+    if (target instanceof HTMLElement && (target.isContentEditable || target.closest('input, select, textarea, video, audio, [contenteditable]:not([contenteditable="false"])'))) return;
     if ((event.key === 'Home' || event.key === 'End') && target instanceof HTMLElement && target.closest('[data-feature-copy]')) return;
     const index = event.key === 'ArrowLeft' ? requested - 1
       : event.key === 'ArrowRight' ? requested + 1

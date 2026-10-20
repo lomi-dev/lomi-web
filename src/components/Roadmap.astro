@@ -1,12 +1,12 @@
 ---
 import Icon from './Icon';
-import { site } from '../data/site';
 import type { Landing } from '../../content/landing-schema';
 import { summarizeRoadmapStage } from '../../content/roadmap-progress';
 
 interface Props { content: Landing['roadmap'] }
 const { content } = Astro.props;
-const taskStatusLabels = { completed: 'Completed', 'in-progress': 'In progress', 'not-started': 'Not started' };
+const taskStatusLabels = { completed: content.ui.legendCompleted, 'in-progress': content.ui.legendProgress, 'not-started': content.ui.legendPlanned };
+const progressText = (completed: number, total: number) => content.ui.progressTemplate.replaceAll('{completed}', String(completed)).replaceAll('{total}', String(total));
 const stages = content.items.map((item) => ({ ...item, ...summarizeRoadmapStage(item) }));
 ---
 
@@ -17,13 +17,13 @@ const stages = content.items.map((item) => ({ ...item, ...summarizeRoadmapStage(
         <div class="roadmap-intro">
           <h2 id="roadmap-title">{content.title}</h2>
           <p class="roadmap-intro-description">{content.description}</p>
-          <ul class="roadmap-legend" aria-label="Task statuses">
+          <ul class="roadmap-legend" aria-label={content.ui.legendLabel}>
             {Object.entries(taskStatusLabels).map(([status, label]) => <li data-task-status={status}>
               <span class="roadmap-task-marker" aria-hidden="true">{status === 'completed' && <Icon name="check" width={12} height={12} />}{status === 'in-progress' && <span></span>}</span>
               <span>{label}</span>
             </li>)}
           </ul>
-          <span class="roadmap-scroll-hint" aria-hidden="true">Scroll to explore <span>→</span></span>
+          <span class="roadmap-scroll-hint" aria-hidden="true">{content.ui.scrollHint} <span>→</span></span>
         </div>
         <div class="roadmap-spine" aria-hidden="true"><span></span></div>
         <ol class="roadmap-milestones">
@@ -35,8 +35,8 @@ const stages = content.items.map((item) => ({ ...item, ...summarizeRoadmapStage(
               <h3>{item.title}</h3>
               <p class="milestone-description">{item.description}</p>
               <div class="roadmap-task-progress">
-                <div class="roadmap-progress-caption"><span>{item.completed} of {item.total} completed</span><span class="roadmap-progress-percent">{item.percent}%</span></div>
-                <progress value={item.completed} max={item.total} aria-label={`${item.phase} progress`} aria-valuetext={`${item.completed} of ${item.total} completed (${item.percent}%)`}>{item.percent}%</progress>
+                <div class="roadmap-progress-caption"><span>{progressText(item.completed, item.total)}</span><span class="roadmap-progress-percent">{item.percent}%</span></div>
+                <progress value={item.completed} max={item.total} aria-label={content.ui.progressLabel.replaceAll('{phase}', item.phase)} aria-valuetext={`${progressText(item.completed, item.total)} (${item.percent}%)`}>{item.percent}%</progress>
               </div>
               <ul class="roadmap-tasks">{item.tasks.map((task) => <li class="roadmap-task" data-task-status={task.status}>
                 <span class="roadmap-task-marker" aria-hidden="true">{task.status === 'completed' && <Icon name="check" width={12} height={12} />}{task.status === 'in-progress' && <span></span>}</span>
@@ -49,10 +49,10 @@ const stages = content.items.map((item) => ({ ...item, ...summarizeRoadmapStage(
     </div>
 
     <div class="roadmap-bottom roadmap-shell">
-      <nav class="roadmap-controls" aria-label="Roadmap stages">
-        {content.items.map((item, index) => <button type="button" data-roadmap-jump={index} aria-controls={`roadmap-stage-${index + 1}`} aria-label={`Explore ${item.phase}`}><span class="roadmap-control-index">{String(index + 1).padStart(2, '0')}</span><span class="roadmap-control-label">{item.phase}</span></button>)}
+      <nav class="roadmap-controls" aria-label={content.ui.stagesLabel}>
+        {content.items.map((item, index) => <button type="button" data-roadmap-jump={index} aria-controls={`roadmap-stage-${index + 1}`} aria-label={content.ui.exploreLabel.replaceAll('{phase}', item.phase)}><span class="roadmap-control-index">{String(index + 1).padStart(2, '0')}</span><span class="roadmap-control-label">{item.phase}</span></button>)}
       </nav>
-      <a class="roadmap-discuss" href={`${site.github}/issues`}>{content.linkLabel}<Icon name="diagonal" width={16} height={16} /></a>
+      <a class="roadmap-discuss" href={content.href}>{content.linkLabel}<Icon name="diagonal" width={16} height={16} /></a>
     </div>
   </div>
 </section>
@@ -64,9 +64,9 @@ const stages = content.items.map((item) => ({ ...item, ...summarizeRoadmapStage(
 
 <style>
   .roadmap-story {
-    --scroll-surface-color: #111610;
-    --roadmap-background: #111610;
-    --roadmap-foreground: #f3f6ed;
+    --scroll-surface-color: var(--color-dark);
+    --roadmap-background: var(--color-dark);
+    --roadmap-foreground: var(--color-dark-text);
     --roadmap-muted: #adb7a5;
     --roadmap-accent: var(--color-lime);
     --roadmap-gutter: clamp(24px, 5.2vw, 112px);

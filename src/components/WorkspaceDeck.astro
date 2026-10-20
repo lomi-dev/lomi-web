@@ -1,12 +1,17 @@
 ---
 import HeroVideo from './HeroVideo.astro';
+import ContentMedia from './ContentMedia.astro';
+import workspacePlaceholder from '../assets/placeholders/workspace.png';
+import type { Landing } from '../../content/landing-schema';
 
-interface Props { alt: string }
-const { alt } = Astro.props;
+interface Props { content: Landing['hero'] }
+const { content } = Astro.props;
 ---
 
-<figure class="workspace-showcase" id="workspace" aria-label="Lomi product walkthrough">
-  <HeroVideo alt={alt} />
+<figure class="workspace-showcase" id="workspace" aria-label={content.previewAlt}>
+  {content.mediaMode === 'youtube' ? <HeroVideo content={content} /> : <div class="workspace-capture" data-video-player data-scroll-surface>
+    <ContentMedia image={content.poster} video={content.mediaMode === 'video' ? content.video : null} alt={content.previewAlt} fallback={workspacePlaceholder} loading="eager" />
+  </div>}
 </figure>
 
 <style>
@@ -14,4 +19,5 @@ const { alt } = Astro.props;
     margin: 0;
     min-width: 0;
   }
+  .workspace-capture { --scroll-surface-color: #080a08; width: 100%; min-height: 200px; aspect-ratio: 8 / 5; overflow: hidden; border: 1px solid rgb(0 0 0 / 12%); border-radius: 16px; background: #080a08; }
 </style>

@@ -14,20 +14,21 @@ const { hero, features, roadmap, newsletter } = content;
 const footerContent = {
   ...content.footer,
   groups: content.footer.groups
-    .map((group) => ({ ...group, links: activeLandingLinks(group.links) }))
+    .map((group) => ({ ...group, links: activeLandingLinks(group.links, content.layout) }))
     .filter((group) => group.links.length > 0),
 };
 ---
 
-<Layout title={content.seo.title} description={content.seo.description} themeColor="#ffffff" edgeColor="var(--color-lime)">
-  <Header content={content.navigation} />
+<Layout website={content} title={content.seo.title} description={content.seo.description} themeColor={content.site.theme.paper} edgeColor="var(--color-lime)">
+  <Header content={content.navigation} site={content.site} layout={content.layout} />
   <main id="main" tabindex="-1" data-scroll-surface style="--scroll-surface-color: var(--color-chalk)">
-    <Hero content={hero} />
-    <FeatureGallery content={features} />
-    <Roadmap content={roadmap} />
-    <NewsletterSection content={newsletter} />
+    {!content.layout.some((row) => row.section === 'hero' && row.enabled) && <h1 class="sr-only">{content.seo.title}</h1>}
+    {content.layout.filter((row) => row.enabled).map(({ section }) => section === 'hero' ? <Hero content={hero} layout={content.layout} />
+      : section === 'features' ? <FeatureGallery content={features} />
+      : section === 'roadmap' ? <Roadmap content={roadmap} />
+      : section === 'newsletter' ? <NewsletterSection content={newsletter} site={content.site} /> : null)}
   </main>
-  <Footer content={footerContent} />
+  <Footer content={footerContent} site={content.site} layout={content.layout} />
 </Layout>
 
 <script>

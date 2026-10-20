@@ -1,81 +1,80 @@
 ---
-import { Picture } from 'astro:assets';
+import ContentMedia from './ContentMedia.astro';
+import type { Editable } from '../../content/editor-schema';
+import { pageDefaults } from '../../content/page-defaults';
 import Icon from './Icon';
 import workbench from '../assets/product/workbench.png';
-import { site } from '../data/site';
 import { downloadPlatforms, releaseFallback } from '../lib/downloads';
 
-const packageLabels = {
-  'apple-silicon': 'Apple Silicon', intel: 'Intel',
-  exe: 'EXE', msi: 'MSI', appimage: 'AppImage', deb: 'DEB', rpm: 'RPM',
-};
+interface Props { content: Editable<typeof pageDefaults.download> }
+const { content } = Astro.props;
+const platforms = downloadPlatforms.map((platform) => ({ ...platform, ...content.platforms[platform.id] }));
 ---
 
-<div class="download-page" data-download-page data-scroll-surface data-release-state="loading">
+<div class="download-page" data-download-page data-download-copy={JSON.stringify(content)} data-scroll-surface data-release-state="loading">
   <div class="download-shell">
     <header class="download-opening">
-      <h1>Download lomi.</h1>
-      <p>Your agents, editor and terminals.<br />One workspace, ready for your desktop.</p>
+      <h1>{content.title}</h1>
+      <p>{content.description.map((line, index) => <>{index > 0 && <br />}{line.text}</>)}</p>
     </header>
 
     <div class="download-composition">
       <div class="download-options">
-        <section class="download-chooser" id="install" aria-label="Choose your download">
+        <section class="download-chooser" id="install" aria-label={content.chooserLabel}>
           <div class="system-picker">
-            <p class="control-label" id="system-label">Operating system</p>
+            <p class="control-label" id="system-label">{content.systemLabel}</p>
             <nav class="platform-tabs" data-platform-tabs aria-labelledby="system-label">
-              {downloadPlatforms.map((platform) => <a class="platform-tab" id={`tab-${platform.id}`} href={`#${platform.id}`} data-platform={platform.id}>
+              {platforms.map((platform) => <a class="platform-tab" id={`tab-${platform.id}`} href={`#${platform.id}`} data-platform={platform.id}>
                 <img src={`/icons/download-${platform.id}.svg`} width="22" height="22" alt="" aria-hidden="true" />
                 <span>{platform.label}</span>
               </a>)}
             </nav>
           </div>
           <div class="platform-panels">
-            {downloadPlatforms.map((platform) => <section class="platform-panel" id={platform.id} data-platform-panel={platform.id} aria-label={`Download for ${platform.label}`}>
+            {platforms.map((platform) => <section class="platform-panel" id={platform.id} data-platform-panel={platform.id} aria-label={content.downloadLabel.replaceAll('{platform}', platform.label)}>
               <fieldset data-package-options disabled>
-                <legend class="control-label">{platform.id === 'macos' ? 'Mac chip' : 'Installer format'}</legend>
+                <legend class="control-label">{platform.legend}</legend>
                 <div class:list={['package-options', { 'package-options-linux': platform.id === 'linux' }]}>
-                  {platform.packages.map((option, index) => <label class="package-option" title={option.detail}>
+                  {platform.packages.map((option, index) => <label class="package-option" title={content.packages[option.id].detail}>
                     <input type="radio" name={`package-${platform.id}`} value={option.id} checked={index === 0} />
-                    <span>{packageLabels[option.id]}</span>
-                    <span class="visually-hidden">{option.detail}</span>
+                    <span>{content.packages[option.id].label}</span>
+                    <span class="visually-hidden">{content.packages[option.id].detail}</span>
                   </label>)}
                 </div>
               </fieldset>
-              <a class="package-download" href={releaseFallback} data-download-action><Icon name="download" width={18} height={18} /><span data-action-label>View releases on GitHub</span></a>
+              <a class="package-download" href={releaseFallback} data-download-action><Icon name="download" width={18} height={18} /><span data-action-label>{content.releasesLabel}</span></a>
               <p class="package-status" data-package-status role="status" aria-live="polite"></p>
-              {platform.id === 'windows' && <details class="package-help"><summary>About Windows installers<Icon name="plus" width={12} height={12} /></summary><p>Both packages are for Windows x64. EXE is the standard setup; MSI is the Windows Installer package. The installers are not Authenticode-signed.</p></details>}
+              {platform.id === 'windows' && content.showWindowsHelp && <details class="package-help"><summary>{content.windowsHelp.title}<Icon name="plus" width={12} height={12} /></summary><p>{content.windowsHelp.description}</p></details>}
             </section>)}
           </div>
-          <noscript><p class="download-noscript">JavaScript is off. Browse the installer files on GitHub. Select Linux to see the Arch Linux command.</p></noscript>
-          <div class="release-feedback"><p data-release-status role="status" aria-live="polite"></p><button type="button" data-release-retry hidden>Try again<Icon name="arrow" width={14} height={14} /></button></div>
+          <noscript><p class="download-noscript">{content.noscript}</p></noscript>
+          <div class="release-feedback"><p data-release-status role="status" aria-live="polite"></p><button type="button" data-release-retry hidden>{content.retryLabel}<Icon name="arrow" width={14} height={14} /></button></div>
         </section>
 
-        <section class="aur-install" id="arch-linux" aria-labelledby="aur-title">
-          <div class="aur-heading"><h2 id="aur-title">On Arch Linux?</h2><a href="https://aur.archlinux.org/packages/lomi-bin">View on AUR<Icon name="diagonal" width={13} height={13} /></a></div>
-          <p class="aur-description">Install the x86_64 binary with your AUR helper.</p>
-          <div class="aur-command"><span aria-hidden="true">$</span><code id="aur-command">yay -S lomi-bin</code><button type="button" data-copy-aur hidden aria-label="Copy AUR install command"><span data-copy-label>Copy</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="2" /><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3" /></svg></button></div>
+        {content.showAur && <section class="aur-install" id="arch-linux" aria-labelledby="aur-title">
+          <div class="aur-heading"><h2 id="aur-title">{content.aur.title}</h2><a href={content.aur.href}>{content.aur.linkLabel}<Icon name="diagonal" width={13} height={13} /></a></div>
+          <p class="aur-description">{content.aur.description}</p>
+          <div class="aur-command"><span aria-hidden="true">$</span><code id="aur-command">{content.aur.command}</code><button type="button" data-copy-aur hidden aria-label={content.aur.copyAriaLabel}><span data-copy-label>{content.aur.copyLabel}</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="2" /><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3" /></svg></button></div>
           <p class="copy-status" data-copy-status role="status" aria-live="polite"></p>
-        </section>
+        </section>}
       </div>
 
-      <figure class="product-showcase">
+      {content.showScreenshot && <figure class="product-showcase">
         <div class="product-stage">
-          <div class="preview-heading"><span>Everything in its place.</span><span class="preview-caption">The lomi workspace</span></div>
-          <Picture
-            src={workbench}
-            alt="The lomi desktop app on macOS, with the project explorer, TypeScript editor and terminal in one workspace."
-            formats={['avif', 'webp']}
+          <div class="preview-heading"><span>{content.screenshot.heading}</span><span class="preview-caption">{content.screenshot.caption}</span></div>
+          <ContentMedia
+            image={content.screenshot.image}
+            fallback={workbench}
+            alt={content.screenshot.alt}
             widths={[640, 960, 1440, 1920]}
             sizes="(min-width: 1280px) 720px, (min-width: 1000px) 54vw, (min-width: 768px) 620px, calc(100vw - 72px)"
             loading="eager"
-            decoding="async"
             class="product-capture"
           />
         </div>
-      </figure>
+      </figure>}
     </div>
-    <div class="download-help"><span>Need a hand getting started?</span><a href={site.docs}>Read the documentation<Icon name="arrow" width={16} height={16} /></a></div>
+    {content.showHelp && <div class="download-help"><span>{content.help.text}</span><a href={content.help.href}>{content.help.label}<Icon name="arrow" width={16} height={16} /></a></div>}
   </div>
 </div>
 
@@ -85,14 +84,14 @@ const packageLabels = {
 </script>
 
 <style>
-  .download-page { --scroll-surface-color: #fff; --download-muted: #5b6355; --download-line: #dfe4d8; background: #fff; color: var(--color-ink); padding: 132px 0 64px; }
+  .download-page { --scroll-surface-color: var(--color-paper); --download-muted: #5b6355; --download-line: #dfe4d8; background: var(--color-paper); color: var(--color-ink); padding: 132px 0 64px; }
   .download-shell { width: min(1200px, calc(100% - 80px)); margin-inline: auto; }
   .download-opening { max-width: 640px; margin: 0 auto 48px; text-align: center; }
   h1 { margin: 0; font-size: clamp(54px, 5vw, 72px); font-weight: 500; line-height: 1.06; letter-spacing: -.055em; text-wrap: balance; }
   .download-opening > p { margin-top: 20px; color: var(--download-muted); font-size: 17px; line-height: 1.65; }
   .download-composition { display: grid; grid-template-columns: 400px minmax(0, 1fr); align-items: start; gap: 28px 48px; }
   .download-options { display: flex; min-width: 0; flex-direction: column; gap: 28px; }
-  .download-chooser { min-width: 0; padding: 24px; border: 1px solid var(--download-line); border-radius: 16px; background: #fff; }
+  .download-chooser { min-width: 0; padding: 24px; border: 1px solid var(--download-line); border-radius: 16px; background: var(--color-paper); }
   .control-label { display: block; color: #333e2b; font-size: 12px; font-weight: 500; line-height: 1.5; }
   .platform-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; margin-top: 12px; padding: 4px; border-radius: 12px; background: #f0f3eb; box-shadow: inset 0 0 0 1px #e1e6d9; }
   .platform-tab { display: flex; align-items: center; justify-content: center; gap: 8px; min-width: 0; min-height: 48px; padding: 10px 4px; border-radius: 8px; color: #4c5843; font-size: 13px; font-weight: 500; line-height: 1.4; }
@@ -161,7 +160,7 @@ const packageLabels = {
   }
   @media (prefers-reduced-motion: no-preference) {
     .platform-tab, .package-option, .package-download, .aur-command button { transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease, color 150ms ease; }
-    .package-download:active { transform: translateY(1px); }
+    .package-download:active { background: var(--color-lime-pressed); transform: translateY(1px); }
   }
   @media (forced-colors: active) {
     .platform-tab[aria-selected='true'] { outline: 2px solid Highlight; outline-offset: -2px; }

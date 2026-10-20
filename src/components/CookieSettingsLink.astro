@@ -1,6 +1,7 @@
 ---
+import { editorDefaults } from '../../content/editor-defaults';
 interface Props { label?: string }
-const { label = 'Cookie settings' } = Astro.props;
+const { label = editorDefaults.footer.cookieSettingsLabel } = Astro.props;
 ---
 
 <a class="cookie-settings-link" href="/cookies/#preferences" data-cookie-settings>{label}</a>

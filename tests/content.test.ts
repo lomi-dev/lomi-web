@@ -3,6 +3,8 @@ import { afterEach, describe, it, spyOn } from 'bun:test';
 import assert from 'node:assert/strict';
 import seed from '../content/landing.json';
 import { landingSchema, safeHref } from '../content/landing-schema';
+import { editorDefaults } from '../content/editor-defaults';
+import { pageDefaults } from '../content/page-defaults';
 import { loadLanding } from '../content/load-landing';
 import { summarizeRoadmapStage } from '../content/roadmap-progress';
 import { activeLandingLinks } from '../src/data/navigation';
@@ -49,7 +51,7 @@ describe('roadmap task progress', () => {
 describe('published landing content', () => {
   it('renders the checked-in outline without a CMS or a network request', async () => {
     const fetch = spyOn(globalThis, 'fetch').mockRejectedValue(new Error('Unexpected network request'));
-    assert.deepEqual(await loadLanding(), seed);
+    assert.deepEqual(await loadLanding(), landingSchema.parse(seed));
     assert.equal(fetch.mock.calls.length, 0);
   });
 
@@ -57,8 +59,8 @@ describe('published landing content', () => {
     const fetch = spyOn(globalThis, 'fetch').mockResolvedValue(Response.json({
       ...seed, _status: 'published', id: 1, createdAt: '2026-10-19',
     }));
-    assert.deepEqual(await loadLanding('http://127.0.0.1:3001'), seed);
-    assert.equal(fetch.mock.calls[0][0].toString(), 'http://127.0.0.1:3001/api/globals/landing?depth=0&draft=false');
+    assert.deepEqual(await loadLanding('http://127.0.0.1:3001'), landingSchema.parse(seed));
+    assert.equal(fetch.mock.calls[0][0].toString(), 'http://127.0.0.1:3001/api/globals/landing?depth=1&draft=false');
   });
 
   it('rejects a draft even if a misconfigured CMS returns HTTP 200', async () => {
@@ -77,7 +79,7 @@ describe('published landing content', () => {
   });
 
   it('accepts the Devlog, Download, and Remote routes, HTTPS links, and section anchors', () => {
-    for (const href of ['/devlog', '/devlog/', '/download', '/download/', '/remote', '/remote/', 'https://docs.lomi.dev', '#roadmap']) {
+    for (const href of ['/devlog', '/devlog/', '/download', '/download/', '/remote', '/remote/', '/', '/cookies/', '/cookies/#preferences', '/remote#section', '/#features', 'mailto:hello@example.test', 'https://docs.lomi.dev', '#roadmap']) {
       assert.equal(landingSchema.safeParse({ ...seed, navigation: { ...seed.navigation, links: [{ label: 'Link', href }] } }).success, true, href);
     }
   });
@@ -91,7 +93,7 @@ describe('published landing content', () => {
       '/devlog?draft=true', '/devlog//', '/%64evlog',
       '/download/../admin', '/download?draft=true', '/download//', '/%64ownload',
       '/remote/../admin', '/remote?draft=true', '/remote/?draft=true',
-      '/remote//', '/%72emote', '/remote/%2e%2e/admin', '/remote#section',
+      '/remote//', '/%72emote', '/remote/%2e%2e/admin',
     ]) {
       assert.equal(landingSchema.safeParse({ ...seed, navigation: { ...seed.navigation, links: [{ label: 'Unsafe', href }] } }).success, false, href);
     }
@@ -158,5 +160,106 @@ describe('published landing content', () => {
     for (const url of ['http://cms.example.test', 'https://user:password@cms.example.test', 'https://cms.example.test/other', 'https://cms.example.test/?draft=true']) {
       await assert.rejects(loadLanding(url), /CMS_URL/);
     }
+  });
+});
+
+
+describe('website editor contract', () => {
+  const document = () => structuredClone(landingSchema.parse(seed));
+  const image = { id: 12, url: '/api/media/file/sentinel.png', alt: 'Uploaded image', mimeType: 'image/png', width: 640, height: 400 };
+
+  it('hydrates legacy additions without overwriting published core copy', () => {
+    const legacy = { ...seed, hero: { ...seed.hero, title: 'Authored legacy title' }, site: null, layout: [], pages: { remote: { description: [] } } };
+    const parsed = landingSchema.parse(legacy);
+    assert.equal(parsed.hero.title, 'Authored legacy title');
+    assert.deepEqual(parsed.features.items.map(({ title }) => title), seed.features.items.map(({ title }) => title));
+    assert.deepEqual(parsed.site, editorDefaults.site);
+    assert.deepEqual(parsed.layout, editorDefaults.layout);
+    assert.deepEqual(parsed.pages.remote.description, pageDefaults.remote.description);
+    assert.equal(parsed.editorVersion, 0);
+  });
+
+  it('accepts a newly authored feature without its retired icon field', () => {
+    const value = document();
+    const feature = { title: 'New CMS feature', description: 'New feature description', detail: 'Feature detail', image, video: null, alt: 'New upload alt' };
+    const parsed = landingSchema.parse({ ...value, features: { ...value.features, items: [feature] } });
+    assert.equal(parsed.features.items[0].title, feature.title);
+    assert.deepEqual(parsed.features.items[0].image, image);
+  });
+
+  it('defaults retired hidden fields without requiring editors to populate them', () => {
+    for (const replacement of [null, undefined]) {
+      const value = document();
+      const legacy = {
+        ...value, workflow: replacement, principles: replacement, faq: replacement, download: replacement,
+        hero: { ...value.hero, eyebrow: replacement, note: replacement, previewCaption: replacement },
+        features: { ...value.features, eyebrow: replacement },
+        roadmap: { ...value.roadmap, eyebrow: replacement },
+        newsletter: { ...value.newsletter, eyebrow: replacement },
+        footer: { ...value.footer, tagline: replacement, colophon: replacement },
+      };
+      const parsed = landingSchema.parse(legacy);
+      assert.equal(parsed.hero.title, value.hero.title);
+      assert.equal(parsed.features.items[0].title, value.features.items[0].title);
+      assert.equal(parsed.footer.signoff, value.footer.signoff);
+    }
+  });
+
+  it('preserves intentionally empty editor arrays with the current marker', () => {
+    const current = document();
+    current.editorVersion = 1;
+    current.layout = [];
+    current.navigation.productGroups = [];
+    current.footer.socials = [];
+    current.pages.remote.description = [];
+    const parsed = landingSchema.parse(current);
+    assert.deepEqual(parsed.layout, []);
+    assert.deepEqual(parsed.navigation.productGroups, []);
+    assert.deepEqual(parsed.footer.socials, []);
+    assert.deepEqual(parsed.pages.remote.description, []);
+  });
+
+  it('rejects duplicate and unsupported homepage sections', () => {
+    for (const layout of [[{ section: 'hero', enabled: true }, { section: 'hero', enabled: false }], [{ section: 'admin', enabled: true }]]) {
+      assert.equal(landingSchema.safeParse({ ...document(), layout }).success, false);
+    }
+  });
+
+  it('rejects malformed settings, CSS injection, unsafe links and invalid YouTube IDs', () => {
+    for (const update of [
+      (value: any) => { value.site.theme.accent = '#fff;display:none'; },
+      (value: any) => { value.site.theme.ink = 42; },
+      (value: any) => { value.pages.download.showAur = 'true'; },
+      (value: any) => { value.navigation.actionHref = 'javascript:alert(1)'; },
+      (value: any) => { value.site.cookie.informationHref = '//evil.test'; },
+      (value: any) => { value.hero.videoUrl = 'https://www.youtube.com/watch?v=short'; },
+      (value: any) => { value.hero.videoUrl = 'https://evil.test/embed/dQw4w9WgXcQ'; },
+    ]) {
+      const value = document(); update(value);
+      assert.equal(landingSchema.safeParse(value).success, false);
+    }
+  });
+
+  it('accepts populated upload metadata and rejects unsafe or unpopulated relationships', () => {
+    const valid = document();
+    valid.hero.poster = image;
+    valid.hero.video = { ...image, url: '/api/media/file/clip.webm', mimeType: 'video/webm' };
+    valid.features.items[0].image = image;
+    assert.deepEqual(landingSchema.parse(valid).hero.poster, image);
+    for (const upload of [12, '12', { ...image, url: 'javascript:alert(1)' }, { ...image, url: '/api/media/file/../secret' },
+      { ...image, mimeType: 'image/svg+xml' }, { ...image, mimeType: 'video/mp4' }, { ...image, width: -1 }]) {
+      assert.equal(landingSchema.safeParse({ ...document(), hero: { ...document().hero, poster: upload } }).success, false);
+    }
+    assert.equal(landingSchema.safeParse({ ...document(), hero: { ...document().hero, video: image } }).success, false);
+  });
+
+  it('filters disabled home anchors while retaining legal-page anchors and external routes', () => {
+    const links = [
+      { label: 'Workspace', href: '#workspace' }, { label: 'Features', href: '/#features' },
+      { label: 'Newsletter', href: '#newsletter' }, { label: 'Roadmap', href: '#roadmap' },
+      { label: 'Privacy', href: '/cookies/#preferences' }, { label: 'Remote', href: '/remote/#section' },
+    ];
+    const layout = [{ section: 'hero', enabled: true }, { section: 'features', enabled: false }, { section: 'roadmap', enabled: true }, { section: 'newsletter', enabled: false }];
+    assert.deepEqual(activeLandingLinks(links, layout), [links[0], links[3], links[4], links[5]]);
   });
 });
