@@ -28,47 +28,7 @@ page.on('pageerror', (error) => errors.push(error.message));
 await mkdir('artifacts', { recursive: true });
 
 const releaseUrl = 'https://github.com/lomi-dev/lomi/releases';
-const assetUrl = (name) => `https://github.com/lomi-dev/lomi/releases/download/v1.2.3/${name}`;
-const releaseFixture = [
-  {
-    tag_name: 'v1.2.2',
-    html_url: `${releaseUrl}/tag/v1.2.2`,
-    draft: false,
-    published_at: '2026-01-01T12:00:00Z',
-    assets: [],
-  },
-  {
-    tag_name: 'v9.9.9',
-    html_url: `${releaseUrl}/tag/v9.9.9`,
-    draft: true,
-    published_at: '2026-09-01T12:00:00Z',
-    assets: [],
-  },
-  {
-    tag_name: 'v1.2.3',
-    html_url: `${releaseUrl}/tag/v1.2.3`,
-    draft: false,
-    published_at: '2026-08-01T12:00:00Z',
-    assets: [
-      'Lomi_1.2.3_aarch64.dmg',
-      'Lomi_1.2.3_x64.dmg',
-      'Lomi_1.2.3_x64-setup.exe',
-      'Lomi_1.2.3_x64_en-US.msi',
-      'Lomi_1.2.3_amd64.AppImage',
-      'Lomi_1.2.3_amd64.deb',
-      'Lomi-1.2.3-1.x86_64.rpm',
-    ].map((name) => ({ name, browser_download_url: assetUrl(name) })),
-  },
-];
-let releaseApiFails = false;
-await page.route(/^https:\/\/api\.github\.com\/repos\/lomi-dev\/lomi\/releases\?per_page=10$/, async (route) => {
-  if (releaseApiFails) {
-    await route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ message: 'Unavailable' }) });
-    return;
-  }
-  await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(releaseFixture) });
-});
-
+const downloadPath = '/download/';
 const footerViewports = [
   { width: 1440, height: 900 },
   { width: 1920, height: 1080 },
@@ -826,14 +786,17 @@ async function verifyAdaptiveHeader(targetPage) {
       await close();
       await expectControls('dark');
       if (!mobile) {
-        await targetPage.locator('.header-action[data-download-open]').click();
-        await expect(targetPage.locator('#download-dialog')).toBeVisible();
+        await targetPage.evaluate(() => { const dialog = document.createElement('dialog'); dialog.id = 'verify-native-dialog'; dialog.textContent = 'Native modal probe'; document.body.append(dialog); dialog.showModal(); });
+        await expect(targetPage.locator('#verify-native-dialog')).toBeVisible();
         const modalForegrounds = await controls();
         await setDarkSurface(true);
         await frames();
         expect(await controls(), 'An open native modal freezes local navigation foregrounds').toEqual(modalForegrounds);
+        await targetPage.locator('#verify-native-dialog').evaluate((element) => element.addEventListener('close', () => { element.dataset.verifyClosed = 'true'; }, { once: true }));
         await targetPage.keyboard.press('Escape');
-        await expect(targetPage.locator('#download-dialog')).not.toBeVisible();
+        await expect(targetPage.locator('#verify-native-dialog')).toHaveAttribute('data-verify-closed', 'true');
+        await expect(targetPage.locator('#verify-native-dialog')).not.toBeVisible();
+        await targetPage.locator('#verify-native-dialog').evaluate((element) => element.remove());
         await expectControls('light');
       }
       await setDarkSurface(false);
@@ -871,7 +834,7 @@ async function verifyFixedHeader(targetPage, javaScriptEnabled = true) {
       await expect(targetPage.locator('#product-menu')).not.toBeVisible();
       await expect(targetPage.locator('#mobile-navigation')).not.toBeVisible();
       const links = targetPage.locator('.desktop-navigation .product-fallback, .desktop-navigation .navigation-link:not(.product-fallback)');
-      await expect(links).toHaveCount(4);
+      await expect(links).toHaveCount(5);
       for (const link of await links.all()) {
         await expect(link).toBeVisible();
         await link.focus();
@@ -980,15 +943,16 @@ async function verifyDevlog(javaScriptEnabled) {
       const product = devlogPage.locator(mobile ? '#mobile-product' : '#product-menu');
       await activate(product.locator(':scope > summary'));
       expect(await product.locator('.product-link').evaluateAll((links) => links.map((link) => link.getAttribute('href'))))
-        .toEqual(['/#workspace', '/#features', 'https://docs.lomi.dev', 'https://github.com/lomi-dev/lomi', releaseUrl, releaseUrl]);
-      await activate(product.locator('a[href="/#workspace"]'));
+        .toEqual(['/#workspace', '/#features', '/remote/', 'https://docs.lomi.dev', 'https://github.com/lomi-dev/lomi', downloadPath, releaseUrl]);
+      await activate(product.locator('a[href="/#features"]'));
     } else {
       await expect(devlogPage.locator('.product-fallback')).toHaveAttribute('href', '/#workspace');
       await devlogPage.locator('.product-fallback').click();
     }
-    await expect(devlogPage).toHaveURL(new URL('/#workspace', url).href);
-    await expect(devlogPage.locator('#workspace')).toBeInViewport();
-    await expectAnchorBelowHeader(devlogPage, '#workspace');
+    const productAnchor = javaScriptEnabled ? '#features' : '#workspace';
+    await expect(devlogPage).toHaveURL(new URL(`/${productAnchor}`, url).href);
+    await expect(devlogPage.locator(productAnchor)).toBeInViewport();
+    await expectAnchorBelowHeader(devlogPage, productAnchor);
     await devlogPage.goto(devlogUrl);
     await openRoot();
     await activate(rootLinks().and(devlogPage.locator('a[href="/#roadmap"]')));
@@ -999,9 +963,9 @@ async function verifyDevlog(javaScriptEnabled) {
     if (javaScriptEnabled || !mobile) {
       await openRoot();
       const download = devlogPage.locator(mobile ? '.mobile-download' : '.header-action');
-      await expect(download).toHaveAttribute('href', releaseUrl);
+      await expect(download).toHaveAttribute('href', downloadPath);
       await activate(download);
-      await expect(devlogPage).toHaveURL(releaseUrl);
+      await expect(devlogPage).toHaveURL(new URL(downloadPath, url).href);
     }
     await devlogPage.goto(devlogUrl);
     await activate(devlogPage.getByRole('link', { name: 'Back to lomi' }));
@@ -1011,21 +975,21 @@ async function verifyDevlog(javaScriptEnabled) {
   await devlogContext.close();
 }
 
-async function verifyLongFooterColophon(targetPage) {
-  const colophon = targetPage.locator('.site-footer .footer-credits > p');
-  const original = await colophon.textContent();
-  // footer.colophon accepts trimmed text from 1 through 2000 characters.
-  const longColophon = 'Made in the open, with room for every project. '.repeat(12).slice(0, 520).trim();
-  expect(longColophon.length, 'Representative long CMS colophon').toBeGreaterThanOrEqual(500);
-  expect(longColophon.length).toBeLessThanOrEqual(2000);
+async function verifyLongFooterSignoff(targetPage) {
+  const signoff = targetPage.locator('.site-footer .footer-invitation h2');
+  const original = await signoff.textContent();
+  // footer.signoff accepts trimmed text from 1 through 2000 characters.
+  const longSignoff = 'Keep the project in view, with room for every idea. '.repeat(12).slice(0, 520).trim();
+  expect(longSignoff.length, 'Representative long CMS signoff').toBeGreaterThanOrEqual(500);
+  expect(longSignoff.length).toBeLessThanOrEqual(2000);
   try {
-    await colophon.evaluate((element, value) => { element.textContent = value; }, longColophon);
+    await signoff.evaluate((element, value) => { element.textContent = value; }, longSignoff);
     // Just above the short-window breakpoint: long copy must not squeeze links out.
     await verifyViewportFooter(targetPage, false, [{ width: 320, height: 400 }]);
   } finally {
-    await colophon.evaluate((element, value) => { element.textContent = value; }, original);
+    await signoff.evaluate((element, value) => { element.textContent = value; }, original);
   }
-  await expect(colophon).toHaveText(original);
+  await expect(signoff).toHaveText(original);
 }
 
 try {
@@ -1037,22 +1001,22 @@ try {
   await expect(page.locator('.site-footer a[href="https://github.com/lomi-dev/lomi"]').first()).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Primary navigation', exact: true })).toBeVisible();
   const desktopNavigation = page.getByRole('navigation', { name: 'Primary navigation', exact: true });
-  const desktopLinks = await desktopNavigation.locator('a.navigation-link:not(.product-fallback)').evaluateAll((links) => links.map((link) => {
+  const desktopLinks = await desktopNavigation.locator('a.navigation-link:not(.product-fallback):visible').evaluateAll((links) => links.map((link) => {
     const label = link.cloneNode(true);
     label.querySelectorAll('[aria-hidden="true"]').forEach((decoration) => decoration.remove());
     return { href: link.getAttribute('href'), label: link.getAttribute('aria-label') || label.textContent.trim() };
   }));
   expect(desktopLinks.length, 'Desktop navigation links').toBeGreaterThan(0);
   for (const [index, link] of desktopLinks.entries()) {
-    await expect(desktopNavigation.locator('a.navigation-link:not(.product-fallback)').nth(index)).toHaveAccessibleName(link.label);
+    await expect(desktopNavigation.locator('a.navigation-link:not(.product-fallback):visible').nth(index)).toHaveAccessibleName(link.label);
   }
   await expect(page.getByRole('contentinfo')).toBeVisible();
   await expect(page.locator('#roadmap').getByRole('heading', { level: 2 })).toBeVisible();
   await expect(page.locator('#roadmap .roadmap-masthead, #roadmap .section-marker')).toHaveCount(0);
-  expect(await page.locator('main > section').evaluateAll((sections) => sections.map((section) => section.classList.contains('hero') ? 'hero' : section.id))).toEqual(['hero', 'features', 'roadmap']);
-  await expect(page.locator('#workflow, #principles, #faq, #download, #newsletter, #newsletter-form, .newsletter-noscript, .download-cta')).toHaveCount(0);
-  await expect(page.getByRole('textbox', { name: 'Email address' })).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Subscribe' })).toHaveCount(0);
+  expect(await page.locator('main > section').evaluateAll((sections) => sections.map((section) => section.classList.contains('hero') ? 'hero' : section.id))).toEqual(['hero', 'features', 'roadmap', 'newsletter']);
+  await expect(page.locator('#workflow, #principles, #faq, #download, .download-cta')).toHaveCount(0);
+  await expect(page.getByRole('textbox', { name: 'Email address' })).toHaveCount(1);
+  await expect(page.getByRole('button', { name: 'Keep me posted' })).toHaveCount(1);
   const anchors = await page.evaluate(() => {
     const ids = [...document.querySelectorAll('[id]')].map((element) => element.id);
     return {
@@ -1064,7 +1028,7 @@ try {
   });
   expect(anchors.duplicates, 'Unique element IDs').toEqual([]);
   expect(anchors.missingTargets, 'Internal anchor destinations').toEqual([]);
-  await expect(page.locator('#download-dialog')).not.toBeVisible();
+  await expect(page.locator('#download-dialog')).toHaveCount(0);
   for (const viewport of [{ width: 1440, height: 900 }, { width: 1920, height: 1080 }]) {
     await page.setViewportSize(viewport);
     await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
@@ -1072,7 +1036,7 @@ try {
     await expect(page.locator('.hero h1')).toHaveCSS('text-align', 'center');
     const copyBounds = await page.locator('.hero-content').boundingBox();
     expect(Math.abs(copyBounds.x + copyBounds.width / 2 - viewport.width / 2), 'The hero copy block is centered in the viewport').toBeLessThanOrEqual(1);
-    await expect(page.locator('.hero [data-download-open]')).toBeInViewport();
+    await expect(page.locator('.hero a[href="/download/"]')).toBeInViewport();
     const image = await page.locator('.hero #workspace [data-video-open] img').boundingBox();
     const visibleHeight = Math.max(0, Math.min(viewport.height, image.y + image.height) - Math.max(0, image.y));
     expect(image.y, 'The screenshot follows the hero copy').toBeGreaterThan(0);
@@ -1088,13 +1052,13 @@ try {
   await verifyAdaptiveHeader(page);
   const productMenu = page.locator('#product-menu');
   const productSummary = productMenu.locator(':scope > summary');
-  await expect(productMenu.locator('.product-link')).toHaveCount(6);
+  await expect(productMenu.locator('.product-link')).toHaveCount(7);
   await expect(productMenu.locator('.product-group')).toHaveCount(3);
   const productDestinations = await productMenu.locator('.product-link').evaluateAll((links) => links.map((link) => link.getAttribute('href')));
-  expect(productDestinations).toEqual(['#workspace', '#features', 'https://docs.lomi.dev', 'https://github.com/lomi-dev/lomi', releaseUrl, releaseUrl]);
-  await expect(productMenu.locator('.product-link').nth(4)).toHaveAttribute('data-download-open');
-  await expect(productMenu.locator('.product-link').nth(4)).toHaveAttribute('aria-controls', 'download-dialog');
-  await expect(productMenu.locator('.product-link').nth(5)).not.toHaveAttribute('data-download-open');
+  expect(productDestinations).toEqual(['#workspace', '#features', '/remote/', 'https://docs.lomi.dev', 'https://github.com/lomi-dev/lomi', downloadPath, releaseUrl]);
+  await expect(productMenu.locator(`.product-link[href="${downloadPath}"]`)).toHaveCount(1);
+  await expect(productMenu.locator(`.product-link[href="${downloadPath}"]`)).not.toHaveAttribute('data-download-open');
+  await expect(productMenu.locator(`.product-link[href="${releaseUrl}"]`)).not.toHaveAttribute('data-download-open');
   for (const link of await productMenu.locator('.product-link').all()) {
     await expect(link.locator('.product-link-title')).toHaveText(/\S/);
   }
@@ -1240,7 +1204,7 @@ try {
     }
   }
   await verifyViewportFooter(page, true);
-  await verifyLongFooterColophon(page);
+  await verifyLongFooterSignoff(page);
   await page.setViewportSize({ width: 844, height: 390 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(844);
   await page.locator('#roadmap').scrollIntoViewIfNeeded();
@@ -1255,8 +1219,9 @@ try {
   const mobileProductSummary = mobileProduct.locator(':scope > summary');
   await expect(mobileProduct.locator('.product-group')).toHaveCount(3);
   expect(await mobileProduct.locator('.product-link').evaluateAll((links) => links.map((link) => link.getAttribute('href')))).toEqual(productDestinations);
-  await expect(mobileProduct.locator('.product-link').nth(4)).toHaveAttribute('data-download-open');
-  await expect(mobileProduct.locator('.product-link').nth(5)).not.toHaveAttribute('data-download-open');
+  await expect(mobileProduct.locator(`.product-link[href="${downloadPath}"]`)).toHaveCount(1);
+  await expect(mobileProduct.locator(`.product-link[href="${downloadPath}"]`)).not.toHaveAttribute('data-download-open');
+  await expect(mobileProduct.locator(`.product-link[href="${releaseUrl}"]`)).not.toHaveAttribute('data-download-open');
   const mobileRootLinks = mobileMenu.locator('.mobile-root-link');
   expect(await mobileRootLinks.evaluateAll((links) => links.map((link) => ({
     href: link.getAttribute('href'), label: link.textContent.trim(),
@@ -1318,115 +1283,11 @@ try {
     await writeFile(`artifacts/accessibility-${width}.json`, JSON.stringify(results.violations, null, 2));
     expect(results.violations, `Accessibility at ${width}px`).toEqual([]);
   }
-  const downloadTriggers = page.locator('[data-download-open]');
-  const downloadTrigger = page.locator('.hero [data-download-open]');
-  const downloadDialog = page.getByRole('dialog', { name: 'Choose your download' });
-  const osSelect = page.getByLabel('Operating system');
-  const typeSelect = page.getByLabel('Package type');
-  const downloadAction = page.getByRole('link', { name: 'Download prerelease' });
-  const osIconWrap = page.locator('[data-download-os-icon]');
-
-  await expect(page.locator('dialog')).toHaveCount(3);
-  await expect(page.locator('#feature-dialog')).toHaveCount(1);
-  await expect(page.locator('#download-dialog')).toHaveCount(1);
+  await expect(page.locator('#download-dialog, [data-download-open]')).toHaveCount(0);
   await expect(page.locator('#video-dialog')).toHaveCount(1);
-  expect(await downloadTriggers.count()).toBeGreaterThanOrEqual(5);
-  for (const trigger of await downloadTriggers.all()) {
-    const inMobileMenu = await trigger.evaluate((element) => Boolean(element.closest('#mobile-navigation')));
-    const inProductMenu = await trigger.evaluate((element) => Boolean(element.closest('#product-menu, #mobile-product')));
-    await page.setViewportSize({ width: inMobileMenu ? 390 : 1440, height: 900 });
-    if (inMobileMenu) await mobileSummary.click();
-    if (inProductMenu) await (inMobileMenu ? mobileProductSummary : productSummary).click();
-    await expect(trigger).toBeVisible();
-    await expect(trigger).toHaveAttribute('aria-controls', 'download-dialog');
-    await trigger.click();
-    await expect(downloadDialog).toBeVisible();
-    await expect(osSelect).toBeFocused();
-    await page.keyboard.press('Escape');
-    await expect(downloadDialog).not.toBeVisible();
-    await expect(inMobileMenu ? mobileSummary : inProductMenu ? productSummary : trigger).toBeFocused();
+  for (const link of await page.locator('a[href="/download/"]').all()) {
+    await expect(link).not.toHaveAttribute('aria-controls');
   }
-  const desktopHeaderDownload = page.locator('.site-header .header-actions [data-download-open]');
-  const mobileHeaderDownload = mobileMenu.locator('.mobile-utilities [data-download-open]');
-  await page.setViewportSize({ width: 390, height: 900 });
-  await mobileSummary.click();
-  await mobileHeaderDownload.click();
-  await expect(downloadDialog).toBeVisible();
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.keyboard.press('Escape');
-  await expect(downloadDialog).not.toBeVisible();
-  await expect(desktopHeaderDownload, 'Mobile download restores desktop header focus after resizing').toBeFocused();
-  await desktopHeaderDownload.click();
-  await expect(downloadDialog).toBeVisible();
-  await page.setViewportSize({ width: 390, height: 900 });
-  await page.keyboard.press('Escape');
-  await expect(downloadDialog).not.toBeVisible();
-  await expect(mobileSummary, 'Desktop download restores mobile menu focus after resizing').toBeFocused();
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await downloadTrigger.click();
-  await expect(downloadDialog).toBeVisible();
-  await expect(osSelect).toHaveValue('linux');
-  await expect(osIconWrap).toHaveAttribute('data-selected-os', 'linux');
-  await expect(typeSelect).toHaveValue('appimage');
-  await expect(typeSelect).toBeEnabled();
-  await expect(downloadAction).toHaveAttribute('href', assetUrl('Lomi_1.2.3_amd64.AppImage'));
-  await expect(downloadDialog.locator('[data-download-status]')).toBeEmpty();
-
-  const packageCases = [
-    ['macos', 'apple-silicon', 'Lomi_1.2.3_aarch64.dmg'],
-    ['macos', 'intel', 'Lomi_1.2.3_x64.dmg'],
-    ['windows', 'exe', 'Lomi_1.2.3_x64-setup.exe'],
-    ['windows', 'msi', 'Lomi_1.2.3_x64_en-US.msi'],
-    ['linux', 'appimage', 'Lomi_1.2.3_amd64.AppImage'],
-    ['linux', 'deb', 'Lomi_1.2.3_amd64.deb'],
-    ['linux', 'rpm', 'Lomi-1.2.3-1.x86_64.rpm'],
-  ];
-  const defaultTypes = { macos: 'apple-silicon', windows: 'exe', linux: 'appimage' };
-  let selectedOs = 'linux';
-  let selectedType = 'appimage';
-  for (const [os, type, filename] of packageCases) {
-    if (os !== selectedOs) {
-      await osSelect.selectOption(os);
-      selectedOs = os;
-      selectedType = defaultTypes[os];
-      await expect(typeSelect).toHaveValue(selectedType);
-    }
-    await expect(osIconWrap).toHaveAttribute('data-selected-os', os);
-    await expect(osIconWrap.locator(`[data-os-icon="${os}"]`)).toBeVisible();
-    await expect(osIconWrap.locator(`[data-os-icon="${os}"]`)).toHaveAttribute('src', `/icons/download-${os}.svg`);
-    await expect.poll(() => osIconWrap.locator(`[data-os-icon="${os}"]`).evaluate((image) => image.naturalWidth)).toBeGreaterThan(0);
-    if (type !== selectedType) {
-      await typeSelect.selectOption(type);
-      selectedType = type;
-    }
-    await expect(downloadAction).toHaveAttribute('href', assetUrl(filename));
-  }
-
-  await expect(downloadDialog.locator('[data-architecture-warning]')).toHaveCount(0);
-  const osBox = await osSelect.boundingBox();
-  const typeBox = await typeSelect.boundingBox();
-  expect(osBox).not.toBeNull();
-  expect(typeBox).not.toBeNull();
-  expect(typeBox.y).toBeGreaterThan(osBox.y + osBox.height);
-  expect(Math.abs(typeBox.width - osBox.width)).toBeLessThan(1);
-
-  await page.setViewportSize({ width: 390, height: 844 });
-  const mobileDialog = await downloadDialog.boundingBox();
-  expect(mobileDialog).not.toBeNull();
-  expect(Math.abs(mobileDialog.x - (390 - mobileDialog.width) / 2)).toBeLessThan(1);
-  expect(Math.abs(mobileDialog.y - (844 - mobileDialog.height) / 2)).toBeLessThan(1);
-  const dialogA11y = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
-  expect(dialogA11y.violations, 'Accessibility with the download dialog open').toEqual([]);
-  await page.keyboard.press('Escape');
-  await expect(downloadDialog).not.toBeVisible();
-  await expect(downloadTrigger).toBeFocused();
-
-  releaseApiFails = true;
-  await downloadTrigger.click();
-  await expect(downloadDialog.getByRole('status')).toHaveText('We couldn’t check installer availability. Browse the latest release on GitHub.');
-  await expect(downloadDialog.getByRole('link', { name: 'Open latest release' })).toHaveAttribute('href', releaseUrl);
-  await page.keyboard.press('Escape');
-  await expect(downloadTrigger).toBeFocused();
 
   await expect(page.locator('astro-island, .agent-constellation, [data-agent]')).toHaveCount(0);
   expect(errors).toEqual([]);
@@ -1439,10 +1300,11 @@ try {
   await expect(staticPage.getByRole('heading', { level: 1 })).toBeVisible();
   await verifyFixedHeader(staticPage, false);
   await expect(staticPage.locator('#roadmap').getByRole('heading', { level: 2 })).toBeVisible();
-  expect(await staticPage.locator('main > section').evaluateAll((sections) => sections.map((section) => section.classList.contains('hero') ? 'hero' : section.id))).toEqual(['hero', 'features', 'roadmap']);
-  await expect(staticPage.locator('#workflow, #principles, #faq, #download, #newsletter, #newsletter-form, .newsletter-noscript, .download-cta')).toHaveCount(0);
-  await expect(staticPage.getByRole('textbox', { name: 'Email address' })).toHaveCount(0);
-  await expect(staticPage.getByRole('button', { name: 'Subscribe' })).toHaveCount(0);
+  expect(await staticPage.locator('main > section').evaluateAll((sections) => sections.map((section) => section.classList.contains('hero') ? 'hero' : section.id))).toEqual(['hero', 'features', 'roadmap', 'newsletter']);
+  await expect(staticPage.locator('#workflow, #principles, #faq, #download, .download-cta')).toHaveCount(0);
+  await expect(staticPage.getByRole('textbox', { name: 'Email address' })).toBeDisabled();
+  await expect(staticPage.getByRole('button', { name: 'Keep me posted' })).toBeDisabled();
+  await expect(staticPage.locator('.newsletter-noscript')).toHaveText('Enable JavaScript to subscribe to the newsletter.');
   const staticBackground = staticPage.locator('lomi-shape-waves');
   await expect(staticBackground).toHaveAttribute('data-renderer', 'fallback');
   await verifyTerminalFallback(staticBackground);
@@ -1470,11 +1332,11 @@ try {
   await staticPage.locator('[data-video-open]').click();
   await expect(staticPage).toHaveURL(videoUrl);
   await staticPage.goto(url);
-  const staticHeroDownload = staticPage.locator('.hero [data-download-open]');
+  const staticHeroDownload = staticPage.locator('.hero a[href="/download/"]');
   await expect(staticHeroDownload).toBeVisible();
-  await expect(staticHeroDownload).toHaveAttribute('href', releaseUrl);
+  await expect(staticHeroDownload).toHaveAttribute('href', downloadPath);
   await staticHeroDownload.click();
-  await expect(staticPage).toHaveURL(releaseUrl);
+  await expect(staticPage).toHaveURL(new URL(downloadPath, url).href);
   await staticPage.goto(url);
   await expect(staticPage.locator('#mobile-navigation')).not.toBeVisible();
   await expect(staticPage.locator('#product-menu')).not.toBeVisible();
@@ -1487,7 +1349,7 @@ try {
   await expectAnchorBelowHeader(staticPage, '#roadmap');
   await verifyStaticBackdropDoesNotBlockPage(staticPage);
   await verifyViewportFooter(staticPage);
-  await verifyLongFooterColophon(staticPage);
+  await verifyLongFooterSignoff(staticPage);
   await staticPage.setViewportSize({ width: 390, height: 844 });
   await staticPage.goto(url);
   await staticPage.keyboard.press('Tab');
@@ -1523,10 +1385,10 @@ try {
   await expect(unavailableBackground.locator('svg[data-background-fallback]:visible')).toHaveCSS('opacity', '1');
   await expect(unavailableBackground.locator('canvas[data-background-canvas]')).toHaveCSS('opacity', '0');
   await expect(fallbackPage.getByRole('heading', { level: 1 })).toBeVisible();
-  await expect(fallbackPage.locator('.hero [data-download-open]')).toHaveAttribute('href', releaseUrl);
+  await expect(fallbackPage.locator('.hero a[href="/download/"]')).toHaveAttribute('href', downloadPath);
   expect(fallbackErrors, 'Canvas 2D unavailable fallback has no page errors').toEqual([]);
   await fallbackContext.close();
-  console.log('Passed: Hero/Features/Roadmap/Footer and remaining anchors, 7 viewport widths including 200% equivalent reflow and landscape, terminal-glyph canvas pointer trail/fade/touch gating and pixel motion/reduced/resume/offscreen/resize and no-JS/unavailable-2D fallback, no CLI cards or client islands, two-image hero composition and lazy video dialog/keyboard/backdrop/touch/scroll lock/no-JS, exact viewport footer/keyboard access across 8 sizes plus long CMS copy at 320x400 with and without JS, desktop Product/mobile drill-in and Devlog routes with/without JS, mobile navigation, deleted sections/FAQ/newsletter markup absent with/without JS, all 7 native download packages including Product Download, release fallback, every download trigger and focus restoration across desktop/mobile resizing, no-JS reading and release links, and mobile/desktop/dialog accessibility.');
+  console.log('Passed: Hero/Features/Roadmap/Newsletter/Footer and remaining anchors, 7 viewport widths including 200% equivalent reflow and landscape, terminal-glyph canvas pointer trail/fade/touch gating and pixel motion/reduced/resume/offscreen/resize and no-JS/unavailable-2D fallback, no CLI cards or client islands, two-image hero composition and lazy video dialog/keyboard/backdrop/touch/scroll lock/no-JS, exact viewport footer/keyboard access across 8 sizes plus long CMS copy at 320x400 with and without JS, desktop Product/mobile drill-in and Devlog routes with/without JS, mobile navigation, retired sections absent and newsletter visible with/without JS, dedicated download route links including Product Download, no-JS reading and download links (installer coverage: verify:download), and mobile/desktop/dialog accessibility.');
 } finally {
   await browser.close();
 }

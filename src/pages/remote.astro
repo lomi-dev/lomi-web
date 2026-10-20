@@ -1,0 +1,28 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import RemotePage from '../components/RemotePage.astro';
+import { activeLandingLinks } from '../data/navigation';
+import { loadLanding } from '../../content/load-landing';
+
+const content = await loadLanding(import.meta.env.CMS_URL);
+const footerContent = {
+  ...content.footer,
+  groups: content.footer.groups.map((group) => ({
+    ...group,
+    links: activeLandingLinks(group.links).map((link) => ({
+      ...link,
+      href: link.href.startsWith('#') ? `/${link.href}` : link.href,
+    })),
+  })).filter((group) => group.links.length > 0),
+};
+---
+
+<Layout title="lomi remote — A host for your workspace" description="Get the lomi remote installation command for macOS, Linux or Windows. A native host in development for your computer or server." themeColor="#ffffff" edgeColor="var(--color-lime)">
+  <Header content={content.navigation} theme="light" />
+  <main id="main" tabindex="-1">
+    <RemotePage />
+  </main>
+  <Footer content={footerContent} />
+</Layout>

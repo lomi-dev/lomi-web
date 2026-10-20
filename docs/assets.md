@@ -55,6 +55,24 @@ The dimmed backdrop remains available when a browser does not render backdrop
 blur.
 The native `browser.png` capture remains a local asset for future sections.
 
+The download page reuses the unchanged `src/assets/product/workbench.png`
+capture at its original aspect ratio, without additional window chrome. Its
+alt text identifies the shown platform as macOS. Astro exports
+responsive AVIF and WebP sources with a PNG fallback; the screenshot is static.
+
+The download system picker uses local Iconify Simple Icons SVGs, with their
+original path geometry and the fill changed to Lomi ink:
+
+| Asset | Iconify source |
+| --- | --- |
+| `public/icons/download-macos.svg` | [`simple-icons:apple`](https://api.iconify.design/simple-icons/apple.svg) |
+| `public/icons/download-windows.svg` | [`simple-icons:windows`](https://api.iconify.design/simple-icons/windows.svg) |
+| `public/icons/download-linux.svg` | [`simple-icons:linux`](https://api.iconify.design/simple-icons/linux.svg) |
+
+The [Simple Icons collection](https://github.com/iconify/icon-sets/blob/master/json/simple-icons.json)
+declares [CC0-1.0](https://github.com/simple-icons/simple-icons/blob/develop/LICENSE.md).
+The icons are served with the site; no browser request to Iconify is needed.
+
 The older root-level `workbench.png`, `workbench-light.png`, and
 `source-control.png` assets remain unused. No interface was reconstructed or
 generated. Review the captures against the final launch release.
@@ -82,6 +100,31 @@ The geometric background is drawn with code, with a three-path static SVG
 fallback generated during the Astro build. It is inspired by React Bits
 Shape Waves; no upstream shader or generated image is used. Its implementation
 and reference are recorded in [docs/shape-waves.md](shape-waves.md).
+
+## Remote installation page
+
+`src/components/RemotePage.astro` reuses the download page's locally served
+Iconify Simple Icons for macOS, Linux and Windows, with unchanged geometry.
+The command bar, separators and copy symbol are HTML/CSS/inline SVG. The shared
+`Icon` component supplies the copied-state check and diagonal link arrow.
+The two choices combine macOS/Linux and keep Windows separate. Beneath the
+installer, the page reuses `src/assets/product/workbench.png` unchanged: the
+authentic macOS desktop capture already shown on Download. Its alt text identifies
+the desktop workspace, without presenting it as a Remote dashboard. Astro serves
+responsive AVIF/WebP sources with a PNG fallback, intrinsic image dimensions and
+lazy loading. No external image request or icon package is added. Native radio
+inputs and CSS `:has()` select the command even without JavaScript. See
+[Remote command behavior and provenance](remote.md).
+
+## Footer social icons
+
+The YouTube, X, LinkedIn and TikTok marks in `src/components/Icon.tsx` use
+unchanged geometry from [Tabler Icons on Iconify](https://icon-sets.iconify.design/tabler/):
+`tabler:brand-youtube`, `tabler:brand-x`, `tabler:brand-linkedin` and
+`tabler:brand-tiktok`. They render as inline SVGs with the collection's 24 × 24
+view box and 2 px stroke, inheriting the footer's color. No browser request to
+Iconify is needed. The upstream MIT notice is included in
+`public/icons/LICENSE-tabler-MIT.txt`.
 
 ## Typography
 

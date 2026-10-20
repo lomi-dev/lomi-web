@@ -4,33 +4,35 @@ import Header from '../components/Header.astro';
 import Hero from '../components/Hero.astro';
 import FeatureGallery from '../components/FeatureGallery.astro';
 import Roadmap from '../components/Roadmap.astro';
+import NewsletterSection from '../components/NewsletterSection.astro';
 import VideoDialog from '../components/VideoDialog.astro';
 import Footer from '../components/Footer.astro';
-import DownloadDialog from '../components/DownloadDialog.astro';
-import { site } from '../data/site';
 import { activeLandingLinks } from '../data/navigation';
 import { loadLanding } from '../../content/load-landing';
 
 const content = await loadLanding(import.meta.env.CMS_URL);
-const { hero, features, roadmap } = content;
+const { hero, features, roadmap, newsletter } = content;
 const footerContent = {
   ...content.footer,
   groups: content.footer.groups
     .map((group) => ({ ...group, links: activeLandingLinks(group.links) }))
     .filter((group) => group.links.length > 0),
 };
-const repoPath = new URL(site.releases).pathname.replace(/\/releases\/?$/, '');
-const releaseApi = `https://api.github.com/repos${repoPath}/releases?per_page=10`;
 ---
 
-<Layout title={content.seo.title} description={content.seo.description} themeColor="#ffffff">
+<Layout title={content.seo.title} description={content.seo.description} themeColor="#ffffff" edgeColor="var(--color-lime)">
   <Header content={content.navigation} />
-  <main id="main" tabindex="-1">
+  <main id="main" tabindex="-1" data-scroll-surface style="--scroll-surface-color: var(--color-chalk)">
     <Hero content={hero} />
     <FeatureGallery content={features} />
     <Roadmap content={roadmap} />
+    <NewsletterSection content={newsletter} />
   </main>
   <Footer content={footerContent} />
   <VideoDialog />
-  <DownloadDialog apiUrl={releaseApi} releaseUrl={site.releases} showTrigger={false} />
 </Layout>
+
+<script>
+  import { alignInitialSectionAnchor } from '../components/initial-section-anchor';
+  alignInitialSectionAnchor();
+</script>

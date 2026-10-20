@@ -1,0 +1,28 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import DownloadPage from '../components/DownloadPage.astro';
+import { activeLandingLinks } from '../data/navigation';
+import { loadLanding } from '../../content/load-landing';
+
+const content = await loadLanding(import.meta.env.CMS_URL);
+const footerContent = {
+  ...content.footer,
+  groups: content.footer.groups.map((group) => ({
+    ...group,
+    links: activeLandingLinks(group.links).map((link) => ({
+      ...link,
+      href: link.href.startsWith('#') ? `/${link.href}` : link.href,
+    })),
+  })).filter((group) => group.links.length > 0),
+};
+---
+
+<Layout title="Download lomi — macOS, Windows & Linux" description="Get lomi for macOS, Windows or Linux. Choose your installer, or install on Arch Linux from the AUR." themeColor="#ffffff" edgeColor="var(--color-lime)">
+  <Header content={content.navigation} theme="light" />
+  <main id="main" tabindex="-1">
+    <DownloadPage />
+  </main>
+  <Footer content={footerContent} />
+</Layout>

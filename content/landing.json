@@ -236,6 +236,10 @@
             "href": "#download"
           },
           {
+            "label": "lomi remote",
+            "href": "/remote/"
+          },
+          {
             "label": "FAQ",
             "href": "#faq"
           }

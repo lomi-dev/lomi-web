@@ -17,7 +17,7 @@ const link = (): Field[] => [
   {
     name: 'href', type: 'text', required: true, minLength: 1, maxLength: 2000,
     validate: (value: string | null | undefined) =>
-      isSafeHref(value) ? true : 'Enter an HTTPS URL, /devlog/, or a #section anchor.',
+      isSafeHref(value) ? true : 'Enter an HTTPS URL, /devlog/, /download/, /remote/, or a #section anchor.',
   },
 ]
 

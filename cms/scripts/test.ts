@@ -38,7 +38,7 @@ try {
   await assert.rejects(payload.updateGlobal({ slug: 'landing', data: { hero: { title: 'Unauthorized' } }, overrideAccess: false }))
   await assert.rejects(payload.findGlobalVersions({ slug: 'landing', overrideAccess: false }))
   await assert.rejects(payload.create({ collection: 'users', data: { email: 'public@example.com', password: 'public-registration-disabled' }, overrideAccess: false }))
-  for (const href of ['/devlog', '/devlog/', 'https://docs.lomi.dev', '#roadmap']) {
+  for (const href of ['/devlog', '/devlog/', '/download', '/download/', '/remote', '/remote/', 'https://docs.lomi.dev', '#roadmap']) {
     const updated: Landing = await payload.updateGlobal({ slug: 'landing', data: { navigation: { links: [{ label: 'Link', href }] } } })
     assert.equal(updated.navigation.links[0].href, href)
   }
@@ -48,6 +48,9 @@ try {
     'https:example.com', 'https:///example.com', 'https://example.com\\@evil.test',
     'https://exam\nple.com', '/unknown', '/devlog/../admin',
     '/devlog?draft=true', '/devlog//', '/%64evlog',
+    '/download/../admin', '/download?draft=true', '/download//', '/%64ownload',
+    '/remote/../admin', '/remote?draft=true', '/remote/?draft=true',
+    '/remote//', '/%72emote', '/remote/%2e%2e/admin', '/remote#section',
   ]) {
     await assert.rejects(payload.updateGlobal({ slug: 'landing', data: { navigation: { links: [{ label: 'Unsafe', href }] } } }), /href/i, href)
   }

@@ -8,8 +8,8 @@ import { loadLanding } from '../../content/load-landing';
 const content = await loadLanding(import.meta.env.CMS_URL);
 ---
 
-<Layout title="Devlog — lomi" description="Notes from building lomi. Work in progress.">
-  <div class="devlog-surface">
+<Layout title="Devlog — lomi" description="Notes from building lomi. Work in progress." edgeColor="#10150f">
+  <div class="devlog-surface" data-scroll-surface>
     <Header content={content.navigation} />
     <main id="main" class="devlog-page" tabindex="-1">
       <div class="devlog-content">
@@ -24,7 +24,7 @@ const content = await loadLanding(import.meta.env.CMS_URL);
 </Layout>
 
 <style>
-  .devlog-surface { min-height: 100svh; display: flex; flex-direction: column; background: #10150f; color: #f3f6ed; }
+  .devlog-surface { --scroll-surface-color: #10150f; min-height: 100svh; display: flex; flex-direction: column; background: #10150f; color: #f3f6ed; }
   .devlog-page { display: flex; flex: 1; align-items: center; width: min(1120px, calc(100% - 64px)); margin-inline: auto; padding: 178px 26px 94px; }
   .devlog-content { width: 100%; }
   .devlog-label { display: flex; align-items: center; gap: 16px; margin-bottom: 30px; font-family: var(--font-mono); font-size: 11px; color: #b4c4a8; }

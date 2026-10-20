@@ -2,14 +2,14 @@
 import geistFont from '@fontsource-variable/geist/files/geist-latin-wght-normal.woff2?url';
 import '../styles/global.css';
 
-interface Props { title: string; description: string; themeColor?: string }
-const { title, description, themeColor = '#0b0e0b' } = Astro.props;
+interface Props { title: string; description: string; themeColor?: string; edgeColor?: string }
+const { title, description, themeColor = '#0b0e0b', edgeColor = 'var(--color-chalk)' } = Astro.props;
 
 const canonical = Astro.site ? new URL(Astro.url.pathname, Astro.site) : undefined;
 const socialImage = Astro.site ? new URL('/social-card.png', Astro.site) : undefined;
 ---
 <!doctype html>
-<html lang="en">
+<html lang="en" style={{ '--page-edge-background': edgeColor }}>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -37,5 +37,9 @@ const socialImage = Astro.site ? new URL('/social-card.png', Astro.site) : undef
   <body id="top">
     <a class="skip-link" href="#main">Skip to content</a>
     <slot />
+    <script>
+      import { initPageBackdrop } from '../components/page-backdrop';
+      initPageBackdrop();
+    </script>
   </body>
 </html>

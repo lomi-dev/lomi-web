@@ -10,8 +10,8 @@ if (endpoint) {
 const isConfigured = Boolean(endpoint);
 ---
 
-<section class="newsletter" aria-label="Newsletter signup">
-  <form id="newsletter-form" data-endpoint={endpoint}>
+<section class="newsletter" data-state={isConfigured ? 'idle' : 'unavailable'} aria-label="Newsletter signup">
+  <form id="newsletter-form" data-endpoint={endpoint} aria-busy="false">
     <label for="newsletter-email">Email address</label>
     <div class="newsletter-controls">
       <input
@@ -26,29 +26,44 @@ const isConfigured = Boolean(endpoint);
         disabled
         aria-describedby="newsletter-status newsletter-note"
       />
-      <button type="submit" disabled>Subscribe</button>
+      <button type="submit" disabled>
+        <span data-submit-label>Keep me posted</span>
+        <span class="newsletter-submit-icon" aria-hidden="true">
+          <svg class="newsletter-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15m-6-7 7 7-7 7" /></svg>
+          <svg class="newsletter-check" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6" /></svg>
+        </span>
+      </button>
     </div>
-    <p id="newsletter-status" class="newsletter-status" role="status" aria-live="polite">
+    <p id="newsletter-status" class="newsletter-status" role="status" aria-live="polite" aria-atomic="true">
       {!isConfigured && 'Newsletter signup is temporarily unavailable.'}
     </p>
   </form>
-  <p class="newsletter-note" id="newsletter-note">Occasional notes on what we’re building. Unsubscribe anytime.</p>
+  <p class="newsletter-note" id="newsletter-note">Occasional updates. Unsubscribe anytime.</p>
+  <noscript><p class="newsletter-noscript">Enable JavaScript to subscribe to the newsletter.</p></noscript>
 </section>
-
-<noscript><p class="newsletter-noscript">Enable JavaScript to subscribe to the newsletter.</p></noscript>
 
 <script>
   const form = document.querySelector<HTMLFormElement>('#newsletter-form');
+  const newsletter = form?.closest<HTMLElement>('.newsletter');
   const emailInput = document.querySelector<HTMLInputElement>('#newsletter-email');
   const submitButton = form?.querySelector<HTMLButtonElement>('button[type="submit"]');
+  const submitLabel = submitButton?.querySelector<HTMLElement>('[data-submit-label]');
   const status = document.querySelector<HTMLElement>('#newsletter-status');
   const endpoint = form?.dataset.endpoint;
 
+  function setState(state: 'idle' | 'pending' | 'success' | 'error', message = '') {
+    if (!form || !newsletter || !emailInput || !submitButton || !submitLabel || !status) return;
+    newsletter.dataset.state = state;
+    status.dataset.state = state;
+    status.textContent = message;
+    form.setAttribute('aria-busy', String(state === 'pending'));
+    emailInput.disabled = state === 'pending';
+    submitButton.disabled = state === 'pending';
+    submitLabel.textContent = state === 'pending' ? 'Subscribing…' : state === 'success' ? 'Subscribed' : 'Keep me posted';
+  }
+
   emailInput?.addEventListener('input', () => {
-    if (status?.dataset.state) {
-      status.textContent = '';
-      status.removeAttribute('data-state');
-    }
+    if (endpoint && newsletter?.dataset.state !== 'pending') setState('idle');
   });
 
   form?.addEventListener('submit', async (event) => {
@@ -56,10 +71,7 @@ const isConfigured = Boolean(endpoint);
     if (!emailInput || !submitButton || !status || submitButton.disabled || !form.reportValidity() || !endpoint) return;
 
     const email = emailInput.value.trim();
-    submitButton.disabled = true;
-    submitButton.textContent = 'Subscribing…';
-    status.textContent = '';
-    status.removeAttribute('data-state');
+    setState('pending', 'Sending your signup…');
 
     try {
       const response = await fetch(endpoint, {
@@ -70,82 +82,109 @@ const isConfigured = Boolean(endpoint);
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       });
+      if (response.status === 429) {
+        setState('error', 'Too many attempts. Please wait a moment and try again.');
+        return;
+      }
       if (response.status !== 202 || (await response.json()).accepted !== true) {
         throw new Error('Signup request unavailable');
       }
 
       form.reset();
-      status.textContent = 'You’re on the list. Thanks for joining!';
-      status.dataset.state = 'success';
+      setState('success', 'You’re on the list. Thanks for joining!');
     } catch {
-      status.textContent = 'Something went wrong. Please try again.';
-      status.dataset.state = 'error';
-    } finally {
-      submitButton.disabled = false;
-      submitButton.textContent = 'Subscribe';
+      setState('error', 'We couldn’t complete your signup. Please try again.');
     }
   });
 
-  if (endpoint && emailInput && submitButton) {
-    emailInput.disabled = false;
-    submitButton.disabled = false;
-  }
+  if (endpoint) setState('idle');
 </script>
 
 <style>
   .newsletter {
-    width: min(100%, 510px);
-    margin: 26px auto 0;
-    text-align: center;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    color: #0b0d0c;
+    text-align: left;
   }
   .newsletter form { margin: 0; }
-  .newsletter label { display: block; margin-bottom: 6px; font-size: 12px; font-weight: 500; text-align: left; }
-  .newsletter-controls { display: flex; gap: 8px; }
+  .newsletter label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 13px;
+    line-height: 1.5;
+    font-weight: 500;
+  }
+  .newsletter-controls { display: grid; gap: 8px; }
   .newsletter input {
+    box-sizing: border-box;
+    width: 100%;
     min-width: 0;
-    flex: 1;
-    min-height: 48px;
-    padding: 0 14px;
-    border: 1px solid #a9b0a8;
-    border-radius: 3px;
-    background: #fff;
-    color: var(--color-ink);
+    min-height: 56px;
+    padding: 14px 16px;
+    border: 1px solid #adb79f;
+    border-radius: 10px;
+    background: #f5f6ef;
+    color: #0b0d0c;
     font: inherit;
     font-size: 16px;
+    line-height: 1.5;
   }
-  .newsletter input::placeholder { color: #68716a; }
+  .newsletter input::placeholder { color: #62695b; opacity: 1; }
   .newsletter button {
-    min-height: 48px;
-    padding: 0 19px;
-    border: 1px solid var(--color-ink);
-    border-radius: 3px;
-    background: var(--color-lime);
-    color: var(--color-ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 52px;
+    padding: 13px 20px;
+    border: 1px solid #0b0d0c;
+    border-radius: 999px;
+    background: #0b0d0c;
+    color: #c8ff3d;
     font: inherit;
-    font-size: 13px;
+    font-size: 14px;
+    line-height: 1.5;
     font-weight: 500;
     cursor: pointer;
   }
-  .newsletter button:active { background: var(--color-lime-pressed); }
-  .newsletter button:disabled { cursor: not-allowed; opacity: .65; }
-  .newsletter input:disabled { background: #f2f3ef; }
-  .newsletter input:focus-visible, .newsletter button:focus-visible { outline-offset: 3px; }
-  .newsletter-status { min-height: 16px; margin-top: 5px; font-size: 12px; line-height: 1.5; }
-  .newsletter-status:empty { display: none; }
+  .newsletter-submit-icon { display: flex; flex: 0 0 20px; }
+  .newsletter-check { display: none; }
+  .newsletter[data-state="success"] .newsletter-arrow { display: none; }
+  .newsletter[data-state="success"] .newsletter-check { display: block; }
+  .newsletter button:not(:disabled):active { background: #30362c; }
+  .newsletter button:disabled { cursor: not-allowed; background: #30362c; border-color: #30362c; }
+  .newsletter input:disabled { color: #62695b; cursor: not-allowed; opacity: 1; }
+  .newsletter input:focus-visible,
+  .newsletter button:focus-visible { outline: 2px solid #476c16; outline-offset: 4px; }
+  .newsletter-status {
+    min-height: 3em;
+    margin: 8px 0 0;
+    color: #525b4a;
+    font-size: 12px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
   .newsletter-status[data-state="success"] { color: #245a3b; }
   .newsletter-status[data-state="error"] { color: #a02424; }
-  .newsletter-note { margin-top: 10px; color: var(--color-text-secondary); font-size: 12px; line-height: 1.6; }
-  .newsletter-noscript { text-align: center; font-size: 12px; }
+  .newsletter-note {
+    margin: 4px 0 0;
+    color: #62695b;
+    font-size: 11px;
+    line-height: 1.6;
+    text-align: center;
+    text-wrap: balance;
+  }
+  .newsletter-noscript { margin: 12px 0 0; font-size: 12px; line-height: 1.5; }
 
   @media (hover: hover) and (pointer: fine) {
-    .newsletter button:not(:disabled):hover { background: var(--color-lime-hover); }
+    .newsletter button:not(:disabled):hover { background: #272e22; }
   }
-  @media (max-width: 460px) {
-    .newsletter { margin-top: 24px; }
-    .newsletter-controls { flex-direction: column; }
-    .newsletter input { flex: auto; width: 100%; }
-  }
-  @media (max-height: 600px) and (min-width: 601px) {
-    .newsletter { margin-top: 18px; }
+  @media (prefers-reduced-motion: no-preference) {
+    .newsletter button { transition: background-color 160ms ease, transform 160ms ease; }
+    .newsletter button:not(:disabled):active { transform: translateY(1px); }
   }
 </style>

@@ -9,14 +9,14 @@ interface Props { content: Landing['hero'] }
 const { content } = Astro.props;
 ---
 
-<section class="hero" aria-labelledby="hero-title">
+<section class="hero" aria-labelledby="hero-title" data-scroll-surface>
   <div class="hero-atmosphere" aria-hidden="true"><ShapeWavesBackground /></div>
   <div class="hero-opening hero-shell">
     <div class="hero-content">
       <h1 id="hero-title">{content.title}<span>{content.accent}</span></h1>
       <p class="hero-description">{content.description}</p>
       <div class="hero-actions">
-        <a class="hero-download" href={site.releases} data-download-open aria-haspopup="dialog" aria-controls="download-dialog"><Icon name="download" width={18} height={18} />{content.primaryLabel}</a>
+        <a class="hero-download" href={site.download}><Icon name="download" width={18} height={18} />{content.primaryLabel}</a>
         <a class="hero-explore" href="#workspace">{content.secondaryLabel}<span aria-hidden="true">↓</span></a>
       </div>
     </div>
@@ -27,7 +27,7 @@ const { content } = Astro.props;
 </section>
 
 <style>
-  .hero { --hero-gutter: clamp(24px, 5.2vw, 112px); position: relative; isolation: isolate; overflow: hidden; min-height: 100svh; padding-bottom: 64px; background: linear-gradient(180deg, #ffffff 0%, #ffffff 65%, var(--color-chalk) 100%); color: var(--color-ink); }
+  .hero { --scroll-surface-color: #ffffff; --hero-gutter: clamp(24px, 5.2vw, 112px); position: relative; isolation: isolate; overflow: hidden; min-height: 100svh; padding-bottom: 64px; background: linear-gradient(180deg, #ffffff 0%, #ffffff 65%, var(--color-chalk) 100%); color: var(--color-ink); }
   .hero-shell { width: min(1760px, calc(100% - var(--hero-gutter) * 2)); margin-inline: auto; }
   .hero-opening { position: relative; padding: clamp(160px, 16svh, 194px) 0 112px; }
   .hero-atmosphere { position: absolute; z-index: -1; inset: 0 0 auto; height: 950px; overflow: hidden; pointer-events: none; --shape-waves-background: #ffffff; --shape-waves-color: #9baa8b; --shape-waves-interaction-color: #6b922c; }

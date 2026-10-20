@@ -2,7 +2,7 @@
 import { afterEach, describe, it, spyOn } from 'bun:test';
 import assert from 'node:assert/strict';
 import seed from '../content/landing.json';
-import { landingSchema } from '../content/landing-schema';
+import { landingSchema, safeHref } from '../content/landing-schema';
 import { loadLanding } from '../content/load-landing';
 import { activeLandingLinks } from '../src/data/navigation';
 
@@ -39,8 +39,8 @@ describe('published landing content', () => {
     await assert.rejects(loadLanding('https://cms.example.test'));
   });
 
-  it('accepts the Devlog route, HTTPS links, and section anchors', () => {
-    for (const href of ['/devlog', '/devlog/', 'https://docs.lomi.dev', '#roadmap']) {
+  it('accepts the Devlog, Download, and Remote routes, HTTPS links, and section anchors', () => {
+    for (const href of ['/devlog', '/devlog/', '/download', '/download/', '/remote', '/remote/', 'https://docs.lomi.dev', '#roadmap']) {
       assert.equal(landingSchema.safeParse({ ...seed, navigation: { ...seed.navigation, links: [{ label: 'Link', href }] } }).success, true, href);
     }
   });
@@ -52,6 +52,9 @@ describe('published landing content', () => {
       'https:example.com', 'https:///example.com', 'https://example.com\\@evil.test',
       'https://exam\nple.com', '/unknown', '/devlog/../admin',
       '/devlog?draft=true', '/devlog//', '/%64evlog',
+      '/download/../admin', '/download?draft=true', '/download//', '/%64ownload',
+      '/remote/../admin', '/remote?draft=true', '/remote/?draft=true',
+      '/remote//', '/%72emote', '/remote/%2e%2e/admin', '/remote#section',
     ]) {
       assert.equal(landingSchema.safeParse({ ...seed, navigation: { ...seed.navigation, links: [{ label: 'Unsafe', href }] } }).success, false, href);
     }
@@ -69,18 +72,48 @@ describe('published landing content', () => {
     const original = structuredClone(publishedLinks);
     assert.deepEqual(activeLandingLinks(publishedLinks), [
       { label: 'features', href: '#features' },
+      { label: 'newsletter', href: '#newsletter' },
       { label: 'Overview', href: '#workspace' },
       { label: 'Roadmap', href: '#roadmap' },
-      { label: 'Download', href: 'https://github.com/lomi-dev/lomi/releases' },
+      { label: 'Download', href: '/download/' },
       { label: 'Devlog', href: '/devlog/' },
       { label: 'Docs', href: 'https://docs.lomi.dev' },
     ]);
     assert.deepEqual(publishedLinks, original);
   });
 
+  it('normalizes legacy download destinations without changing release notes', () => {
+    const releases = 'https://github.com/lomi-dev/lomi/releases';
+    const links = [
+      { label: 'Download', href: '/#download' },
+      { label: 'Download', href: releases },
+      { label: 'Download lomi', href: `${releases}/` },
+      { label: 'Release notes', href: releases },
+      { label: 'Releases', href: `${releases}/` },
+      { label: 'Download', href: 'https://example.test/releases' },
+      { label: 'Download', href: '/download/' },
+    ];
+    assert.deepEqual(activeLandingLinks(links), [
+      { label: 'Download', href: '/download/' },
+      { label: 'Download', href: '/download/' },
+      { label: 'Download lomi', href: '/download/' },
+      ...links.slice(3),
+    ]);
+  });
+
+  it('trims an authored download URL before exposing it to the page', () => {
+    assert.equal(safeHref.parse('  /download/  '), '/download/');
+  });
+
   it('preserves feature links that point back to the landing page', () => {
     assert.deepEqual(activeLandingLinks([{ label: 'Features', href: '/#features' }]), [
       { label: 'Features', href: '/#features' },
+    ]);
+  });
+
+  it('preserves newsletter links that point back to the landing page', () => {
+    assert.deepEqual(activeLandingLinks([{ label: 'Newsletter', href: '/#newsletter' }]), [
+      { label: 'Newsletter', href: '/#newsletter' },
     ]);
   });
 
