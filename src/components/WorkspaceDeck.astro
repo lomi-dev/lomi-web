@@ -9,7 +9,7 @@ const { content, placeholderLogo } = Astro.props;
 ---
 
 <figure class="workspace-showcase" id="workspace" aria-label={content.previewAlt}>
-  {content.mediaMode === 'youtube' || content.mediaMode === 'video' && content.video ? <HeroVideo content={content} placeholderLogo={placeholderLogo} /> : <div class="workspace-capture" data-scroll-surface style={!content.poster ? '--scroll-surface-color: color-mix(in srgb, var(--color-ink) 3%, var(--color-chalk))' : undefined}>
+  {content.mediaMode === 'youtube' || content.mediaMode === 'video' && content.video ? <HeroVideo content={content} placeholderLogo={placeholderLogo} /> : <div class="workspace-capture" data-scroll-surface data-product-capture={!content.poster || undefined} style={!content.poster ? '--scroll-surface-color: color-mix(in srgb, var(--color-ink) 3%, var(--color-chalk))' : undefined}>
     <ContentMedia image={content.poster} video={content.mediaMode === 'video' ? content.video : null} alt={content.previewAlt} placeholderLogo={placeholderLogo} placeholderVariant="hero" loading="eager" />
   </div>}
 </figure>
@@ -20,5 +20,6 @@ const { content, placeholderLogo } = Astro.props;
     min-width: 0;
   }
   .workspace-capture { --scroll-surface-color: #080a08; width: 100%; min-height: 200px; aspect-ratio: 8 / 5; overflow: hidden; border: 1px solid rgb(0 0 0 / 12%); border-radius: 16px; background: #080a08; }
+  .workspace-capture[data-product-capture] :global(img) { object-fit: cover; }
   .workspace-capture :global([data-media-placeholder]) { border: 0; border-radius: 0; }
 </style>

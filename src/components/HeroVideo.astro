@@ -2,22 +2,25 @@
 import ContentMedia from './ContentMedia.astro';
 import Icon from './Icon';
 import { resolveMedia, youtubeVideoId, type MediaAsset } from '../../content/editor-schema';
+import { getImage } from 'astro:assets';
+import workbench from '../assets/product/hero-workbench.png';
 import type { Landing } from '../../content/landing-schema';
 
 interface Props { content: Landing['hero']; placeholderLogo?: MediaAsset | null }
 const { content, placeholderLogo } = Astro.props;
 const clip = content.mediaMode === 'video' ? resolveMedia(content.video, import.meta.env.CMS_URL) : null;
 const image = resolveMedia(content.poster, import.meta.env.CMS_URL);
+const nativePoster = image?.url ?? (await getImage({ src: workbench, width: 2880, format: 'webp' })).src;
 const videoId = youtubeVideoId(content.videoUrl)!;
 const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
 const copy = content.player;
 ---
 
-<div class="hero-video" data-hero-video data-placeholder-poster={!image || undefined} data-video-provider={clip ? 'video' : 'youtube'} data-video-status="poster" data-video-id={videoId} data-video-copy={JSON.stringify(copy)}>
+<div class="hero-video" data-hero-video data-product-poster={!image || undefined} data-video-provider={clip ? 'video' : 'youtube'} data-video-status="poster" data-video-id={videoId} data-video-copy={JSON.stringify(copy)}>
   <div class="video-player" data-video-player role="group" aria-label={copy.videoTitle} aria-busy="false" data-scroll-surface>
     <div class="video-viewport" data-video-viewport>
       <div class="video-mount" data-video-mount>
-        {clip && <video data-native-video controls muted playsinline preload="metadata" poster={image?.url ?? '/placeholders/hero-workspace.svg'} aria-label={copy.videoTitle}>
+        {clip && <video data-native-video controls muted playsinline preload="metadata" poster={nativePoster} aria-label={copy.videoTitle}>
           <source src={clip.url} type={clip.mimeType} />{content.previewAlt}
         </video>}
       </div>
@@ -25,7 +28,6 @@ const copy = content.player;
       <a class="video-poster" data-video-poster href={clip?.url ?? watchUrl} target="_blank" rel="noopener noreferrer" aria-label={copy.watchLabel}>
         <ContentMedia image={content.poster} alt={content.previewAlt} placeholderLogo={placeholderLogo} placeholderVariant="hero" loading="eager" />
         <span class="video-poster-play" aria-hidden="true"><Icon name="play" width={24} height={24} /></span>
-        <span class="video-loading" aria-hidden="true"></span>
       </a>
     </div>
     <div class="player-controls" data-player-controls role="group" aria-label={copy.controlsLabel}>
@@ -46,6 +48,7 @@ const copy = content.player;
       <button class="player-retry" type="button" data-player-retry hidden>{copy.retryLabel}</button>
     </div>
   </div>
+  <span class="video-loading" aria-hidden="true"></span>
   <span class="video-status" role="status" data-video-announcement></span>
 </div>
 
@@ -55,13 +58,11 @@ const copy = content.player;
 </script>
 
 <style>
-  .hero-video { min-width: 0; }
-  .video-player { --scroll-surface-color: #080a08; position: relative; isolation: isolate; width: 100%; min-height: 240px; aspect-ratio: 8 / 5; overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: #080a08; }
-  [data-placeholder-poster]:not([data-video-frame]) .video-player { --scroll-surface-color: color-mix(in srgb, var(--color-ink) 3%, var(--color-chalk)); }
-  [data-placeholder-poster]:not([data-video-frame]) .video-player::after { display: none; }
-  [data-placeholder-poster]:not([data-video-frame]) .player-controls { --player-foreground: var(--color-ink); }
+  .hero-video { position: relative; isolation: isolate; min-width: 0; }
+  .video-player { --scroll-surface-color: #080a08; position: relative; isolation: isolate; width: 100%; min-height: 240px; aspect-ratio: 8 / 5; overflow: hidden; border: 0; border-radius: 16px; background: #080a08; }
+  [data-product-poster] .video-player { background: #eef2e8; }
   .video-poster :global([data-media-placeholder]) { border: 0; border-radius: 0; }
-  .video-viewport { position: absolute; inset: 0; overflow: hidden; }
+  .video-viewport { position: absolute; inset: 0; }
   .video-player::after { content: ''; position: absolute; z-index: 2; inset: auto 0 0; height: min(130px, 40%); background: linear-gradient(transparent, rgb(0 0 0 / 75%) 40%, rgb(0 0 0 / 88%)); pointer-events: none; }
   .video-gestures { display: none; position: absolute; z-index: 1; inset: 48px 0 64px; width: 100%; border: 0; padding: 0; background: transparent; cursor: pointer; }
   [data-player-ready][data-video-frame] .video-gestures { display: block; }
@@ -70,7 +71,9 @@ const copy = content.player;
   .video-poster, .video-mount { position: absolute; inset: 0; }
   .video-poster { z-index: 1; }
   .video-poster :global(picture), .video-poster :global(img) { display: block; width: 100%; height: 100%; }
-  .video-poster :global(img), .video-mount :global(video) { object-fit: contain; }
+  [data-product-poster] .video-poster :global(img) { object-fit: cover; }
+  .video-mount :global(video) { object-fit: contain; }
+  [data-video-provider='youtube']:not([data-video-frame]) .video-mount :global(iframe) { visibility: hidden; }
   .video-mount { display: none; }
   [data-video-mounted] .video-mount, [data-video-provider='video'] .video-mount { display: block; }
   [data-video-frame] .video-poster { visibility: hidden; }
@@ -78,7 +81,7 @@ const copy = content.player;
   .video-poster-play { display: none; position: absolute; inset: 0; width: 48px; height: 48px; margin: auto; align-items: center; justify-content: center; border: 0; border-radius: 50%; background: var(--color-lime); color: var(--color-ink); }
   [data-player-ready] .video-poster-play { display: flex; }
   .video-poster-play :global(svg) { transform: translateX(-1px); }
-  .video-loading { display: none; position: absolute; top: 50%; left: 50%; width: 30px; height: 30px; margin: -15px; border: 2px solid #ffffff40; border-top-color: var(--color-lime); border-radius: 50%; }
+  .video-loading { display: none; position: absolute; z-index: 4; top: 50%; left: 50%; width: 30px; height: 30px; margin: -15px; border: 2px solid #ffffff40; border-top-color: var(--color-lime); border-radius: 50%; pointer-events: none; }
   [data-video-status='loading'] .video-loading { display: block; }
   [data-video-status='loading'] .video-poster-play { visibility: hidden; }
   .player-controls { --player-foreground: var(--color-dark-text); --player-track: color-mix(in srgb, var(--player-foreground) 30%, transparent); display: none; position: absolute; z-index: 3; inset-inline: 16px; bottom: max(12px, env(safe-area-inset-bottom, 0px)); align-items: center; gap: 10px; min-height: 44px; padding: 4px 0; border: 0; color: var(--player-foreground); background: transparent; }
@@ -110,7 +113,7 @@ const copy = content.player;
   .video-poster:focus-visible { outline: 2px solid var(--color-lime); outline-offset: -5px; border-radius: inherit; }
   .player-controls :focus-visible { outline: 2px solid var(--color-lime); outline-offset: 3px; }
   .video-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-  .video-player:fullscreen { width: 100%; height: 100%; max-height: none; min-height: 0; aspect-ratio: auto; border: 0; border-radius: 0; }
+  .video-player:fullscreen { width: 100%; height: 100%; max-height: none; min-height: 0; aspect-ratio: auto; border: 0; border-radius: 0; box-shadow: none; }
   [data-video-provider='video']:not([data-player-ready]) .video-poster { display: none; }
   @media (hover: hover) { .player-icon-button:not(:disabled):hover, .player-controls .player-toggle:not(:disabled):hover { background: color-mix(in srgb, var(--color-dark-text) 12%, transparent); } .player-controls .player-retry:hover { background: var(--color-lime-hover); } }
   @media (hover: hover) and (pointer: fine) { [data-controls-visible='false'] .video-gestures { cursor: none; } }

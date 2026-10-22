@@ -1,5 +1,7 @@
 ---
 import { resolveMedia, type MediaAsset } from '../../content/editor-schema';
+import { Picture } from 'astro:assets';
+import workbench from '../assets/product/hero-workbench.png';
 import MediaPlaceholder from './MediaPlaceholder.astro';
 import FeatureSimulation from './FeatureSimulation.astro';
 import type { Landing } from '../../content/landing-schema';
@@ -18,7 +20,7 @@ interface Props {
   widths?: number[];
   sizes?: string;
 }
-const { image, video, alt, placeholderLogo, placeholderAspect, placeholderVariant, placeholderFeature, class: className, loading = 'lazy', controls = true } = Astro.props;
+const { image, video, alt, placeholderLogo, placeholderAspect, placeholderVariant, placeholderFeature, class: className, loading = 'lazy', controls = true, widths, sizes } = Astro.props;
 const picture = resolveMedia(image, import.meta.env.CMS_URL);
 const clip = resolveMedia(video, import.meta.env.CMS_URL);
 const description = alt || picture?.alt || clip?.alt || '';
@@ -30,6 +32,7 @@ const description = alt || picture?.alt || clip?.alt || '';
   {description}
 </video> : picture ? <picture><img class={className} src={picture.url} alt={description}
   width={picture.width ?? 1600} height={picture.height ?? 1000} loading={loading} decoding="async" /></picture>
+  : placeholderVariant === 'hero' ? <Picture src={workbench} alt={description} class={className} widths={widths ?? [640, 960, 1280, 1600, 1920, 2560, 2880]} sizes={sizes ?? '(min-width: 1600px) 1440px, calc(100vw - 40px)'} formats={['avif', 'webp']} loading={loading} decoding={loading === 'eager' ? 'sync' : 'async'} />
   : placeholderFeature ? <FeatureSimulation kind={placeholderFeature} class={className} />
   : <MediaPlaceholder logo={placeholderLogo} aspect={placeholderAspect} variant={placeholderVariant} class={className} loading={loading} />}
 
