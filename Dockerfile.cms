@@ -1,0 +1,26 @@
+FROM oven/bun:1.3.14 AS dependencies
+WORKDIR /app
+COPY cms/package.json cms/bun.lock ./cms/
+RUN cd cms && bun install --frozen-lockfile
+
+FROM dependencies AS build
+COPY cms ./cms
+COPY content ./content
+WORKDIR /app/cms
+ARG NEXT_PUBLIC_SERVER_URL=https://cms.lomi.dev
+ENV NEXT_PUBLIC_SERVER_URL=${NEXT_PUBLIC_SERVER_URL}
+ENV PAYLOAD_SECRET=build-only-dummy-secret-not-for-runtime
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN bun run build
+
+FROM oven/bun:1.3.14 AS runtime
+WORKDIR /app
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3001
+COPY --from=dependencies /app/cms/node_modules ./cms/node_modules
+COPY --from=build /app/cms ./cms
+COPY --from=build /app/content ./content
+WORKDIR /app/cms
+EXPOSE 3001
+CMD ["sh", "-c", "bunx payload migrate && bun run seed && bunx next start --hostname 0.0.0.0 --port 3001"]
