@@ -1,6 +1,6 @@
-/** Run explanatory previews only while their actual card or dialog is visible. */
+/** Load animated app captures only while their card or dialog is visible. */
 export function initFeaturePreviews(root: HTMLElement) {
-  const scenes = Array.from(root.querySelectorAll<HTMLElement>('[data-feature-simulation]'));
+  const scenes = Array.from(root.querySelectorAll<HTMLElement>('[data-feature-preview]'));
   if (!scenes.length) return;
   const toggles = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-preview-toggle]'));
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
@@ -17,13 +17,24 @@ export function initFeaturePreviews(root: HTMLElement) {
     for (const scene of scenes) {
       const available = visible.has(scene) && (!modal || modal.contains(scene))
         && !scene.closest('[hidden], [inert], dialog[data-state="closing"]');
-      scene.toggleAttribute('data-preview-running', allowed && available);
+      const running = allowed && available;
+      scene.toggleAttribute('data-preview-running', running);
+      const gif = scene.querySelector<HTMLImageElement>('[data-feature-gif]');
+      if (gif) {
+        if (running) {
+          const source = gif.dataset.featureGifSrc;
+          if (source && !gif.hasAttribute('src')) gif.src = source;
+        } else {
+          gif.removeAttribute('src');
+          scene.removeAttribute('data-preview-ready');
+        }
+      }
     }
     root.dataset.previewPaused = String(paused);
     for (const toggle of toggles) {
       const ownDialog = toggle.closest('dialog');
-      const uploadedMedia = ownDialog && !ownDialog.querySelector('[data-feature-slide]:not([hidden]) [data-feature-simulation]');
-      const hideToggle = reducedMotion.matches || Boolean(uploadedMedia);
+      const ownPreview = ownDialog && ownDialog.querySelector('[data-feature-slide]:not([hidden]) [data-feature-preview]');
+      const hideToggle = reducedMotion.matches || !ownPreview && Boolean(ownDialog);
       if (toggle.hidden !== hideToggle) toggle.hidden = hideToggle;
       const label = paused ? toggle.dataset.resumeLabel : toggle.dataset.pauseLabel;
       toggle.setAttribute('aria-label', label ?? '');
@@ -46,7 +57,13 @@ export function initFeaturePreviews(root: HTMLElement) {
     sync();
   }));
 
-  // No observer support means a useful static illustration, with no busy loop.
+  scenes.forEach((scene) => {
+    const gif = scene.querySelector<HTMLImageElement>('[data-feature-gif]');
+    gif?.addEventListener('load', () => scene.setAttribute('data-preview-ready', ''));
+    gif?.addEventListener('error', () => scene.removeAttribute('data-preview-ready'));
+  });
+
+  // Without observer support the local poster stays useful and avoids GIF playback.
   if (typeof IntersectionObserver === 'undefined') return;
   const observer = new IntersectionObserver((entries) => {
     for (const entry of entries) {

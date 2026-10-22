@@ -7,24 +7,22 @@ const { origin, close } = await startStaticPreview();
 const browser = await chromium.launch();
 const errors = [];
 const kinds = ['terminal', 'panels', 'code', 'expand', 'git', 'spark'];
-const scenes = (page) => page.locator('[data-feature-card] [data-feature-simulation]');
+const scenes = (page) => page.locator('[data-feature-card] [data-feature-preview]');
 const dialog = (page) => page.locator('#feature-dialog');
-const running = (scene) => scene.evaluate((element) => element.getAnimations({ subtree: true }).some((animation) => animation.playState === 'running'));
-const sample = (scene) => scene.evaluate((element) => [...element.querySelectorAll('[data-simulation-motion]')].map((node) => {
-  const style = getComputedStyle(node), rect = node.getBoundingClientRect();
-  return [style.transform, style.opacity, style.clipPath, style.strokeDashoffset, rect.x, rect.y, rect.width, rect.height];
-}));
 async function motion(scene, expected) {
-  await expect.poll(() => running(scene), { message: expected ? 'Visible simulation runs' : 'Unavailable simulation stops', timeout: 5000 }).toBe(expected);
-  // Let the browser commit its pending pause before sampling a still frame.
-  if (!expected) await new Promise((done) => setTimeout(done, 80));
-  const before = await sample(scene);
-  assert.ok(before.length > 0, 'Each scene contains animated visual elements');
+  await expect.poll(() => scene.evaluate((element) => element.hasAttribute('data-preview-running')), {
+    message: expected ? 'Visible app capture starts' : 'Unavailable app capture stops', timeout: 5000,
+  }).toBe(expected);
+  const gif = scene.locator('[data-feature-gif]');
   if (expected) {
-    await expect.poll(() => sample(scene), { message: 'Rendered simulation changes across actual frames', timeout: 5000, intervals: [150, 300, 500] }).not.toEqual(before);
+    await expect(gif).toHaveAttribute('src', /\.gif(?:\?|$)/);
+    await expect.poll(() => gif.evaluate((image) => image.complete && image.naturalWidth > 0), {
+      message: 'Visible animated app capture loads', timeout: 5000,
+    }).toBe(true);
+    await expect(scene).toHaveAttribute('data-preview-ready', '');
   } else {
-    await new Promise((done) => setTimeout(done, 240));
-    assert.deepEqual(await sample(scene), before, 'Paused scene stays visually still');
+    await expect.poll(() => gif.getAttribute('src'), { message: 'Unavailable GIF source is released' }).toBeNull();
+    await expect(scene).not.toHaveAttribute('data-preview-ready');
   }
 }
 async function open(options = {}) {
@@ -44,13 +42,13 @@ try {
   await expect(page.locator('[data-feature-gallery]')).toHaveAttribute('data-feature-ready', 'true');
   const cards = scenes(page);
   await expect(cards).toHaveCount(6);
-  assert.deepEqual(await cards.evaluateAll((elements) => elements.map((element) => element.dataset.featureSimulation)), kinds);
+  assert.deepEqual(await cards.evaluateAll((elements) => elements.map((element) => element.dataset.featurePreview)), kinds);
   await expect(page.locator('[data-preview-toggle]')).toHaveCount(2);
   const headerToggle = page.locator('[data-preview-toggle]').first();
   const pauseLabel = await headerToggle.getAttribute('data-pause-label');
   const resumeLabel = await headerToggle.getAttribute('data-resume-label');
   assert.ok(pauseLabel && resumeLabel && pauseLabel !== resumeLabel, 'Pause and play actions have distinct authored labels');
-  // Start above Features, then exercise each independently visible simulation.
+  // Start above Features, then exercise each independently visible app capture.
   await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
   for (const scene of await cards.all()) await motion(scene, false);
   for (let index = 0; index < kinds.length; index++) {
@@ -78,12 +76,12 @@ try {
   for (let index = 0; index < kinds.length; index++) {
     await page.locator(`[data-feature-open="${index}"]`).click();
     await expect(dialog(page)).toBeVisible();
-    const active = dialog(page).locator('[data-feature-slide]:not([hidden]) [data-feature-simulation]');
-    await expect(active).toHaveAttribute('data-feature-simulation', kinds[index]);
+    const active = dialog(page).locator('[data-feature-slide]:not([hidden]) [data-feature-preview]');
+    await expect(active).toHaveAttribute('data-feature-preview', kinds[index]);
     await assertPlaceholder(active, { variant: 'feature', aspect: '8 / 5' });
     await motion(active, true);
     for (const scene of await cards.all()) await motion(scene, false);
-    for (const scene of await dialog(page).locator('[data-feature-slide][hidden] [data-feature-simulation]').all()) await motion(scene, false);
+    for (const scene of await dialog(page).locator('[data-feature-slide][hidden] [data-feature-preview]').all()) await motion(scene, false);
     await active.screenshot({ path: `artifacts/feature-preview-${kinds[index]}-dialog.png`, animations: 'allow' });
     if (index === 0) {
       const toggle = dialog(page).locator('[data-preview-toggle]');
@@ -99,7 +97,7 @@ try {
     }
     await dialog(page).locator('[data-feature-close]').click();
     await expect(dialog(page)).not.toBeVisible();
-    await motion(dialog(page).locator('[data-feature-slide]').nth(index).locator('[data-feature-simulation]'), false);
+    await motion(dialog(page).locator('[data-feature-slide]').nth(index).locator('[data-feature-preview]'), false);
   }
 
   await cards.first().scrollIntoViewIfNeeded();
@@ -148,5 +146,5 @@ try {
     await fallback.context.close();
   }
   assert.deepEqual(errors, [], 'No feature-preview runtime errors');
-  console.log('Passed: six distinct inline SVG simulations; actual rendered motion; shared pause/resume from header and dialog; offscreen, hidden slide, modal backdrop, closed dialog and document visibility pausing; live reduced motion and no-JS static fallbacks; 320/1440px screenshots and overflow.');
+  console.log('Passed: six local animated app captures; visible-card and active-dialog loading; shared pause/resume from header and dialog; offscreen, hidden slide, modal backdrop, closed dialog and document visibility pausing; reduced-motion and no-JS poster fallbacks; 320/1440px screenshots and overflow.');
 } finally { await browser.close(); await close(); }

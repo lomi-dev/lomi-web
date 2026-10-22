@@ -960,7 +960,8 @@ try {
   const workspace = page.locator('.hero #workspace');
   const workspaceImage = workspace.locator('[data-video-player]');
   await expect(workspace.locator('img')).toHaveCount(1);
-  await expect(workspace.locator('[data-media-placeholder] img')).toHaveAttribute('alt', '');
+  await expect(workspace.locator('img')).toHaveAttribute('alt', /project explorer, TypeScript editor and integrated terminal/);
+  await expect(workspace.locator('picture source').first()).toHaveAttribute('srcset', /hero-workbench/);
   await expect.poll(() => workspace.locator('img').evaluate((image) => image.naturalWidth)).toBeGreaterThan(0);
   await verifyInlineVideo(page, videoRequests);
 

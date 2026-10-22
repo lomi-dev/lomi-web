@@ -1,4 +1,3 @@
-import { assertPlaceholder } from './verify-placeholders.mjs';
 import { chromium, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { createServer } from 'node:http';
@@ -306,18 +305,18 @@ try {
   await expect.poll(() => page.evaluate(() => window.__players[0].calls)).toContain('playVideo');
   expect((await page.evaluate(() => window.__players[0].calls))[0]).toBe('mute');
   await expect(player(page).locator('[data-video-poster]')).toBeVisible();
-  const paleSurface = await player(page).locator('[data-media-placeholder]').evaluate((element) => getComputedStyle(element).backgroundColor);
-  await expect.poll(() => page.locator('html').evaluate((element) => getComputedStyle(element).backgroundColor), { message: 'Overscroll follows the pale placeholder before the first frame' }).toBe(paleSurface);
-  const ink = await control(page, 'controls').evaluate((element) => {
-    const probe = document.createElement('span'); probe.style.color = 'var(--color-ink)'; element.append(probe);
+  const posterSurface = await player(page).locator('.video-player').evaluate((element) => getComputedStyle(element).backgroundColor);
+  await expect.poll(() => page.locator('html').evaluate((element) => getComputedStyle(element).backgroundColor), { message: 'Overscroll follows the product screenshot surface before the first frame' }).toBe(posterSurface);
+  const foreground = await control(page, 'controls').evaluate((element) => {
+    const probe = document.createElement('span'); probe.style.color = 'var(--color-dark-text)'; element.append(probe);
     const color = getComputedStyle(probe).color; probe.remove(); return color;
   });
-  await expect(control(page, 'controls')).toHaveCSS('color', ink);
+  await expect(control(page, 'controls')).toHaveCSS('color', foreground);
   await emit(page, 'onStateChange', 1);
   await expect(player(page)).toHaveAttribute('data-video-status', 'playing');
   await expect(player(page).locator('[data-video-poster]')).toBeHidden();
   await expect.poll(() => page.locator('html').evaluate((element) => getComputedStyle(element).backgroundColor), { message: 'Overscroll follows the dark video surface after its first frame' }).toBe('rgb(8, 10, 8)');
-  expect(await control(page, 'controls').evaluate((element) => getComputedStyle(element).color), 'Video controls switch to a light foreground').not.toBe(ink);
+  expect(await control(page, 'controls').evaluate((element) => getComputedStyle(element).color), 'Video controls retain a readable foreground').toBe(foreground);
   await expect(control(page, 'controls')).toHaveAttribute('aria-label', labels.controlsLabel);
   await expect(control(page, 'toggle')).toHaveAccessibleName(labels.pauseLabel);
   await toggleIcon(page, 'pause');
@@ -526,13 +525,13 @@ try {
   const staticNative = await open(preview, { javaScriptEnabled: false });
   await expect(player(staticNative.page).locator('[data-video-poster]')).toHaveAttribute('href', `${cms}/api/media/file/clip.webm`);
   const nativePoster = player(staticNative.page).locator('video');
-  await expect(nativePoster).toHaveAttribute('poster', '/placeholders/hero-workspace.svg');
+  await expect(nativePoster).toHaveAttribute('poster', /\/_astro\/hero-workbench.*\.webp/);
   expect(await staticNative.page.evaluate(async (url) => {
     const image = new Image();
     image.src = url;
     await image.decode();
     return image.naturalWidth > 0 && image.naturalHeight > 0;
-  }, await nativePoster.getAttribute('poster')), 'Native fallback SVG poster decodes without site JavaScript').toBe(true);
+  }, await nativePoster.getAttribute('poster')), 'Native product screenshot poster decodes without site JavaScript').toBe(true);
   await expect(control(staticNative.page, 'controls')).toBeHidden();
   await expect(player(staticNative.page).locator('[data-native-video]')).toHaveAttribute('controls', '');
   await expect(player(staticNative.page).locator('[data-native-video]')).toBeVisible();
@@ -542,8 +541,11 @@ try {
   await build('image');
   const image = await open(preview);
   await expect(player(image.page)).toHaveCount(0);
-  await expect(image.page.locator('#workspace img')).toBeVisible();
-  await assertPlaceholder(image.page.locator('#workspace [data-media-placeholder]'), { variant: 'hero', aspect: '8 / 5' });
+  const heroImage = image.page.locator('#workspace img');
+  await expect(heroImage).toBeVisible();
+  await expect(heroImage).toHaveAttribute('alt', fixture.hero.previewAlt);
+  await expect(image.page.locator('#workspace picture source').first()).toHaveAttribute('srcset', /hero-workbench/);
+  await expect.poll(() => heroImage.evaluate((element) => element.complete && element.naturalWidth > 0)).toBe(true);
   await expect(image.page.locator('#workspace video, #workspace iframe, #workspace [data-player-controls]')).toHaveCount(0);
   expect(image.requests).toEqual([]);
   await image.context.close();

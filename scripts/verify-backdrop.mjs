@@ -59,8 +59,7 @@ try {
   // A nested player must not become the top overscroll surface.
   await center(page, '[data-video-player]');
   const playerColor = await page.locator('[data-video-player]').evaluate((element) => {
-    const placeholder = element.closest('[data-placeholder-poster]:not([data-video-frame])')?.querySelector('[data-media-placeholder]');
-    return getComputedStyle(placeholder ?? element).backgroundColor;
+    return getComputedStyle(element).backgroundColor;
   });
   await expect(page.locator('html')).toHaveCSS('background-color', playerColor);
   await page.mouse.move(720, 450);

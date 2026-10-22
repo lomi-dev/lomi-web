@@ -28,17 +28,18 @@ The page includes:
   blocked until permission and a `/cookies/` information page. See
   [consent behavior and verification](docs/cookies.md).
 - An inline video player aligned with the feature gallery, with custom
-  controls and a local placeholder before external media loads.
-- An asymmetric feature gallery with six animated workspace previews and a
+  controls and the app screenshot as its poster before external media loads.
+- An asymmetric feature gallery with six animated GIFs captured from the
+  genuine Lomi UI, static WebP posters, and a
   native media dialog, including feature navigation, keyboard support, and
   readable fallbacks.
 - A dark horizontal roadmap with a lime axis, alternating milestones, and
   native scroll progress. Small windows and reduced motion use a vertical list.
-- A pale workspace outline in the hero, with project files, an editor and
-  terminal panes. Feature cards/dialogs demonstrate each tool with matching
-  illustrations; Download has its own workspace overview, while Devlog and
-  Remote use a centered Lomi wordmark. Uploaded CMS media replaces these
-  placeholders.
+- A current screenshot of the Lomi app in the hero, with project files, an
+  editor and terminal panes. Feature cards/dialogs show matching animated
+  captures from the app; Download has its own workspace overview, while
+  Devlog and Remote use a centered Lomi wordmark. Uploaded CMS media replaces
+  the hero screenshot.
 - A newsletter invitation above the footer, with a paper signup card in a lime
   envelope and a direct Newsletter link in desktop and mobile navigation.
 - A lime footer that fills exactly one viewport in both dimensions.

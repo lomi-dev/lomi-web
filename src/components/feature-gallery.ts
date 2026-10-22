@@ -60,20 +60,12 @@ export function initFeatureGallery(root: HTMLElement) {
 
   function outgoingLayer(source: HTMLElement) {
     const layer = source.cloneNode(true) as HTMLElement;
-    // Preserve the exact preview frame while the whole outgoing slide moves.
-    // A cloned CSS timeline would otherwise restart behind the swipe animation.
-    const sourceFrames = source.querySelectorAll<SVGElement>('[data-simulation-motion]');
-    layer.querySelectorAll<SVGElement>('[data-simulation-motion]').forEach((frame, index) => {
-      const original = sourceFrames[index];
-      if (!original) return;
-      const style = getComputedStyle(original);
-      frame.style.animation = 'none';
-      frame.style.transform = style.transform;
-      frame.style.transformOrigin = style.transformOrigin;
-      frame.style.transformBox = style.transformBox;
-      frame.style.opacity = style.opacity;
-      frame.style.clipPath = style.clipPath;
-    });
+    // The outgoing slide is a brief static snapshot; never leave a GIF looping in the detached layer.
+    for (const scene of layer.querySelectorAll<HTMLElement>('[data-feature-preview]')) {
+      scene.removeAttribute('data-preview-running');
+      scene.removeAttribute('data-preview-ready');
+      scene.querySelector<HTMLImageElement>('[data-feature-gif]')?.removeAttribute('src');
+    }
     for (const element of [layer, ...layer.querySelectorAll<HTMLElement>('*')]) {
       element.removeAttribute('data-preview-running');
       for (const attribute of Array.from(element.attributes)) {

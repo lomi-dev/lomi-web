@@ -6,14 +6,14 @@ Archived image placeholders from [Placehold](https://placehold.co/):
 
 The website no longer renders these numbered images. Current fallbacks use
 `src/components/MediaPlaceholder.astro`: a pale frame, thin border and 16px
-corners. The hero variant outlines a Lomi workspace. Features and dialogs use
-`FeatureSimulation.astro` for six animated workspace closeups. Download has a
-dedicated workspace overview; Devlog and Remote use a centered faint Lomi
-wordmark, or the uploaded CMS brand logo.
+corners. The hero and Download use a current app screenshot. Features and
+dialogs use six genuine animated UI captures and matching static posters.
+Devlog and Remote use a centered faint Lomi wordmark, or the uploaded CMS
+brand logo.
 
-The workspace outline, built-in wordmark and native video posters are local,
-code-native SVGs in `public/placeholders/` and make no external requests.
-Real uploaded media takes precedence over placeholders.
+The built-in wordmark, archived workspace outline, and generic native video
+poster are local SVGs in `public/placeholders/` and make no external requests.
+Real uploaded media takes precedence over the fallbacks.
 
 ```sh
 bun run build

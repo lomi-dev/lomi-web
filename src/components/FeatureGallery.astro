@@ -8,7 +8,7 @@ interface Props { content: Landing['features']; placeholderLogo?: MediaAsset | n
 const { content, placeholderLogo } = Astro.props;
 const mediaAlt = (item: Landing['features']['items'][number]) => item.alt || item.image?.alt || item.video?.alt || item.title;
 const count = content.items.length;
-const hasSimulations = content.items.some((item) => !item.image && !item.video);
+const hasPreviews = content.items.some((item) => !item.image && !item.video);
 // Explicit tabindex keeps native buttons in WebKit's sequential keyboard order.
 ---
 
@@ -17,7 +17,7 @@ const hasSimulations = content.items.some((item) => !item.image && !item.video);
     <div class="gallery-heading">
       <h2 id="features-title">{content.title}<span>{content.accent}</span></h2>
       <div class="gallery-intro"><p>{content.description}</p>
-        {hasSimulations && <button class="preview-toggle" type="button" tabindex="0" data-preview-toggle data-pause-label={content.controls.pausePreviewsLabel} data-resume-label={content.controls.resumePreviewsLabel} hidden>
+        {hasPreviews && <button class="preview-toggle" type="button" tabindex="0" data-preview-toggle data-pause-label={content.controls.pausePreviewsLabel} data-resume-label={content.controls.resumePreviewsLabel} hidden>
           <span data-preview-pause-icon><Icon name="pause" width={14} height={14} /></span><span data-preview-play-icon hidden><Icon name="play" width={14} height={14} /></span><span data-preview-label>{content.controls.pausePreviewsLabel}</span>
         </button>}
       </div>
@@ -39,14 +39,14 @@ const hasSimulations = content.items.some((item) => !item.image && !item.video);
 
   <dialog id="feature-dialog" class="feature-dialog" aria-labelledby="feature-dialog-title-0" aria-describedby="feature-dialog-description-0" tabindex="-1">
     <div class="feature-dialog-chrome">
-      {hasSimulations && <button class="preview-toggle preview-toggle-modal" type="button" tabindex="0" data-preview-toggle data-pause-label={content.controls.pausePreviewsLabel} data-resume-label={content.controls.resumePreviewsLabel} aria-label={content.controls.pausePreviewsLabel} hidden><span data-preview-pause-icon><Icon name="pause" width={16} height={16} /></span><span data-preview-play-icon hidden><Icon name="play" width={16} height={16} /></span></button>}
+      {hasPreviews && <button class="preview-toggle preview-toggle-modal" type="button" tabindex="0" data-preview-toggle data-pause-label={content.controls.pausePreviewsLabel} data-resume-label={content.controls.resumePreviewsLabel} aria-label={content.controls.pausePreviewsLabel} hidden><span data-preview-pause-icon><Icon name="pause" width={16} height={16} /></span><span data-preview-play-icon hidden><Icon name="play" width={16} height={16} /></span></button>}
       <button class="feature-modal-close" type="button" tabindex="0" data-feature-close aria-label={content.controls.closeLabel}><Icon name="close" width={20} height={20} /></button>
     </div>
     <div class="feature-modal-panel" data-feature-panel>
       <div class="feature-slides" data-feature-pages>
         {content.items.map((item, index) => <article class="feature-slide" data-feature-slide id={`feature-slide-${index}`} hidden={index !== 0}>
           <div class="feature-modal-media" data-feature-modal-media>
-            <ContentMedia image={item.image} video={item.video} placeholderLogo={placeholderLogo} placeholderFeature={item.icon} alt={mediaAlt(item)} widths={[640, 960, 1440, 1920]} sizes="(min-width: 1600px) 960px, (min-width: 900px) 65vw, 92vw" loading="eager" />
+            <ContentMedia image={item.image} video={item.video} placeholderLogo={placeholderLogo} placeholderFeature={item.icon} alt={mediaAlt(item)} widths={[640, 960, 1440, 1920]} sizes="(min-width: 1600px) 960px, (min-width: 900px) 65vw, 92vw" loading={index === 0 ? 'eager' : 'lazy'} />
           </div>
           <div class="feature-modal-copy" data-feature-copy tabindex="0" role="region" aria-labelledby={`feature-dialog-title-${index}`}>
             <p class="feature-modal-detail">{item.detail}</p>
@@ -94,7 +94,7 @@ const hasSimulations = content.items.some((item) => !item.image && !item.video);
   .gallery-media { position: relative; isolation: isolate; flex-shrink: 0; aspect-ratio: 16 / 10; overflow: hidden; border-radius: 16px; background: #080a08; }
   .gallery-media::after { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; border: 1px solid rgb(0 0 0 / 12%); border-radius: inherit; }
   .gallery-media :global(picture), .gallery-media :global(video) { position: absolute; display: block; inset: 0; }
-  .gallery-media :global([data-feature-simulation]) { position: absolute; inset: 0; }
+  .gallery-media :global([data-feature-preview]) { position: absolute; inset: 0; }
   .gallery-media:has([data-media-placeholder]) { background: transparent; }
   .gallery-media:has([data-media-placeholder])::after { display: none; }
   .gallery-media :global([data-media-placeholder]) { display: grid; }
@@ -121,7 +121,7 @@ const hasSimulations = content.items.some((item) => !item.image && !item.video);
   .feature-slide { display: grid; grid-area: 1 / 1 / -1 / -1; grid-template-columns: subgrid; grid-template-rows: subgrid; min-width: 0; min-height: 0; background: var(--color-paper); }
   .feature-slide[hidden] { display: none; }
   .feature-modal-media { position: relative; display: grid; align-items: center; grid-column: 1; grid-row: 1 / span 2; min-width: 0; min-height: 0; overflow: hidden; background: #000; border-right: 1px solid #e2e8da; }
-  .feature-modal-media :global(picture), .feature-modal-media :global(video) { display: block; width: 100%; height: 100%; min-height: 0; }
+  .feature-modal-media :global(picture), .feature-modal-media :global(video), .feature-modal-media :global([data-feature-preview]) { display: block; width: 100%; height: 100%; min-height: 0; }
   .feature-modal-media:has([data-media-placeholder]) { background: transparent; }
   .feature-modal-media :global([data-media-placeholder]) { display: grid; }
   .feature-modal-media :global(img) { display: block; width: 100%; height: 100%; object-fit: contain; }

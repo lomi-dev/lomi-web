@@ -431,10 +431,12 @@ try {
   await expect(root).toHaveCSS('background-color', 'rgb(247, 248, 243)');
   expect(await root.getAttribute('data-scroll-surface')).not.toBeNull();
   await expect(root.locator('[data-feature-open]')).toHaveCount(6);
-  await expect(root.locator('[data-feature-card-media] [data-feature-simulation] > svg')).toHaveCount(6);
+  await expect(root.locator('[data-feature-card-media] [data-feature-preview]')).toHaveCount(6);
   await expect(root.locator('video, iframe')).toHaveCount(0);
   for (const image of await root.locator('img').all()) {
-    expect(new URL(await image.getAttribute('src'), url).origin, 'Feature imagery stays local').toBe(new URL(url).origin);
+    for (const source of [await image.getAttribute('src'), await image.getAttribute('data-feature-gif-src')].filter(Boolean)) {
+      expect(new URL(source, url).origin, 'Feature imagery stays local').toBe(new URL(url).origin);
+    }
   }
   await verifyOriginMotion(page, 1);
   await page.setViewportSize({ width: 390, height: 844 });
@@ -692,7 +694,7 @@ try {
     await staticRun.context.close();
   }
   expect(errors, 'No runtime errors in feature scenarios').toEqual([]);
-  console.log(`Passed (${browserType.name()}): whole-dialog card-origin entry/exit and interrupted opening on desktop/mobile, all feature cards, accessible names/descriptions, wrapping arrows/dots/keyboard, directional whole-feature swipes with image/copy/navigation in lockstep, bounded latest-intent queue, reverse/resize/reduced-motion/close cleanup, rapid input and reopen, native focus containment/Escape/backdrop, focus and scroll restoration, resize/mobile/tablet/short desktop, reduced motion/live cancellation, CMS 1/12 items and long copy, no-JS fallback, local simulations, no overflow and axe.`);
+  console.log(`Passed (${browserType.name()}): whole-dialog card-origin entry/exit and interrupted opening on desktop/mobile, all feature cards, accessible names/descriptions, wrapping arrows/dots/keyboard, directional whole-feature swipes with image/copy/navigation in lockstep, bounded latest-intent queue, reverse/resize/reduced-motion/close cleanup, rapid input and reopen, native focus containment/Escape/backdrop, focus and scroll restoration, resize/mobile/tablet/short desktop, reduced motion/live cancellation, CMS 1/12 items and long copy, no-JS fallback, local app captures, no overflow and axe.`);
 } finally {
   await browser.close();
 }

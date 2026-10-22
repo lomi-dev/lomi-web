@@ -22,8 +22,8 @@ The social preview is a browser capture of the page with this logo.
 Final workspace source: `src/assets/clouds.png` (1536 × 1024).
 
 The original image and CloudBackdrop component are retained as unused assets.
-The current hero uses a white composition with one product placeholder rather than the
-previous photographic panorama. The source image remains unchanged.
+The current hero uses a white composition with the real app capture rather
+than the previous photographic panorama. The source image remains unchanged.
 
 Created using the built-in `image_gen` tool. The two user-supplied landing-page images were visual direction references, not copied into the website. Astro exports responsive AVIF and WebP versions with PNG fallbacks at build time.
 
@@ -33,31 +33,37 @@ Exact generation prompt:
 
 ## Application screenshots
 
-Missing product media uses a pale background, thin border and 16px corners.
-`MediaPlaceholder.astro` supplies the hero, Download and brand variants.
-The hero shows an outline of Lomi's workspace, with a project explorer,
-editor, development terminal and two
-coding-agent terminals. Feature cards and dialogs use six animated SVG
-closeups of the workspace; see [feature previews](feature-gallery.md).
-Download has a dedicated overview with files, an editor, browser, terminal and
-Git changes inside its existing showcase box. Devlog and Remote use a
-centered faint Lomi wordmark; an uploaded site logo supplies their
-placeholder branding. Uploaded CMS media always
-takes precedence. Placeholder images are decorative and do not repeat
-content labels to screen readers.
+When the hero has no uploaded CMS poster, it shows
+`src/assets/product/hero-workbench.png`: a 2880 × 1800 capture of the current
+Lomi React/Vite interface with the Explorer, editor, and terminal visible in a
+single workspace. The capture was rendered from the app in Chromium at a 1440 ×
+900 CSS viewport and 2× pixel density. It uses the app's real interface and
+editor source; the native bridge and terminal output are test fixtures. Astro
+generates responsive AVIF/WebP variants, including a native-video poster.
+Uploaded CMS media takes precedence.
+
+When Download has no uploaded screenshot, it uses the same genuine app capture
+inside its existing showcase box. The contextual image alt text describes the
+Explorer, editor, and terminal visible in the workspace. Other missing product
+media uses a pale background, thin border, and 16px corners. Feature cards and
+dialogs use six animated GIF captures of the real Lomi workspace with static
+WebP posters; see [feature previews](feature-gallery.md). Devlog and Remote
+use a centered faint Lomi wordmark; an uploaded site logo supplies their
+placeholder branding. Wordmark fallbacks are decorative, while app captures
+have descriptive alt text for their workspace interfaces.
 SVG assets remain sharp without responsive raster exports.
 
 `public/placeholders/lomi-mark.svg` contains the existing Lomi logo geometry.
-`public/placeholders/lomi-poster.svg` supplies the same default design for
-generic native video posters. `public/placeholders/hero-workspace.svg` supplies
-the hero outline in image mode and while video loads, including the native
-no-JavaScript poster fallback. These are local, code-native SVGs with no
-external requests. Old numbered PNGs remain archived
-in `src/assets/placeholders/` but are no longer imported by rendered pages.
+`public/placeholders/lomi-poster.svg` supplies the default design for generic
+native video posters. The old `hero-workspace.svg` remains in the public asset
+directory for compatibility but the hero now uses the real app capture instead.
+The generic poster remains a local, code-native SVG with no external requests.
+Old numbered PNGs remain archived in `src/assets/placeholders/` but are no
+longer imported by rendered pages.
 
 `HeroVideo.astro` embeds the selected YouTube video `dQw4w9WgXcQ` directly in
 this frame after external-media permission, including remembered permission.
-The placeholder or uploaded poster remains until the first playback signal.
+The app capture or uploaded poster remains until the first playback signal.
 Custom controls sit inside the frame; see [player behavior](hero-player.md).
 The [official YouTube IFrame API](https://developers.google.com/youtube/iframe_api_reference)
 mutes before automatic playback, which begins only when half the player is in
@@ -68,13 +74,14 @@ the preview; media permission uses the existing Cookie settings.
 The previous mobile placeholder and unused dialog component remain archived.
 The native `browser.png` capture remains a local asset for future sections.
 
-Unchanged desktop captures copied from `../lomi/docs/images/` remain in
-`src/assets/product/`: `workbench.png` (project explorer, TypeScript editor and
-terminal), `source-control.png` (Git history and diff), and `browser.png`.
-They are 2880 × 1800 and remain available for future approved replacements.
+Unchanged desktop captures copied from `../lomi/docs/images/` remain archived
+in `src/assets/product/`: `workbench.png` (project explorer, TypeScript editor
+and terminal), `source-control.png` (Git history and diff), and `browser.png`.
+They remain available for future approved sections.
 
-Download uses `public/placeholders/download-workspace.svg`; Remote uses the
-shared brand placeholder until its screenshot is uploaded in Payload.
+`public/placeholders/download-workspace.svg` remains archived for compatibility.
+Remote uses the shared brand placeholder until its screenshot is uploaded in
+Payload.
 The archived desktop captures are available for a future
 approved upload and are no longer used as automatic page fallbacks.
 
@@ -92,8 +99,8 @@ declares [CC0-1.0](https://github.com/simple-icons/simple-icons/blob/develop/LIC
 The icons are served with the site; no browser request to Iconify is needed.
 
 The older root-level `workbench.png`, `workbench-light.png`, and
-`source-control.png` assets remain unused. No interface was reconstructed or
-generated. Review the captures against the final launch release.
+`source-control.png` assets remain unused. No interface was reconstructed for
+the hero; its fallback is a browser capture of the current app UI.
 
 `public/social-card.png` is a 1200 × 630 browser capture of the current hero
 with centered copy, terminal-character waves, and fixed navigation,

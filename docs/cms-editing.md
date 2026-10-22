@@ -66,15 +66,15 @@ video. **Poster** supplies the image and the YouTube loading state. **Video URL*
 accepts an HTTPS YouTube watch, share or embed URL. The player still requires
 the visitor's external-media permission; changing content does not bypass it.
 An uploaded video uses the same custom controls and does not require YouTube.
-If the hero **Poster** is empty, a local workspace outline shows the intended
-composition of the product preview: project files, an editor and terminal
-panes. Selecting a poster replaces this illustration in image and video modes.
-Feature cards and dialogs use animated workspace illustrations when both
-media fields are empty. **Preview scene** selects which function to demonstrate
+If the hero **Poster** is empty, the current Lomi app screenshot shows project
+files, an editor and terminal panes. Selecting a poster replaces this capture
+in image and video modes.
+Feature cards and dialogs use animated captures of the matching Lomi UI when
+both media fields are empty. **Preview scene** selects which function to show
 and stays with the feature when you reorder it. **Features → Controls** contains
-the pause/resume labels. Uploaded images and videos replace these illustrations.
-Download uses a dedicated workspace overview while its **Screenshot → Image**
-field is empty. Selecting an image replaces the illustration inside the same
+the pause/resume labels. Uploaded images and videos replace these captures.
+Download shows the current Lomi app capture while its **Screenshot → Image**
+field is empty. Selecting an image replaces the capture inside the same
 showcase box. Devlog thumbnails and Remote use a pale placeholder with a
 centered brand logo. The uploaded site logo replaces the built-in Lomi
 wordmark there. Native video poster fallbacks use local SVGs until the

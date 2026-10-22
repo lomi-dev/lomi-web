@@ -237,7 +237,7 @@ try {
       await expect(page.locator('.roadmap-progress-caption').first()).toContainText('CMS progress');
       await assertMedia(page, '[data-feature-card] img', fixture.features.items[0].alt);
       await expect(page.locator('[data-preview-toggle]')).toHaveCount(2);
-      await expect(page.locator('[data-feature-card]').nth(1).locator('[data-feature-simulation]')).toHaveAttribute('data-feature-simulation', fixture.features.items[1].icon);
+      await expect(page.locator('[data-feature-card]').nth(1).locator('[data-feature-preview]')).toHaveAttribute('data-feature-preview', fixture.features.items[1].icon);
       for (const toggle of await page.locator('[data-preview-toggle]').all()) {
         await expect(toggle).toHaveAttribute('data-pause-label', fixture.features.controls.pausePreviewsLabel);
         await expect(toggle).toHaveAttribute('data-resume-label', fixture.features.controls.resumePreviewsLabel);
@@ -251,8 +251,8 @@ try {
       await expect(page.locator('#feature-dialog')).not.toBeVisible();
       await page.locator('[data-feature-open="1"]').click();
       await expect(page.locator('#feature-dialog')).toBeVisible();
-      const authoredSimulation = page.locator('#feature-dialog [data-feature-slide]').nth(1).locator('[data-feature-simulation]');
-      await expect(authoredSimulation).toHaveAttribute('data-feature-simulation', fixture.features.items[1].icon);
+      const authoredSimulation = page.locator('#feature-dialog [data-feature-slide]').nth(1).locator('[data-feature-preview]');
+      await expect(authoredSimulation).toHaveAttribute('data-feature-preview', fixture.features.items[1].icon);
       await expect(page.locator('#feature-dialog [data-preview-toggle]')).toBeVisible();
       await assertPlaceholder(authoredSimulation, { variant: 'feature', aspect: '8 / 5' });
       await page.getByRole('button', { name: fixture.features.controls.closeLabel, exact: true }).click();
@@ -374,7 +374,10 @@ try {
   await expect(second.locator('#product-menu, #mobile-product, .header-action, .mobile-download')).toHaveCount(0);
   await assertPlaceholder(second.locator('.remote-showcase [data-media-placeholder]'), { logo: `${cmsOrigin}${mediaPath}`, aspect: '8 / 5' });
   await second.goto(preview + '/download/', { waitUntil: 'networkidle' });
-  await assertPlaceholder(second.locator('.product-showcase [data-media-placeholder]'), { variant: 'download', aspect: '8 / 5' });
+  const downloadCapture = second.locator('.product-showcase img');
+  await expect(downloadCapture).toBeVisible();
+  await expect(downloadCapture).toHaveAttribute('alt', fixture.pages.download.screenshot.alt);
+  await expect.poll(() => downloadCapture.evaluate((image) => image.complete && image.naturalWidth > 0)).toBe(true);
   await second.goto(preview + '/cookies/', { waitUntil: 'networkidle' });
   await expect(second.locator('.cookies-page dl')).toContainText('CMS storage table sentinel');
   await second.close();

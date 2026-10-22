@@ -33,7 +33,7 @@
     "secondaryLabel": "Meet the workspace",
     "note": "Free & open source · macOS, Windows & Linux",
     "previewCaption": "The lomi workspace: project files, an editor and a running terminal.",
-    "previewAlt": "Lomi with a project explorer, a TypeScript file in the editor, and a native terminal showing passing tests."
+    "previewAlt": "Lomi's workspace with its project explorer, TypeScript editor and integrated terminal."
   },
   "workflow": {
     "eyebrow": "Inside the workspace",

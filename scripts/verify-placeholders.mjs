@@ -7,14 +7,16 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 // Shared by the static-site check and the existing isolated CMS fixture builds.
 export async function assertPlaceholder(placeholder, { logo = '/placeholders/lomi-mark.svg', aspect, variant = 'brand' } = {}) {
-  await expect(placeholder).toHaveAttribute('aria-hidden', 'true');
-  const image = placeholder.locator(variant === 'feature' ? ':scope > svg' : 'img');
+  if (variant !== 'feature') await expect(placeholder).toHaveAttribute('aria-hidden', 'true');
+  const image = placeholder.locator(variant === 'feature' ? ':scope > img[data-feature-poster]' : 'img');
   await expect(image).toHaveCount(1);
   if (variant === 'feature') {
     await expect(placeholder).toHaveAttribute('data-placeholder-variant', 'feature');
-    await expect(placeholder).toHaveAttribute('data-feature-simulation', /^(terminal|panels|code|expand|git|spark)$/);
-    await expect(image).toHaveAttribute('viewBox', '0 0 960 600');
-    await expect(placeholder.locator('img, video')).toHaveCount(0);
+    await expect(placeholder).toHaveAttribute('data-feature-preview', /^(terminal|panels|code|expand|git|spark)$/);
+    await expect(image).toHaveAttribute('alt', /.+/);
+    await expect(placeholder.locator(':scope > img[data-feature-gif]')).toHaveAttribute('data-feature-gif-src', /\.gif(?:\?|$)/);
+    await expect(placeholder.locator(':scope > img')).toHaveCount(2);
+    await expect(placeholder.locator('video, svg')).toHaveCount(0);
   } else {
     await expect(image).toHaveAttribute('alt', '');
     const illustration = { hero: '/placeholders/hero-workspace.svg', download: '/placeholders/download-workspace.svg' }[variant];
@@ -23,7 +25,7 @@ export async function assertPlaceholder(placeholder, { logo = '/placeholders/lom
     else await expect(placeholder).not.toHaveAttribute('data-placeholder-variant', /^(hero|download|feature)$/);
   }
   await placeholder.scrollIntoViewIfNeeded();
-  if (variant !== 'feature') await expect.poll(() => image.evaluate((element) => element.complete && element.naturalWidth > 0)).toBe(true);
+  await expect.poll(() => image.evaluate((element) => element.complete && element.naturalWidth > 0)).toBe(true);
   await expect(placeholder).toHaveCSS('border-radius', '16px');
   if (aspect) await expect(placeholder).toHaveCSS('aspect-ratio', aspect);
   const geometry = await placeholder.evaluate((element) => {
@@ -86,8 +88,15 @@ async function verify() {
           await page.goto(origin + route, { waitUntil: 'networkidle' });
           assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), width, `${route} has no overflow at ${width}px`);
           const placeholders = page.locator('[data-media-placeholder]:visible');
-          await expect(placeholders.first(), `${route} exposes a branded fallback`).toBeVisible();
-          await expect(page.locator('[data-placeholder-variant="hero"]')).toHaveCount(route === '/' ? 1 : 0);
+          if (route === '/download/') {
+            const capture = page.locator('.product-showcase img');
+            await expect(capture, 'Download shows the real app capture').toBeVisible();
+            await expect(capture).toHaveAttribute('alt', /desktop app/i);
+            await expect.poll(() => capture.evaluate((image) => image.complete && image.naturalWidth > 0)).toBe(true);
+          } else {
+            await expect(placeholders.first(), `${route} exposes a branded fallback`).toBeVisible();
+          }
+          await expect(page.locator('[data-placeholder-variant="hero"]')).toHaveCount(0);
           for (const placeholder of await placeholders.all()) {
             const variant = await placeholder.evaluate((element) => element.closest('#workspace') ? 'hero' : element.closest('[data-feature-card], [data-feature-slide]') ? 'feature' : element.closest('.product-showcase') ? 'download' : 'brand');
             const geometry = await assertPlaceholder(placeholder, { aspect: route === '/devlog/' ? '16 / 9' : '8 / 5', variant });
@@ -99,11 +108,11 @@ async function verify() {
           const name = route === '/' ? 'hero' : route.slice(1, -1);
           if (javaScriptEnabled) {
             await page.screenshot({ path: `artifacts/placeholders-${name}-${width}.png`, fullPage: true });
-            if (route === '/') await page.locator('.hero').screenshot({ path: `artifacts/hero-outline-${width}.png` });
+            if (route === '/') await page.locator('.hero').screenshot({ path: `artifacts/hero-product-${width}.png` });
           }
           if (route === '/' && javaScriptEnabled && width === 1440) {
             for (const [name, selector, contrast] of [
-              ['hero', '[data-video-poster] [data-media-placeholder]', 'dark'],
+              ['hero', '[data-video-poster] img', 'light'],
               ['feature', '[data-feature-card] [data-media-placeholder]', 'dark'],
               ['roadmap', '#roadmap', 'light'],
             ]) {
@@ -137,7 +146,7 @@ async function verify() {
     await asset.goto(origin + '/placeholders/hero-workspace.svg');
     await asset.screenshot({ path: 'artifacts/hero-workspace-asset.png' });
     await asset.close();
-    console.log('Passed: contextual hero and Download illustrations, feature scenes and branded fallbacks; centered unclipped geometry, uniform background/border/radius/aspect, all feature cards and dialogs, four routes at 320/1440px with and without JavaScript; no legacy PNG media references or YouTube requests.');
+    console.log('Passed: current app capture in hero and Download; branded fallbacks; feature scenes; centered unclipped geometry, uniform background/border/radius/aspect, all feature cards and dialogs, four routes at 320/1440px with and without JavaScript; no legacy PNG media references or YouTube requests.');
   } finally { await browser.close(); await close(); }
 }
 
