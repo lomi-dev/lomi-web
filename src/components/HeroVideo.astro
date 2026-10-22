@@ -77,7 +77,7 @@ const copy = content.player;
   .video-mount :global(iframe), .video-mount :global(video) { display: block; width: 100%; height: 100%; border: 0; }
   .video-poster-play { display: none; position: absolute; inset: 0; width: 48px; height: 48px; margin: auto; align-items: center; justify-content: center; border: 0; border-radius: 50%; background: var(--color-lime); color: var(--color-ink); }
   [data-player-ready] .video-poster-play { display: flex; }
-  .video-poster-play :global(svg) { margin-left: 3px; }
+  .video-poster-play :global(svg) { transform: translateX(-1px); }
   .video-loading { display: none; position: absolute; top: 50%; left: 50%; width: 30px; height: 30px; margin: -15px; border: 2px solid #ffffff40; border-top-color: var(--color-lime); border-radius: 50%; }
   [data-video-status='loading'] .video-loading { display: block; }
   [data-video-status='loading'] .video-poster-play { visibility: hidden; }
