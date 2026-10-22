@@ -1,0 +1,122 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import { activeLandingLinks } from '../data/navigation';
+import { loadLanding } from '../../content/load-landing';
+
+const content = await loadLanding(import.meta.env.CMS_URL);
+const footerContent = {
+  ...content.footer,
+  groups: content.footer.groups.map((group) => ({
+    ...group,
+    links: activeLandingLinks(group.links, content.layout).map((link) => ({
+      ...link,
+      href: link.href.startsWith('#') ? `/${link.href}` : link.href,
+    })),
+  })).filter((group) => group.links.length > 0),
+};
+---
+
+<Layout title="Privacy — lomi" description="What Lomi stores on your device, what it sends to other services, and what the lomi.dev website collects." website={content} themeColor={content.site.theme.paper} edgeColor="var(--color-lime)">
+  <Header content={content.navigation} site={content.site} layout={content.layout} theme="light" />
+  <main class="privacy-page" id="main" tabindex="-1" data-scroll-surface>
+    <article class="privacy-shell">
+      <header>
+        <h1>Privacy.</h1>
+        <p>Lomi is a local-first desktop workspace. Local use needs no account, and the app has no analytics or telemetry. Some optional features connect to other services; here is what they send and when.</p>
+        <p class="updated">Last updated · October 22, 2026</p>
+      </header>
+
+      <section aria-labelledby="privacy-short-version">
+        <h2 id="privacy-short-version">The short version</h2>
+        <ul>
+          <li>Local desktop use does not require a Lomi account. Account-backed features such as Remote are optional.</li>
+          <li>Workspace files, preferences and chat history stay on your device unless you choose to send or share them.</li>
+          <li>AI providers and CLI agents you configure receive the prompts, context and files you send through them. Their own privacy policies apply.</li>
+          <li>Lomi checks GitHub for app updates. The website loads YouTube only after you allow external media, and sends a newsletter signup only when you submit the form.</li>
+        </ul>
+      </section>
+
+      <section aria-labelledby="privacy-local-data">
+        <h2 id="privacy-local-data">What Lomi stores on your device</h2>
+        <ul>
+          <li>Preferences, workspace layout and session state so you can resume your work.</li>
+          <li>Chat history and other local app data used by the workspace.</li>
+          <li>API keys and remembered account sessions in your operating system's credential store when available. If it cannot save an account session, Lomi can keep it in memory until you quit.</li>
+          <li>Your project files in the locations you chose. Lomi does not upload them as part of local desktop use.</li>
+        </ul>
+        <p>Local CLI agents and plugins may keep their own files or history. Their behavior is controlled by those tools and their providers.</p>
+      </section>
+
+      <section aria-labelledby="privacy-network">
+        <h2 id="privacy-network">What the desktop app sends over the network</h2>
+        <p>Lomi connects to services when a feature needs them. Some checks, such as the automatic update check, can happen without a separate click each time.</p>
+        <ul>
+          <li><strong>AI chat:</strong> prompts, selected context and attachments go from your device to the provider configured for that connection. With a local model, requests go to the local endpoint you configured. Lomi does not proxy chat requests.</li>
+          <li><strong>CLI agents:</strong> agents you run in a terminal may contact their own services and send data according to their settings and policies.</li>
+          <li><strong>App updates:</strong> Lomi checks GitHub Releases after a workspace starts and when you request a manual check. It downloads an update only after you choose to install it.</li>
+          <li><strong>Git:</strong> fetch, push and other network operations use the remotes and credentials configured for your project.</li>
+          <li><strong>Browser previews:</strong> a preview connects to the URL you open. A local development server stays on your network; an internet URL connects your browser to that site.</li>
+        </ul>
+      </section>
+
+      <section aria-labelledby="privacy-account-remote">
+        <h2 id="privacy-account-remote">Optional account and Remote features</h2>
+        <p>Local work does not need an account. If you choose an account-backed Lomi feature, sign-in uses GitHub. Lomi's account service receives the profile details needed to create your account, such as your GitHub username, name and email, along with session and security information. GitHub processes the sign-in under its own privacy policy.</p>
+        <p>If you connect to Lomi Remote or share a workspace, the account and Remote services process the information needed to authorize access and provide that feature, including workspace and terminal state you choose to share. Anything shown in a terminal may contain project or personal information, so review it before sharing. Account deletion removes your profile, provider tokens and linked access; security audit events may remain without being associated with your account.</p>
+      </section>
+
+      <section aria-labelledby="privacy-website">
+        <h2 id="privacy-website">What the lomi.dev website stores and sends</h2>
+        <ul>
+          <li><strong>Privacy choice:</strong> the site stores your optional-media choice in this browser's local storage for up to 180 days. It is not an HTTP cookie and is not sent to our server.</li>
+          <li><strong>YouTube:</strong> embedded videos stay off unless you allow external media. If allowed, your browser connects to YouTube, which may receive browser and device information.</li>
+          <li><strong>Downloads:</strong> the download page requests public release information from GitHub.</li>
+          <li><strong>Newsletter:</strong> when you submit the signup form, the email address you provide is sent to the configured newsletter service. The service processes the request and may receive standard connection information.</li>
+          <li><strong>Website hosting:</strong> the host serving lomi.dev may process standard request data such as IP address, browser user agent and requested path to deliver and protect the site.</li>
+        </ul>
+        <p>We do not add separate analytics, advertising cookies or third-party tracking scripts to the website. YouTube may serve ads in its player. Fonts, icons and page images are served with the site. External links take you to services with their own privacy practices. You can review <a href="/cookies/">cookie and media settings</a> or change your choice using Cookie settings in the footer.</p>
+      </section>
+
+      <section aria-labelledby="privacy-providers">
+        <h2 id="privacy-providers">Third-party providers</h2>
+        <p>When you send a prompt or run an agent, the provider you chose receives and processes that data. Providers may retain it under their own terms. Lomi cannot see or control their retention. For data that must stay on your device, use a local model and avoid tools that send project content to external services.</p>
+      </section>
+
+      <section aria-labelledby="privacy-changes">
+        <h2 id="privacy-changes">Changes</h2>
+        <p>If this policy changes, we will update the date at the top of this page. Material changes may also appear in the <a href="https://github.com/lomi-dev/lomi/releases">release notes</a>.</p>
+      </section>
+
+      <section aria-labelledby="privacy-contact">
+        <h2 id="privacy-contact">Contact</h2>
+        <p>Privacy questions: <a href="mailto:admin@lomi.dev">admin@lomi.dev</a>. Source code: <a href="https://github.com/lomi-dev/lomi">github.com/lomi-dev/lomi</a>.</p>
+      </section>
+    </article>
+  </main>
+  <Footer content={footerContent} site={content.site} layout={content.layout} />
+</Layout>
+
+<style>
+  .privacy-page { --scroll-surface-color: var(--color-paper); padding: 132px 0 80px; color: var(--color-ink); background: var(--color-paper); }
+  .privacy-shell { width: min(760px, calc(100% - 80px)); margin-inline: auto; }
+  h1 { margin: 0; font-size: clamp(46px, 5vw, 64px); font-weight: 500; line-height: 1.06; letter-spacing: -.055em; text-wrap: balance; }
+  header > p { margin-top: 20px; color: var(--color-text-secondary); font-size: 17px; line-height: 1.65; }
+  .updated { font-size: 12px; }
+  section { margin-top: 40px; padding-top: 24px; border-top: 1px solid #dfe4d8; }
+  h2 { font-size: 24px; font-weight: 500; line-height: 1.25; letter-spacing: -.035em; }
+  section p, section li { color: var(--color-text-secondary); font-size: 14px; line-height: 1.8; }
+  section p { margin-top: 16px; }
+  section ul { display: grid; gap: 10px; margin: 16px 0 0; padding-left: 22px; }
+  section li { padding-left: 3px; }
+  section p a { color: #263b15; text-decoration: underline; text-underline-offset: 3px; }
+  section strong { color: var(--color-ink); font-weight: 550; }
+  @media (max-width: 767px) {
+    .privacy-page { padding: 112px 0 48px; }
+    .privacy-shell { width: calc(100% - 40px); }
+    h1 { font-size: clamp(40px, 9vw, 56px); }
+    header > p { font-size: 15px; }
+    section { margin-top: 32px; }
+  }
+</style>

@@ -1,0 +1,103 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import { activeLandingLinks } from '../data/navigation';
+import { loadLanding } from '../../content/load-landing';
+
+const content = await loadLanding(import.meta.env.CMS_URL);
+const footerContent = {
+  ...content.footer,
+  groups: content.footer.groups.map((group) => ({
+    ...group,
+    links: activeLandingLinks(group.links, content.layout).map((link) => ({
+      ...link,
+      href: link.href.startsWith('#') ? `/${link.href}` : link.href,
+    })),
+  })).filter((group) => group.links.length > 0),
+};
+---
+
+<Layout title="Security — lomi" description="How to report a security issue in Lomi and what to know about its security boundaries." website={content} themeColor={content.site.theme.paper} edgeColor="var(--color-lime)">
+  <Header content={content.navigation} site={content.site} layout={content.layout} theme="light" />
+  <main class="security-page" id="main" tabindex="-1" data-scroll-surface>
+    <article class="security-shell">
+      <header>
+        <h1>Security.</h1>
+        <p>Lomi opens terminals, works with local files and can send data to AI providers or Remote services you choose. If you find a security issue, please report it privately before sharing it publicly.</p>
+        <p class="updated">Current release · <a href="https://github.com/lomi-dev/lomi/releases">GitHub Releases</a></p>
+      </header>
+
+      <section aria-labelledby="security-reporting">
+        <h2 id="security-reporting">Reporting a security issue</h2>
+        <p>Email <a href="mailto:admin@lomi.dev?subject=Security%20report">admin@lomi.dev</a> with “Security report” in the subject. Please include:</p>
+        <ul>
+          <li>A short description of the issue and what an attacker could do.</li>
+          <li>Steps to reproduce, including a minimal proof of concept if you have one.</li>
+          <li>The affected Lomi version, operating system and architecture.</li>
+        </ul>
+        <p>Use test data and accounts you control. Do not include API keys, passwords, private project files or other people's data. Please do not open a public issue until we have had a chance to investigate.</p>
+      </section>
+
+      <section aria-labelledby="security-scope">
+        <h2 id="security-scope">What to report</h2>
+        <p>Reports are most useful when they show a security impact in Lomi or a Lomi service, for example:</p>
+        <ul>
+          <li>Unauthorized access to files, credentials, terminals, accounts or shared workspaces.</li>
+          <li>A way for untrusted content to cross the desktop app's permission boundaries.</li>
+          <li>Issues in account sign-in, Remote access, the update process or release artifacts.</li>
+          <li>A vulnerability on lomi.dev that could expose data or compromise downloads.</li>
+        </ul>
+        <p>For an issue in an upstream library or provider, please also report it to that project. Let us know if Lomi's integration makes the impact worse.</p>
+      </section>
+
+      <section aria-labelledby="security-versions">
+        <h2 id="security-versions">Versions and fixes</h2>
+        <p>Use the <a href="https://github.com/lomi-dev/lomi/releases">latest release</a> when reproducing an issue. Security fixes are announced in release notes. We do not promise a fixed support window or backports for older versions.</p>
+      </section>
+
+      <section aria-labelledby="security-practices">
+        <h2 id="security-practices">Security in Lomi</h2>
+        <ul>
+          <li>API keys and remembered account sessions use your operating system's credential store when it is available.</li>
+          <li>In-app update packages are verified before installation. The release process also runs security regression checks across supported desktop platforms.</li>
+          <li>Local workspace data stays on your device during local use. AI, account and Remote features can send data to the services needed to provide them; see the <a href="/privacy/">privacy policy</a>.</li>
+        </ul>
+      </section>
+
+      <section aria-labelledby="security-boundaries">
+        <h2 id="security-boundaries">Security boundaries</h2>
+        <p>Lomi's terminal runs commands with your operating system user permissions. Programs, agents and plugins may read or change anything those permissions allow. Review commands, plugin sources and requested access before you use them.</p>
+        <p>AI providers receive the prompts, context and files you send to them. A local model endpoint is trusted by your machine, so connect only to endpoints you control or trust. Lomi does not sandbox an arbitrary command or make third-party tools safe.</p>
+      </section>
+
+      <section aria-labelledby="security-contact">
+        <h2 id="security-contact">Contact</h2>
+        <p>For a private report, email <a href="mailto:admin@lomi.dev?subject=Security%20report">admin@lomi.dev</a>. Source code and releases are available on <a href="https://github.com/lomi-dev/lomi">GitHub</a>.</p>
+      </section>
+    </article>
+  </main>
+  <Footer content={footerContent} site={content.site} layout={content.layout} />
+</Layout>
+
+<style>
+  .security-page { --scroll-surface-color: var(--color-paper); padding: 132px 0 80px; color: var(--color-ink); background: var(--color-paper); }
+  .security-shell { width: min(760px, calc(100% - 80px)); margin-inline: auto; }
+  h1 { margin: 0; font-size: clamp(46px, 5vw, 64px); font-weight: 500; line-height: 1.06; letter-spacing: -.055em; text-wrap: balance; }
+  header > p { margin-top: 20px; color: var(--color-text-secondary); font-size: 17px; line-height: 1.65; }
+  .updated { font-size: 12px; }
+  section { margin-top: 40px; padding-top: 24px; border-top: 1px solid #dfe4d8; }
+  h2 { font-size: 24px; font-weight: 500; line-height: 1.25; letter-spacing: -.035em; }
+  section p, section li { color: var(--color-text-secondary); font-size: 14px; line-height: 1.8; }
+  section p { margin-top: 16px; }
+  section ul { display: grid; gap: 10px; margin: 16px 0 0; padding-left: 22px; }
+  section li { padding-left: 3px; }
+  section p a { color: #263b15; text-decoration: underline; text-underline-offset: 3px; }
+  @media (max-width: 767px) {
+    .security-page { padding: 112px 0 48px; }
+    .security-shell { width: calc(100% - 40px); }
+    h1 { font-size: clamp(40px, 9vw, 56px); }
+    header > p { font-size: 15px; }
+    section { margin-top: 32px; }
+  }
+</style>

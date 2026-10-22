@@ -10,13 +10,23 @@ import type { Landing } from '../../content/landing-schema';
 interface Props { content: Landing['footer']; site?: Landing['site']; layout?: Landing['layout'] }
 const { content, site = editorDefaults.site, layout = editorDefaults.layout } = Astro.props;
 const brandLogo = resolveMedia(site.brand.logo, import.meta.env.CMS_URL);
-const groups = content.groups.map((group) => ({
-  ...group,
-  links: activeLandingLinks(group.links, layout).map((link) => ({
-    ...link,
-    label: link.label.trim().toLowerCase() === 'lomi remote' ? 'Remote' : link.label,
-  })),
-})).filter((group) => group.links.length);
+const groups = [
+  ...content.groups.map((group) => ({
+    ...group,
+    links: activeLandingLinks(group.links, layout).map((link) => ({
+      ...link,
+      label: link.label.trim().toLowerCase() === 'lomi remote' ? 'Remote' : link.label,
+    })),
+  })).filter((group) => group.links.length),
+  {
+    title: 'Legal',
+    links: [
+      { label: 'Privacy', href: '/privacy/' },
+      { label: 'Terms', href: '/terms/' },
+      { label: 'Security', href: '/security/' },
+    ],
+  },
+];
 ---
 
 <footer class="site-footer" aria-label={content.ariaLabel} data-scroll-surface>
@@ -155,7 +165,7 @@ const groups = content.groups.map((group) => ({
 
   .footer-navigation {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 30px 24px;
     padding-top: 5px;
   }
@@ -264,7 +274,7 @@ const groups = content.groups.map((group) => ({
     .footer-body { grid-template-columns: minmax(0, 1fr); gap: 28px; }
     .footer-invitation h2 { font-size: clamp(42px, 10vw, 62px); max-width: 14ch; }
     .footer-actions { margin-top: 20px; }
-    .footer-navigation { padding-top: 0; column-gap: 20px; }
+    .footer-navigation { grid-template-columns: repeat(2, minmax(0, 1fr)); padding-top: 0; column-gap: 20px; }
     .footer-link-group { padding-left: 15px; }
     .footer-link-group h3 { margin-bottom: 10px; font-size: 9px; }
     .footer-link-group a { font-size: 13px; }

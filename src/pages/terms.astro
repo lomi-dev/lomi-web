@@ -1,0 +1,118 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import { activeLandingLinks } from '../data/navigation';
+import { loadLanding } from '../../content/load-landing';
+
+const content = await loadLanding(import.meta.env.CMS_URL);
+const footerContent = {
+  ...content.footer,
+  groups: content.footer.groups.map((group) => ({
+    ...group,
+    links: activeLandingLinks(group.links, content.layout).map((link) => ({
+      ...link,
+      href: link.href.startsWith('#') ? `/${link.href}` : link.href,
+    })),
+  })).filter((group) => group.links.length > 0),
+};
+---
+
+<Layout title="Terms of use — lomi" description="Terms for lomi.dev, the Lomi desktop app and optional Lomi services." website={content} themeColor={content.site.theme.paper} edgeColor="var(--color-lime)">
+  <Header content={content.navigation} site={content.site} layout={content.layout} theme="light" />
+  <main class="terms-page" id="main" tabindex="-1" data-scroll-surface>
+    <article class="terms-shell">
+      <header>
+        <h1>Terms of use.</h1>
+        <p>These plain-language terms cover lomi.dev and optional Lomi services. The desktop app's open-source license governs your rights to use, change and share the software.</p>
+        <p class="updated">Last updated · October 22, 2026</p>
+      </header>
+
+      <section aria-labelledby="terms-summary">
+        <h2 id="terms-summary">The short version</h2>
+        <ul>
+          <li>Lomi is open source under the Apache License 2.0.</li>
+          <li>You are responsible for the commands you run, the data you share and the systems you access.</li>
+          <li>AI providers, agents and other third-party services have their own terms and privacy policies.</li>
+          <li>The website and software are provided as-is, subject to the license and rights that cannot be excluded by law.</li>
+        </ul>
+      </section>
+
+      <section aria-labelledby="terms-license">
+        <h2 id="terms-license">1. Software and license</h2>
+        <p>The Lomi desktop application and its source code are licensed under the <a href="https://www.apache.org/licenses/LICENSE-2.0">Apache License, Version 2.0</a>. The license text in the <a href="https://github.com/lomi-dev/lomi/blob/main/LICENSE">Lomi repository</a> governs the software. These terms do not take away rights granted by that license.</p>
+        <p>These terms apply to lomi.dev and any optional hosted Lomi features to the extent they are not covered by a separate agreement.</p>
+      </section>
+
+      <section aria-labelledby="terms-responsibility">
+        <h2 id="terms-responsibility">2. Your use of Lomi</h2>
+        <p>Lomi can run shell commands, read and write files, connect to Git remotes, run agents and send information to providers you configure. You are responsible for:</p>
+        <ul>
+          <li>Using Lomi only with systems, accounts and data you are authorized to access.</li>
+          <li>Reviewing commands and changes before you run or accept them, and keeping backups of important work.</li>
+          <li>Choosing what prompts, files and other information to send to an AI provider or share through an optional Lomi feature.</li>
+          <li>Following applicable laws and the terms of providers and services you use with Lomi.</li>
+        </ul>
+      </section>
+
+      <section aria-labelledby="terms-services">
+        <h2 id="terms-services">3. Third-party services</h2>
+        <p>Lomi can connect to AI providers, CLI agents, GitHub, websites opened in browser previews, YouTube embeds, newsletter services and optional account or Remote services. Those services are operated by others and governed by their own terms and privacy policies. Lomi's maintainers do not control their availability, handling of data or service decisions.</p>
+        <p>When you send data to a provider, that provider receives and processes it. Review its terms and privacy policy before connecting it to your projects.</p>
+      </section>
+
+      <section aria-labelledby="terms-accounts">
+        <h2 id="terms-accounts">4. Optional hosted features</h2>
+        <p>Some account-backed features require signing in and connecting to Lomi services. Their availability and functionality may change. The <a href="/privacy/">privacy policy</a> explains what information those features process. Local desktop work does not require an account.</p>
+      </section>
+
+      <section aria-labelledby="terms-updates">
+        <h2 id="terms-updates">5. Updates and changes</h2>
+        <p>We may change lomi.dev and publish software updates, including changes to features or compatibility. Release notes describe material app changes. These terms may also change; the date above shows when they were last updated.</p>
+      </section>
+
+      <section aria-labelledby="terms-warranty">
+        <h2 id="terms-warranty">6. No warranty</h2>
+        <p>The software is provided under the Apache License 2.0, including its warranty disclaimer. The website and optional hosted features are provided “as is” and “as available”, without promises that they will be uninterrupted, error-free, secure or fit for a particular purpose, to the extent permitted by law.</p>
+      </section>
+
+      <section aria-labelledby="terms-liability">
+        <h2 id="terms-liability">7. Limitation of liability</h2>
+        <p>To the maximum extent permitted by law, the project maintainers are not liable for indirect or consequential loss arising from use of the website, software or optional services. The Apache License 2.0 governs liability for software covered by that license. Nothing in these terms excludes liability or rights that cannot be excluded under applicable law.</p>
+      </section>
+
+      <section aria-labelledby="terms-trademarks">
+        <h2 id="terms-trademarks">8. Names and trademarks</h2>
+        <p>The Apache License 2.0 does not grant rights to use the Lomi name or logo as a trademark. If you distribute a modified version, do not present it as the official Lomi project or imply endorsement.</p>
+      </section>
+
+      <section aria-labelledby="terms-contact">
+        <h2 id="terms-contact">9. Contact</h2>
+        <p>Questions about these terms: <a href="mailto:admin@lomi.dev">admin@lomi.dev</a>. View the source and releases on <a href="https://github.com/lomi-dev/lomi">GitHub</a>.</p>
+      </section>
+    </article>
+  </main>
+  <Footer content={footerContent} site={content.site} layout={content.layout} />
+</Layout>
+
+<style>
+  .terms-page { --scroll-surface-color: var(--color-paper); padding: 132px 0 80px; color: var(--color-ink); background: var(--color-paper); }
+  .terms-shell { width: min(760px, calc(100% - 80px)); margin-inline: auto; }
+  h1 { margin: 0; font-size: clamp(46px, 5vw, 64px); font-weight: 500; line-height: 1.06; letter-spacing: -.055em; text-wrap: balance; }
+  header > p { margin-top: 20px; color: var(--color-text-secondary); font-size: 17px; line-height: 1.65; }
+  .updated { font-size: 12px; }
+  section { margin-top: 40px; padding-top: 24px; border-top: 1px solid #dfe4d8; }
+  h2 { font-size: 24px; font-weight: 500; line-height: 1.25; letter-spacing: -.035em; }
+  section p, section li { color: var(--color-text-secondary); font-size: 14px; line-height: 1.8; }
+  section p { margin-top: 16px; }
+  section ul { display: grid; gap: 10px; margin: 16px 0 0; padding-left: 22px; }
+  section li { padding-left: 3px; }
+  section p a { color: #263b15; text-decoration: underline; text-underline-offset: 3px; }
+  @media (max-width: 767px) {
+    .terms-page { padding: 112px 0 48px; }
+    .terms-shell { width: calc(100% - 40px); }
+    h1 { font-size: clamp(40px, 9vw, 56px); }
+    header > p { font-size: 15px; }
+    section { margin-top: 32px; }
+  }
+</style>
