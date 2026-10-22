@@ -8,7 +8,6 @@ interface Props { content: Landing['features']; placeholderLogo?: MediaAsset | n
 const { content, placeholderLogo } = Astro.props;
 const mediaAlt = (item: Landing['features']['items'][number]) => item.alt || item.image?.alt || item.video?.alt || item.title;
 const count = content.items.length;
-const hasPreviews = content.items.some((item) => !item.image && !item.video);
 // Explicit tabindex keeps native buttons in WebKit's sequential keyboard order.
 ---
 
@@ -16,11 +15,7 @@ const hasPreviews = content.items.some((item) => !item.image && !item.video);
   <div class="gallery-shell">
     <div class="gallery-heading">
       <h2 id="features-title">{content.title}<span>{content.accent}</span></h2>
-      <div class="gallery-intro"><p>{content.description}</p>
-        {hasPreviews && <button class="preview-toggle" type="button" tabindex="0" data-preview-toggle data-pause-label={content.controls.pausePreviewsLabel} data-resume-label={content.controls.resumePreviewsLabel} hidden>
-          <span data-preview-pause-icon><Icon name="pause" width={14} height={14} /></span><span data-preview-play-icon hidden><Icon name="play" width={14} height={14} /></span><span data-preview-label>{content.controls.pausePreviewsLabel}</span>
-        </button>}
-      </div>
+      <div class="gallery-intro"><p>{content.description}</p></div>
     </div>
 
     <div class="gallery-grid" data-feature-grid data-layout={count >= 3 ? 'editorial' : 'compact'}>
@@ -39,7 +34,6 @@ const hasPreviews = content.items.some((item) => !item.image && !item.video);
 
   <dialog id="feature-dialog" class="feature-dialog" aria-labelledby="feature-dialog-title-0" aria-describedby="feature-dialog-description-0" tabindex="-1">
     <div class="feature-dialog-chrome">
-      {hasPreviews && <button class="preview-toggle preview-toggle-modal" type="button" tabindex="0" data-preview-toggle data-pause-label={content.controls.pausePreviewsLabel} data-resume-label={content.controls.resumePreviewsLabel} aria-label={content.controls.pausePreviewsLabel} hidden><span data-preview-pause-icon><Icon name="pause" width={16} height={16} /></span><span data-preview-play-icon hidden><Icon name="play" width={16} height={16} /></span></button>}
       <button class="feature-modal-close" type="button" tabindex="0" data-feature-close aria-label={content.controls.closeLabel}><Icon name="close" width={20} height={20} /></button>
     </div>
     <div class="feature-modal-panel" data-feature-panel>
@@ -80,10 +74,6 @@ const hasPreviews = content.items.some((item) => !item.image && !item.video);
   .gallery-heading h2 > span { display: block; color: #616e54; }
   .gallery-intro { max-width: 350px; margin-bottom: 5px; }
   .gallery-intro > p { color: var(--color-text-secondary); font-size: 15px; line-height: 1.8; }
-  .preview-toggle { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin-top: 8px; padding: 0; border: 0; background: transparent; color: #616e54; font: inherit; font-size: 12px; cursor: pointer; }
-  .preview-toggle[hidden], .preview-toggle [hidden] { display: none; }
-  .preview-toggle > span { display: inline-flex; align-items: center; }
-  .preview-toggle:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 4px; border-radius: 4px; }
   .gallery-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 28px 24px; align-items: stretch; }
   .gallery-tile { grid-column: span 4; min-width: 0; }
   .gallery-grid[data-layout='editorial'] > .gallery-tile:first-child { grid-column: span 8; grid-row: span 2; display: flex; flex-direction: column; }
@@ -114,7 +104,6 @@ const hasPreviews = content.items.some((item) => !item.image && !item.video);
   .feature-dialog:not([open]) { display: none; }
   .feature-dialog::backdrop { background: rgb(31 40 24 / 26%); backdrop-filter: blur(12px); }
   .feature-dialog-chrome { position: sticky; z-index: 5; top: 0; height: 0; }
-  .preview-toggle-modal { position: absolute; top: 18px; right: 70px; display: grid; place-items: center; width: 44px; height: 44px; margin: 0; border: 1px solid #ccd5c1; border-radius: 50%; background: var(--color-paper); color: #37422e; }
   .feature-modal-close { position: absolute; top: 18px; right: 18px; display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid #ccd5c1; border-radius: 50%; color: #37422e; background: var(--color-paper); cursor: pointer; }
   .feature-modal-panel { position: relative; display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(300px, 1fr); grid-template-rows: minmax(0, 1fr) auto; height: min(78dvh, calc(100dvh - 50px), 760px); }
   .feature-slides { position: relative; z-index: 0; isolation: isolate; display: grid; grid-area: 1 / 1 / -1 / -1; grid-template-columns: subgrid; grid-template-rows: subgrid; min-width: 0; min-height: 0; overflow: clip; }
@@ -181,7 +170,6 @@ const hasPreviews = content.items.some((item) => !item.image && !item.video);
     .gallery-caption h3 { font-size: 21px; }
     .gallery-open { right: 14px; bottom: 14px; }
     .feature-modal-close { top: 12px; right: 12px; }
-    .preview-toggle-modal { top: 12px; right: 64px; }
     .feature-modal-copy { padding-inline: 22px; }
     .feature-modal-navigation { padding-inline: 22px; }
     .feature-modal-navigation::before { left: 22px; right: 22px; }

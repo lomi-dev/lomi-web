@@ -109,8 +109,6 @@ try {
   fixture.features.items[0].alt = 'CMS feature alt sentinel';
   fixture.features.items[1].icon = 'git';
   fixture.features.controls.closeLabel = 'CMS close feature sentinel';
-  fixture.features.controls.pausePreviewsLabel = 'CMS pause previews sentinel';
-  fixture.features.controls.resumePreviewsLabel = 'CMS resume previews sentinel';
   fixture.roadmap.title = 'CMS roadmap title sentinel';
   fixture.roadmap.ui.legendCompleted = 'CMS completed sentinel';
   fixture.roadmap.ui.progressTemplate = 'CMS progress {completed}/{total}';
@@ -236,24 +234,18 @@ try {
       await expect(page.locator('[data-roadmap-task-label]').first()).toHaveText('CMS task sentinel');
       await expect(page.locator('.roadmap-progress-caption').first()).toContainText('CMS progress');
       await assertMedia(page, '[data-feature-card] img', fixture.features.items[0].alt);
-      await expect(page.locator('[data-preview-toggle]')).toHaveCount(2);
+      await expect(page.locator('[data-preview-toggle]')).toHaveCount(0);
       await expect(page.locator('[data-feature-card]').nth(1).locator('[data-feature-preview]')).toHaveAttribute('data-feature-preview', fixture.features.items[1].icon);
-      for (const toggle of await page.locator('[data-preview-toggle]').all()) {
-        await expect(toggle).toHaveAttribute('data-pause-label', fixture.features.controls.pausePreviewsLabel);
-        await expect(toggle).toHaveAttribute('data-resume-label', fixture.features.controls.resumePreviewsLabel);
-      }
       await page.emulateMedia({ reducedMotion: 'no-preference' });
       await page.locator('[data-feature-open="0"]').click();
       await expect(page.locator('#feature-dialog')).toBeVisible();
       await expect(page.locator('#feature-dialog-description-0')).toHaveText(fixture.features.items[0].description);
-      await expect(page.locator('#feature-dialog [data-preview-toggle]')).not.toBeVisible();
       await page.getByRole('button', { name: fixture.features.controls.closeLabel, exact: true }).click();
       await expect(page.locator('#feature-dialog')).not.toBeVisible();
       await page.locator('[data-feature-open="1"]').click();
       await expect(page.locator('#feature-dialog')).toBeVisible();
       const authoredSimulation = page.locator('#feature-dialog [data-feature-slide]').nth(1).locator('[data-feature-preview]');
       await expect(authoredSimulation).toHaveAttribute('data-feature-preview', fixture.features.items[1].icon);
-      await expect(page.locator('#feature-dialog [data-preview-toggle]')).toBeVisible();
       await assertPlaceholder(authoredSimulation, { variant: 'feature', aspect: '8 / 5' });
       await page.getByRole('button', { name: fixture.features.controls.closeLabel, exact: true }).click();
       await expect(page.locator('#feature-dialog')).not.toBeVisible();

@@ -20,11 +20,9 @@ video poster. Feature alternative text overrides the media-library description;
 an empty override falls back to the file's description or the feature title.
 See [the editing guide](cms-editing.md).
 
-**Pause previews** switches the animated previews to their static poster; the
-dialog has the same control. **Features → Controls** provides editable
-pause/resume labels. Offscreen cards, hidden slides, cards behind the open
-dialog, background tabs, and reduced-motion settings stop GIF playback.
-Reduced motion and no JavaScript keep the static poster visible.
+Offscreen cards, hidden slides, cards behind the open dialog, background tabs,
+and reduced-motion settings stop GIF playback. Reduced motion and no
+JavaScript keep the static poster visible.
 
 With JavaScript, selecting a preview opens a white native dialog. Desktop
 places the media beside a panel containing the title, description, and

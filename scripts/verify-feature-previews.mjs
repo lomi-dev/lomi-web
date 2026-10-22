@@ -43,11 +43,7 @@ try {
   const cards = scenes(page);
   await expect(cards).toHaveCount(6);
   assert.deepEqual(await cards.evaluateAll((elements) => elements.map((element) => element.dataset.featurePreview)), kinds);
-  await expect(page.locator('[data-preview-toggle]')).toHaveCount(2);
-  const headerToggle = page.locator('[data-preview-toggle]').first();
-  const pauseLabel = await headerToggle.getAttribute('data-pause-label');
-  const resumeLabel = await headerToggle.getAttribute('data-resume-label');
-  assert.ok(pauseLabel && resumeLabel && pauseLabel !== resumeLabel, 'Pause and play actions have distinct authored labels');
+  await expect(page.locator('[data-preview-toggle]')).toHaveCount(0);
   // Start above Features, then exercise each independently visible app capture.
   await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
   for (const scene of await cards.all()) await motion(scene, false);
@@ -62,17 +58,6 @@ try {
     await page.locator('#features').screenshot({ path: `artifacts/feature-previews-${width}.png`, animations: 'allow' });
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), width);
   }
-  await headerToggle.scrollIntoViewIfNeeded();
-  await expect(headerToggle).toHaveAccessibleName(pauseLabel);
-  await headerToggle.click();
-  await expect(page.locator('[data-feature-gallery]')).toHaveAttribute('data-preview-paused', 'true');
-  await expect(headerToggle).toHaveAccessibleName(resumeLabel);
-  await cards.first().scrollIntoViewIfNeeded();
-  for (const scene of await cards.all()) await motion(scene, false);
-  await headerToggle.click();
-  await cards.first().scrollIntoViewIfNeeded();
-  await motion(cards.first(), true);
-
   for (let index = 0; index < kinds.length; index++) {
     await page.locator(`[data-feature-open="${index}"]`).click();
     await expect(dialog(page)).toBeVisible();
@@ -83,18 +68,6 @@ try {
     for (const scene of await cards.all()) await motion(scene, false);
     for (const scene of await dialog(page).locator('[data-feature-slide][hidden] [data-feature-preview]').all()) await motion(scene, false);
     await active.screenshot({ path: `artifacts/feature-preview-${kinds[index]}-dialog.png`, animations: 'allow' });
-    if (index === 0) {
-      const toggle = dialog(page).locator('[data-preview-toggle]');
-      await expect(toggle).toHaveAccessibleName(pauseLabel);
-      await toggle.click();
-      await expect(page.locator('[data-feature-gallery]')).toHaveAttribute('data-preview-paused', 'true');
-      await expect(headerToggle).toHaveAccessibleName(resumeLabel);
-      await motion(active, false);
-      await expect(toggle).toHaveAccessibleName(resumeLabel);
-      await toggle.click();
-      await expect(headerToggle).toHaveAccessibleName(pauseLabel);
-      await motion(active, true);
-    }
     await dialog(page).locator('[data-feature-close]').click();
     await expect(dialog(page)).not.toBeVisible();
     await motion(dialog(page).locator('[data-feature-slide]').nth(index).locator('[data-feature-preview]'), false);
@@ -125,9 +98,7 @@ try {
   await motion(cards.first(), true);
   await page.emulateMedia({ reducedMotion: 'reduce' });
   for (const scene of await cards.all()) await motion(scene, false);
-  await expect(headerToggle).not.toBeVisible();
   await page.emulateMedia({ reducedMotion: 'no-preference' });
-  await expect(headerToggle).toBeVisible();
   await motion(cards.first(), true);
   for (const width of [320, 1440]) {
     await page.setViewportSize({ width, height: 1000 });
@@ -142,9 +113,9 @@ try {
       await assertPlaceholder(scene, { variant: 'feature', aspect: '8 / 5' });
       await motion(scene, false);
     }
-    await expect(fallback.page.locator('[data-preview-toggle]:visible')).toHaveCount(0);
+    await expect(fallback.page.locator('[data-preview-toggle]')).toHaveCount(0);
     await fallback.context.close();
   }
   assert.deepEqual(errors, [], 'No feature-preview runtime errors');
-  console.log('Passed: six local animated app captures; visible-card and active-dialog loading; shared pause/resume from header and dialog; offscreen, hidden slide, modal backdrop, closed dialog and document visibility pausing; reduced-motion and no-JS poster fallbacks; 320/1440px screenshots and overflow.');
+  console.log('Passed: six local animated app captures; visible-card and active-dialog loading; offscreen, hidden slide, modal backdrop, closed dialog and document visibility pausing; reduced-motion and no-JS poster fallbacks; 320/1440px screenshots and overflow.');
 } finally { await browser.close(); await close(); }

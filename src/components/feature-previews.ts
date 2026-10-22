@@ -2,10 +2,8 @@
 export function initFeaturePreviews(root: HTMLElement) {
   const scenes = Array.from(root.querySelectorAll<HTMLElement>('[data-feature-preview]'));
   if (!scenes.length) return;
-  const toggles = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-preview-toggle]'));
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   const visible = new Set<HTMLElement>();
-  let paused = false;
   let suspended = false;
   let scheduled = 0;
 
@@ -13,7 +11,7 @@ export function initFeaturePreviews(root: HTMLElement) {
     if (scheduled) cancelAnimationFrame(scheduled);
     scheduled = 0;
     const modal = document.querySelector<HTMLDialogElement>('dialog[open]');
-    const allowed = !paused && !suspended && !reducedMotion.matches && !document.hidden;
+    const allowed = !suspended && !reducedMotion.matches && !document.hidden;
     for (const scene of scenes) {
       const available = visible.has(scene) && (!modal || modal.contains(scene))
         && !scene.closest('[hidden], [inert], dialog[data-state="closing"]');
@@ -30,32 +28,11 @@ export function initFeaturePreviews(root: HTMLElement) {
         }
       }
     }
-    root.dataset.previewPaused = String(paused);
-    for (const toggle of toggles) {
-      const ownDialog = toggle.closest('dialog');
-      const ownPreview = ownDialog && ownDialog.querySelector('[data-feature-slide]:not([hidden]) [data-feature-preview]');
-      const hideToggle = reducedMotion.matches || !ownPreview && Boolean(ownDialog);
-      if (toggle.hidden !== hideToggle) toggle.hidden = hideToggle;
-      const label = paused ? toggle.dataset.resumeLabel : toggle.dataset.pauseLabel;
-      toggle.setAttribute('aria-label', label ?? '');
-      toggle.title = label ?? '';
-      const text = toggle.querySelector<HTMLElement>('[data-preview-label]');
-      if (text) text.textContent = label ?? '';
-      const pauseIcon = toggle.querySelector<HTMLElement>('[data-preview-pause-icon]');
-      const playIcon = toggle.querySelector<HTMLElement>('[data-preview-play-icon]');
-      if (pauseIcon && pauseIcon.hidden !== paused) pauseIcon.hidden = paused;
-      if (playIcon && playIcon.hidden === paused) playIcon.hidden = !paused;
-    }
   }
 
   function schedule() {
     if (!scheduled) scheduled = requestAnimationFrame(sync);
   }
-
-  toggles.forEach((toggle) => toggle.addEventListener('click', () => {
-    paused = !paused;
-    sync();
-  }));
 
   scenes.forEach((scene) => {
     const gif = scene.querySelector<HTMLImageElement>('[data-feature-gif]');

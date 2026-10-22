@@ -84,7 +84,7 @@ async function noOverflow(page) {
 }
 
 async function controlsVisible(page) {
-  for (const control of await dialog(page).locator('[data-feature-close], [data-feature-prev], [data-feature-next], [data-feature-dot], [data-preview-toggle]:not([hidden])').all()) {
+  for (const control of await dialog(page).locator('[data-feature-close], [data-feature-prev], [data-feature-next], [data-feature-dot]').all()) {
     await expect(control).toBeVisible();
     expect(await control.evaluate((element) => {
       const rect = element.getBoundingClientRect();
