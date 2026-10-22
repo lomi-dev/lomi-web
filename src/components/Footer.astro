@@ -10,7 +10,13 @@ import type { Landing } from '../../content/landing-schema';
 interface Props { content: Landing['footer']; site?: Landing['site']; layout?: Landing['layout'] }
 const { content, site = editorDefaults.site, layout = editorDefaults.layout } = Astro.props;
 const brandLogo = resolveMedia(site.brand.logo, import.meta.env.CMS_URL);
-const groups = content.groups.map((group) => ({ ...group, links: activeLandingLinks(group.links, layout) })).filter((group) => group.links.length);
+const groups = content.groups.map((group) => ({
+  ...group,
+  links: activeLandingLinks(group.links, layout).map((link) => ({
+    ...link,
+    label: link.label.trim().toLowerCase() === 'lomi remote' ? 'Remote' : link.label,
+  })),
+})).filter((group) => group.links.length);
 ---
 
 <footer class="site-footer" aria-label={content.ariaLabel} data-scroll-surface>
