@@ -150,7 +150,7 @@ const action = activeLandingLinks([{ label: content.actionLabel, href: content.a
     for (let element: Element | null = surface; element; element = element.parentElement) {
       const background = getComputedStyle(element).backgroundColor;
       const channels = background.match(/[\d.]+/g)?.map(Number);
-      // color-mix(in srgb, ...) is serialized with 0–1 channels, unlike rgb().
+      // color-mix(in srgb, ...) is serialized with 0 to 1 channels, unlike rgb().
       if (channels && background.startsWith('color(srgb ')) {
         for (let index = 0; index < 3; index++) channels[index] *= 255;
       }

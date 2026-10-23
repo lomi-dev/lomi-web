@@ -1,7 +1,7 @@
 {
   "seo": {
-    "title": "Lomi — Open-source workspace for AI coding agents",
-    "description": "Run Codex, Claude Code, OpenCode and your CLI agents beside native terminals, an editor, browser previews and Git. One open-source desktop workspace."
+    "title": "Lomi | Open-source workspace for AI coding agents",
+    "description": "Run Claude Code, Codex and other CLI agents with terminals, an editor, browser previews and Git in Lomi, a free, open-source desktop workspace."
   },
   "navigation": {
     "links": [
@@ -28,7 +28,7 @@
     "eyebrow": "The terminal ADE",
     "title": "Your agents.",
     "accent": "One home base.",
-    "description": "Run Claude Code, Codex CLI and OpenCode beside your editor, browser previews and Git. One free, open-source desktop workspace for your coding agents.",
+    "description": "Run Claude Code, Codex CLI and OpenCode in one desktop app, with terminals, an editor, browser previews and Git.",
     "primaryLabel": "Download lomi",
     "secondaryLabel": "Meet the workspace",
     "note": "Free & open source · macOS, Windows & Linux",
@@ -58,7 +58,7 @@
     "eyebrow": "Workspace tools",
     "title": "From the shell",
     "accent": "to the commit.",
-    "description": "Use individual panels for each part of the task. Arrange them in tabs and splits.",
+    "description": "Arrange terminals, files and previews in tabs and splits.",
     "items": [
       {
         "icon": "terminal",
@@ -69,7 +69,7 @@
       {
         "icon": "panels",
         "title": "Project workspaces",
-        "description": "Separate tasks into named workspaces. Arrange panels in tabs and splits, with a layout for each project.",
+        "description": "Create named workspaces for your projects, with panels arranged in tabs and splits.",
         "detail": "Tabs & splits"
       },
       {
@@ -81,7 +81,7 @@
       {
         "icon": "expand",
         "title": "Browser previews",
-        "description": "Load a local app in an embedded browser panel. Keep the preview alongside the files and terminal driving it.",
+        "description": "Open your local app next to its code and development server.",
         "detail": "Local app previews"
       },
       {
@@ -120,7 +120,7 @@
   "roadmap": {
     "eyebrow": "Development roadmap",
     "title": "Available now. Proposed next.",
-    "description": "The current workspace is available as a preview. The next priorities are proposals and may change with testing and feedback.",
+    "description": "The preview is available now. Plans may change as we test it and hear from users.",
     "items": [
       {
         "phase": "Available now",
@@ -143,7 +143,7 @@
         "phase": "Proposed next",
         "status": "next",
         "title": "Installation & reliability",
-        "description": "Proposed work for launch and the first weeks of use.",
+        "description": "Proposed improvements to installation and reliability.",
         "points": [
           {
             "label": "Onboarding & installation polish"
@@ -160,7 +160,7 @@
         "phase": "Proposed later",
         "status": "later",
         "title": "Plugins & customization",
-        "description": "Further ideas to evaluate with people using lomi.",
+        "description": "Ideas for future releases.",
         "points": [
           {
             "label": "A broader plugin ecosystem"
@@ -218,7 +218,7 @@
   "newsletter": {
     "eyebrow": "Project updates",
     "title": "Follow the next release.",
-    "description": "Release updates and notes on what is changing in lomi."
+    "description": "Get release notes and updates about Lomi."
   },
   "footer": {
     "tagline": "Open-source desktop workspace.",

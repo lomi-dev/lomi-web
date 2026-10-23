@@ -77,7 +77,7 @@ const sections = [
 
         <section id="windows" aria-labelledby="windows-title">
           <h2 id="windows-title">On Windows, start it from a terminal</h2>
-          <p>Lomi includes regular Windows terminals, but it does not detect or one-click launch agent CLIs there. Install {guide.providerName} using the vendor’s Windows or WSL instructions, then start it yourself in the project terminal.</p>
+          <p>On Windows, Lomi cannot detect or launch agent CLIs from Agents. Install {guide.providerName} using the vendor’s Windows or WSL instructions, then start it from a project terminal.</p>
           <ol class="guide-steps guide-steps-compact">
             {guide.windowsSteps.map((step) => <li>
               <div><h3>{step.title}</h3><p>{step.description}</p></div>
@@ -90,7 +90,7 @@ const sections = [
 
         <section id="workflow" aria-labelledby="workflow-title">
           <h2 id="workflow-title">Keep the coding loop in one workspace</h2>
-          <p>Once the CLI is running, use Lomi to keep the parts of a local change within reach:</p>
+          <p>With the CLI running, use other Lomi panes to run and preview your project, then review the diff in Git:</p>
           <ol class="guide-steps guide-steps-compact">
             {guide.workflowSteps.map((step) => <li>
               <div><h3>{step.title}</h3><p>{step.description}</p></div>
@@ -100,7 +100,7 @@ const sections = [
 
         <section id="limits" aria-labelledby="limits-title">
           <h2 id="limits-title">What this workflow includes</h2>
-          <p>Lomi keeps the project and its tools together while the CLI remains the agent’s own interface.</p>
+          <p>Lomi gives the CLI a local workspace with your project files, terminals and browser.</p>
           <ul class="guide-checklist guide-limits">
             {guide.limits.map((item) => <li>{item}</li>)}
           </ul>

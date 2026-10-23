@@ -6,12 +6,12 @@ import { agentWorkflowLinks, workspaceResourceLinks } from '../data/navigation';
   <div class="shell">
     <div class="workflow-heading">
       <h2 id="agent-workflows-title">Your agent.<br />Your way of working.</h2>
-      <p>Keep the CLI you know. Give it a workspace with your files, a local app preview and Git.</p>
+      <p>Run the CLI you already use alongside your code, local app preview and Git changes.</p>
     </div>
     <div class="workflow-links">
       {agentWorkflowLinks.map((guide, index) => <a class="workflow-link" href={guide.href}>
         <span class="workflow-number" aria-hidden="true">0{index + 1}</span>
-        <span class="workflow-copy"><h3>{guide.label}</h3><span>{index === 0 ? 'From your first terminal session to reviewing the diff.' : 'Run Codex CLI beside the code and app you are building.'}</span></span>
+        <span class="workflow-copy"><h3>{guide.label}</h3><span>{index === 0 ? 'Run Claude Code with your project, then review its changes in Git.' : 'Run Codex CLI with your project, then review its changes in Git.'}</span></span>
         <span class="workflow-arrow" aria-hidden="true">↗</span>
       </a>)}
     </div>

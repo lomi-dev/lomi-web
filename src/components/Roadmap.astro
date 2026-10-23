@@ -40,7 +40,7 @@ const stages = content.items.map((item) => ({ ...item, ...summarizeRoadmapStage(
               </div>
               <ul class="roadmap-tasks">{item.tasks.map((task) => <li class="roadmap-task" data-task-status={task.status}>
                 <span class="roadmap-task-marker" aria-hidden="true">{task.status === 'completed' && <Icon name="check" width={12} height={12} />}{task.status === 'in-progress' && <span></span>}</span>
-                <span><span class="roadmap-task-label" data-roadmap-task-label>{task.label}</span><span class="roadmap-sr-only"> — {taskStatusLabels[task.status]}</span></span>
+                <span><span class="roadmap-task-label" data-roadmap-task-label>{task.label}</span><span class="roadmap-sr-only">: {taskStatusLabels[task.status]}</span></span>
               </li>)}</ul>
             </div>
           </li>)}
