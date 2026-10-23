@@ -1,5 +1,10 @@
 import type { CollectionConfig } from 'payload'
 import { devlogFields } from '../../../content/devlog-schema'
+import {
+  captureCollectionDraftWrite,
+  queueDeletedDevlogRebuild,
+  queuePublishedDevlogRebuild,
+} from '../jobs/rebuildSite'
 
 const validate = (name: Exclude<keyof typeof devlogFields, 'thumbnail'>) => (value: unknown) => {
   const result = devlogFields[name].safeParse(value)
@@ -23,6 +28,11 @@ export const Devlogs: CollectionConfig = {
     readVersions: ({ req }) => Boolean(req.user),
   },
   versions: { drafts: true, maxPerDoc: 20 },
+  hooks: {
+    beforeOperation: [captureCollectionDraftWrite],
+    afterChange: [queuePublishedDevlogRebuild],
+    afterDelete: [queueDeletedDevlogRebuild],
+  },
   fields: [
     { name: 'title', type: 'text', required: true, maxLength: 160, validate: validate('title') },
     { name: 'videoUrl', label: 'YouTube URL', type: 'text', required: true, maxLength: 2000, validate: validate('videoUrl'), admin: { description: 'HTTPS YouTube watch, share, shorts, or embed URL. The site links to YouTube without loading an embedded player.' } },

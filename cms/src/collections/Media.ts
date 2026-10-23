@@ -1,5 +1,6 @@
 import path from 'node:path'
 import type { CollectionConfig } from 'payload'
+import { queueDeletedMediaRebuild, queueMediaRebuild } from '../jobs/rebuildSite'
 
 export const Media: CollectionConfig = {
   slug: 'media',
@@ -11,6 +12,10 @@ export const Media: CollectionConfig = {
     delete: ({ req }) => Boolean(req.user),
   },
   admin: { useAsTitle: 'alt', description: 'Upload images and videos used throughout the website. Add useful alternative text for meaningful images.' },
+  hooks: {
+    afterChange: [queueMediaRebuild],
+    afterDelete: [queueDeletedMediaRebuild],
+  },
   upload: {
     // Runtime storage is mounted by the host, outside the bundled app.
     staticDir: path.resolve(/* turbopackIgnore: true */ process.env.MEDIA_UPLOAD_DIR || 'data/media'),

@@ -2,6 +2,10 @@
 .git/**
 **/.git
 **/.git/**
+.codex
+**/.codex
+.agents
+**/.agents
 
 .env
 .env.*
@@ -25,6 +29,12 @@ dist
 **/.next
 **/out
 **/build
+.astro
+**/.astro
+artifacts
+**/artifacts
+**/*.tsbuildinfo
+**/.DS_Store
 cms/data
 cms/data/**
 **/data/media

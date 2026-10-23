@@ -169,15 +169,17 @@ visitors, so its public media URLs must remain accessible. HTTP is allowed
 only for localhost; a hosted CMS requires HTTPS.
 
 Publishing in Payload requires rebuilding and redeploying Astro to update the
-live page. Configured CMS failures, incomplete content, or drafts fail the build
-instead of silently deploying stale copy. There is no automatic publish hook or
-authenticated draft preview.
+live page. Configure the CMS's optional durable rebuild queue to request this
+automatically in Coolify; without it, redeploy the website manually. Configured
+CMS failures, incomplete content, or drafts fail the build instead of silently
+deploying stale copy. There is no authenticated draft preview.
 
 Local SQLite hosting requires one CMS instance, a persistent writable database
 and a persistent media directory configured with `MEDIA_UPLOAD_DIR`.
 The static site's host cannot execute Payload. See the CMS README for migrations,
-backups, environment configuration, and production build commands. No CMS host or
-deployment provider is configured by this task.
+backups, environment configuration, and production build commands. The
+[Coolify deployment guide](deploy/coolify.md) covers both Docker images,
+administrator initialization, persistent storage, domains, and automatic rebuilds.
 
 ## Where to edit
 

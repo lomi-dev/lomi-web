@@ -1,4 +1,7 @@
-FROM oven/bun:1.3.14 AS build
+# Run Astro on the supported Node.js LTS line while pinning Bun for installs.
+FROM oven/bun:1.3.14 AS bun
+FROM node:22-bookworm-slim AS build
+COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
 WORKDIR /app
 
 COPY package.json bun.lock ./
@@ -7,13 +10,17 @@ RUN bun install --frozen-lockfile
 COPY . .
 ARG CMS_URL
 ARG SITE_URL
+ARG PUBLIC_NEWSLETTER_ENDPOINT
 ENV CMS_URL=${CMS_URL}
 ENV SITE_URL=${SITE_URL}
+ENV PUBLIC_NEWSLETTER_ENDPOINT=${PUBLIC_NEWSLETTER_ENDPOINT}
 RUN bun run build
 
-FROM nginx:1.27-alpine
+FROM nginx:1.30-alpine
 COPY deploy/nginx-site.conf /etc/nginx/conf.d/default.conf
 COPY deploy/nginx-security-headers.conf /etc/nginx/snippets/security-headers.conf
 COPY --from=build /app/dist /usr/share/nginx/html
 EXPOSE 80
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD wget -q -T 2 -O /dev/null http://127.0.0.1/ || exit 1
 CMD ["nginx", "-g", "daemon off;"]

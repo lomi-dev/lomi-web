@@ -4,6 +4,10 @@ import { pageDefaults } from '../../../content/page-defaults'
 import { captureWebsitePatch, hydrateWebsiteRead, prepareWebsiteWrite } from '../hooks/editorContent'
 import { fieldsFromDefaults } from '../fields/fromDefaults'
 import { isSafeHref } from '../../../content/links'
+import {
+  captureGlobalDraftWrite,
+  queuePublishedLandingRebuild,
+} from '../jobs/rebuildSite'
 
 const validateText = (value: string | null | undefined) =>
   typeof value === 'string' && value.trim().length >= 1 && value.trim().length <= 2000
@@ -35,7 +39,12 @@ export const Landing: GlobalConfig = {
     readVersions: ({ req }) => Boolean(req.user),
   },
   versions: { drafts: true, max: 20 },
-  hooks: { beforeOperation: [captureWebsitePatch], afterRead: [hydrateWebsiteRead], beforeValidate: [prepareWebsiteWrite] },
+  hooks: {
+    beforeOperation: [captureWebsitePatch, captureGlobalDraftWrite],
+    afterChange: [queuePublishedLandingRebuild],
+    afterRead: [hydrateWebsiteRead],
+    beforeValidate: [prepareWebsiteWrite],
+  },
   fields: websiteFields([
     group('seo', [text('title'), prose('description')]),
     group('navigation', [rows('links', link()), text('actionLabel')]),

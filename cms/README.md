@@ -18,8 +18,11 @@ Open <http://localhost:3001/admin> and create the first administrator using
 Payload's first-user form. There are no default credentials. All CMS users are
 administrators; after the first account exists, only signed-in administrators
 can create or manage users. Finish account creation before exposing the service
-to the public. Configure `NEXT_PUBLIC_SERVER_URL` with the CMS's HTTPS origin
-when hosting it.
+to the public. The production Docker image instead initializes the administrator
+from `CMS_ADMIN_EMAIL` and `CMS_ADMIN_PASSWORD` before listening. Its first start
+fails without valid credentials; later starts preserve existing accounts.
+Configure `NEXT_PUBLIC_SERVER_URL` with the CMS's HTTPS origin when hosting it.
+See the [Coolify deployment guide](../deploy/coolify.md) for the complete setup.
 
 The **Website** global keeps its existing `landing` API slug and version history.
 Its unnamed tabs organize Navigation, Footer, Site settings, Homepage, and Page
@@ -58,13 +61,20 @@ http://localhost:3001/api/globals/landing?depth=1&draft=false
 ```
 
 Set the Astro site's `CMS_URL` to the CMS origin to use this content during
-its build. Publishing does not rebuild Astro: rebuild and redeploy the site to
-show newly published content. No preview route or publishing webhook is included.
-The CMS is separate from the static site's host.
+its build. Set the optional runtime-only `SITE_REBUILD_URL` and
+`SITE_REBUILD_TOKEN` to enable a durable Payload queue that requests a Coolify
+website rebuild after publication. Draft saves do not trigger builds. The queue
+runs once per minute and retries failed webhook calls; monitor the resulting
+website deployment in Coolify. Without this integration, rebuild and redeploy
+the site manually to show newly published content. There is no draft preview
+route. The CMS is separate from the static site's host.
 
 `bun run seed` manually imports and publishes the checked-in JSON only when no
 landing content or draft versions exist. Repeating it never overwrites edits.
-It does not create an account and never runs automatically during startup.
+It does not create an account. The Docker container runs migrations,
+`bun run bootstrap:admin`, this idempotent seed, and
+`bun run recover:rebuilds` before starting Next.js. Recovery reclaims interrupted
+rebuilds while the previous CMS instance is stopped.
 
 ```sh
 bun run check          # TypeScript

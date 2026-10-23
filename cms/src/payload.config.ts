@@ -6,6 +6,12 @@ import { Devlogs } from './collections/Devlogs'
 import { Media } from './collections/Media'
 import { Users } from './collections/Users'
 import { Landing } from './globals/Landing'
+import { serializeSQLiteAccess } from './database/sqliteConcurrency'
+import {
+  rebuildSiteAutorun,
+  rebuildSiteTask,
+  siteRebuildEnabled,
+} from './jobs/rebuildSite'
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 const secret = process.env.PAYLOAD_SECRET
@@ -18,6 +24,22 @@ export default buildConfig({
   collections: [Users, Media, Devlogs],
   globals: [Landing],
   upload: { limits: { fileSize: 50 * 1024 * 1024 } },
-  db: sqliteAdapter({ client: { url: process.env.DATABASE_URL || 'file:./data/payload.db' } }),
+  onInit: serializeSQLiteAccess,
+  db: sqliteAdapter({
+    client: { url: process.env.DATABASE_URL || 'file:./data/payload.db' },
+    transactionOptions: {},
+    wal: true,
+  }),
+  jobs: {
+    access: {
+      queue: ({ req }: { req: { user?: unknown } }) => Boolean(req.user),
+      run: ({ req }: { req: { user?: unknown } }) => Boolean(req.user),
+      cancel: ({ req }: { req: { user?: unknown } }) => Boolean(req.user),
+    },
+    autoRun: siteRebuildEnabled ? rebuildSiteAutorun : [],
+    deleteJobOnComplete: true,
+    enableConcurrencyControl: true,
+    tasks: [rebuildSiteTask],
+  },
   typescript: { outputFile: path.resolve(dirname, 'payload-types.ts') },
 })
