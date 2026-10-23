@@ -78,8 +78,8 @@ describe('published landing content', () => {
     await assert.rejects(loadLanding('https://cms.example.test'));
   });
 
-  it('accepts the Devlog, Download, and Remote routes, HTTPS links, and section anchors', () => {
-    for (const href of ['/devlog', '/devlog/', '/download', '/download/', '/remote', '/remote/', '/', '/cookies/', '/cookies/#preferences', '/remote#section', '/#features', 'mailto:hello@example.test', 'https://docs.lomi.dev', '#roadmap']) {
+  it('accepts the Devlog, Download, Remote, and agent guide routes, HTTPS links, and section anchors', () => {
+    for (const href of ['/devlog', '/devlog/', '/download', '/download/', '/remote', '/remote/', '/claude-code', '/claude-code/', '/claude-code/#windows', '/codex', '/codex/', '/codex/#windows', '/', '/cookies/', '/cookies/#preferences', '/remote#section', '/#features', 'mailto:hello@example.test', 'https://docs.lomi.dev', '#roadmap']) {
       assert.equal(landingSchema.safeParse({ ...seed, navigation: { ...seed.navigation, links: [{ label: 'Link', href }] } }).success, true, href);
     }
   });
@@ -94,6 +94,8 @@ describe('published landing content', () => {
       '/download/../admin', '/download?draft=true', '/download//', '/%64ownload',
       '/remote/../admin', '/remote?draft=true', '/remote/?draft=true',
       '/remote//', '/%72emote', '/remote/%2e%2e/admin',
+      '/claude-code/../admin', '/claude-code?draft=true', '/claude-code//', '/%63laude-code',
+      '/codex/../admin', '/codex?draft=true', '/codex//', '/%63odex',
     ]) {
       assert.equal(landingSchema.safeParse({ ...seed, navigation: { ...seed.navigation, links: [{ label: 'Unsafe', href }] } }).success, false, href);
     }

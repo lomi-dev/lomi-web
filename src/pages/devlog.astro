@@ -24,7 +24,7 @@ const footerContent = {
 const [latest, ...archive] = episodes;
 ---
 
-<Layout title={page.seo.title} description={page.seo.description} website={content} themeColor={content.site.theme.background} edgeColor="var(--color-chalk)">
+<Layout title={page.seo.title} description={page.seo.description} website={content} robots={episodes.length ? 'index,follow' : 'noindex,follow'} themeColor={content.site.theme.background} edgeColor="var(--color-chalk)">
   <div class="devlog-surface" data-scroll-surface>
     <Header content={content.navigation} site={content.site} layout={content.layout} theme="light" />
     <main id="main" class="devlog-page devlog-shell" tabindex="-1">

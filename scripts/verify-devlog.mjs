@@ -87,6 +87,11 @@ try {
     cmsRequests.length = 0;
     await build(state, cms);
     assert.deepEqual(cmsRequests.filter((url) => url.startsWith('/api/devlogs')), [feedPath], `${state}: published feed request`);
+    const builtDevlog = await readFile(resolve(output, 'devlog/index.html'), 'utf8');
+    const robotsTag = builtDevlog.match(/<meta\b[^>]*name="robots"[^>]*>/)?.[0] ?? '';
+    assert.equal(/\bnoindex\b/.test(robotsTag), state === 'empty', `${state}: only an empty devlog is noindexed`);
+    const sitemap = await readFile(resolve(output, 'sitemap-0.xml'), 'utf8');
+    assert.equal(sitemap.includes('<loc>https://fixture.lomi.test/devlog/</loc>'), state === 'populated', `${state}: sitemap follows published devlog content`);
     for (const javaScriptEnabled of [false, true]) {
       const context = await browser.newContext({ javaScriptEnabled, viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce', timezoneId: 'Pacific/Honolulu' });
       await context.addInitScript(() => localStorage.setItem('lomi.cookie-consent', JSON.stringify({ version: 1, externalMedia: true, savedAt: Date.now() })));
@@ -120,8 +125,8 @@ try {
         if (state === 'empty') {
           await expect(page.locator('[data-devlog-card]')).toHaveCount(0);
           await expect(page.locator('[data-devlog-empty]')).toBeVisible();
-          await expect(page.getByRole('heading', { level: 2 })).toHaveCount(1);
-          await expect(page.getByRole('heading', { level: 2 })).toHaveText(fixture.pages.devlog.empty.title);
+          await expect(page.locator('.devlog-recordings').getByRole('heading', { level: 2 })).toHaveCount(1);
+          await expect(page.locator('.devlog-recordings').getByRole('heading', { level: 2 })).toHaveText(fixture.pages.devlog.empty.title);
           await expect(page.getByRole('link', { name: fixture.pages.devlog.cta.label })).toHaveAttribute('href', '/');
           await expect(page.locator('.empty-preview')).toHaveAttribute('aria-hidden', 'true');
           await expect(page.locator('.empty-preview')).toHaveCSS('aspect-ratio', '16 / 9');
@@ -137,8 +142,8 @@ try {
           const cards = page.locator('[data-devlog-card]');
           await expect(cards).toHaveCount(4);
           await expect(cards.locator('h3')).toHaveText(['The workspace comes together', 'Making room for agents', 'A quieter terminal', 'The first prototype']);
-          await expect(page.getByRole('heading', { level: 2 })).toHaveCount(2);
-          await expect(page.getByRole('heading', { level: 3 })).toHaveCount(4);
+          await expect(page.locator('.devlog-recordings').getByRole('heading', { level: 2 })).toHaveCount(2);
+          await expect(page.locator('.devlog-recordings').getByRole('heading', { level: 3 })).toHaveCount(4);
           await expect(page.locator('.devlog-latest > h2.devlog-section-heading')).toHaveText(fixture.pages.devlog.latestLabel);
           await expect(page.locator('.devlog-archive > h2.devlog-section-heading')).toHaveText(fixture.pages.devlog.archiveLabel);
           await expect(cards.locator('.episode-watch')).toHaveText(Array(4).fill(fixture.pages.devlog.watchLabel));

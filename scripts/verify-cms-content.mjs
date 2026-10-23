@@ -225,7 +225,7 @@ try {
     await expect(page.locator('.mobile-download')).toHaveAttribute('href', route === '/' ? '#newsletter' : '/#newsletter');
     await assertMedia(page, '.site-header img[alt="CMS logo alt sentinel"]', fixture.site.brand.logoAlt);
     if (route === '/') {
-      assert.deepEqual(await page.locator('main > section').evaluateAll((items) => items.map((el) => el.id || 'hero')), ['roadmap', 'hero', 'features', 'newsletter']);
+      assert.deepEqual(await page.locator('main > section').evaluateAll((items) => items.map((el) => el.id || 'hero')), ['roadmap', 'hero', 'features', 'agent-workflows', 'newsletter']);
       await expect(page.locator('.hero h1')).toContainText(fixture.hero.title);
       await expect(page.locator('[data-hero-video]')).toHaveAttribute('data-video-id', youtubeId);
       await expect(page.locator('[data-video-player]')).toHaveAttribute('aria-label', fixture.hero.player.videoTitle);
@@ -284,8 +284,8 @@ try {
       await expect(page.locator('.empty-preview img')).toHaveAttribute('src', `${cmsOrigin}${mediaPath}`);
       await expect(page.locator('.empty-preview img')).toHaveAttribute('alt', '');
       await expect(page.locator('.empty-preview a, .empty-preview button')).toHaveCount(0);
-      await expect(page.locator('.devlog-footer')).toContainText(fixture.pages.devlog.footerLabel);
-      await expect(page.locator('.devlog-footer [data-cookie-settings]')).toHaveText(fixture.pages.devlog.settingsLabel);
+      await expect(page.locator('.site-footer h2')).toHaveText(fixture.footer.signoff);
+      await expect(page.locator('.site-footer [data-cookie-settings]')).toHaveText(fixture.footer.cookieSettingsLabel);
     } else {
       await expect(page.locator('h1')).toHaveText(fixture.pages.cookies.title);
       await expect(page.locator('#preferences')).toContainText('CMS privacy paragraph sentinel');

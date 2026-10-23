@@ -27,6 +27,14 @@ The SQLite migration and CMS scheduler must never overlap another CMS instance.
 CMS restarts briefly interrupt admin and media requests; the static website
 continues serving from its separate container.
 
+Keep Coolify's **www redirect** set to **No redirect** (`redirect: both`):
+Nginx owns the permanent www-to-apex fallback. The Cloudflare website redirect
+rule sends HTTP and www requests directly to HTTPS on lomi.dev, preserving
+paths and query strings. Do not enable an apex-to-www redirect in the proxy;
+it conflicts with Nginx and creates a redirect loop. After changing redirect
+settings through the API, verify generated container labels as well as the
+saved setting, then check all four public HTTP/HTTPS host variants.
+
 ## CMS environment
 
 Set `NEXT_PUBLIC_SERVER_URL=https://cms.lomi.dev` for both build and runtime.

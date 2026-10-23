@@ -3,6 +3,11 @@ import { site } from './site';
 
 const removedAnchors = new Set(['#workflow', '#principles', '#faq']);
 
+export const agentWorkflowLinks = [
+  { label: 'Claude Code in lomi', href: '/claude-code/' },
+  { label: 'Codex CLI in lomi', href: '/codex/' },
+];
+
 // Older CMS drafts may still contain links to sections removed from the page.
 export function activeLandingLinks(links: Landing['navigation']['links'], layout?: readonly { section: string; enabled: boolean }[]): Landing['navigation']['links'] {
   return links.flatMap((link) => {

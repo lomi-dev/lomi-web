@@ -5,16 +5,88 @@ import CookieConsent from '../components/CookieConsent.astro';
 import type { Landing } from '../../content/landing-schema';
 import { editorDefaults } from '../../content/editor-defaults';
 import { resolveMedia } from '../../content/editor-schema';
+import { canonicalUrl, serializeJsonLd } from '../lib/seo';
 
-interface Props { title: string; description: string; themeColor?: string; edgeColor?: string; website?: Landing }
-const { title, description, themeColor, edgeColor = 'var(--color-chalk)', website } = Astro.props;
+type JsonLd = Record<string, unknown>;
+type ArticleMetadata = { publishedTime?: string; modifiedTime?: string };
+type BreadcrumbItem = { name: string; href: string };
+
+interface Props {
+  title: string;
+  description: string;
+  themeColor?: string;
+  edgeColor?: string;
+  website?: Landing;
+  robots?: string;
+  article?: ArticleMetadata;
+  jsonLd?: JsonLd | JsonLd[];
+  breadcrumbs?: BreadcrumbItem[];
+}
+
+const { title, description, themeColor, edgeColor = 'var(--color-chalk)', website, robots = 'index,follow', article, jsonLd, breadcrumbs } = Astro.props;
 const site = website?.site ?? editorDefaults.site;
 const theme = site.theme;
 const favicon = resolveMedia(site.brand.favicon, import.meta.env.CMS_URL);
+const brandLogo = resolveMedia(site.brand.logo, import.meta.env.CMS_URL);
 const uploadedSocialImage = resolveMedia(site.brand.socialImage, import.meta.env.CMS_URL);
 
-const canonical = Astro.site ? new URL(Astro.url.pathname, Astro.site) : undefined;
+const canonical = canonicalUrl(Astro.url.pathname, Astro.site);
+const siteUrl = Astro.site ? new URL('/', Astro.site) : undefined;
 const socialImage = uploadedSocialImage?.url ?? (Astro.site ? new URL('/social-card.png', Astro.site) : undefined);
+const socialImageAlt = uploadedSocialImage?.alt || (uploadedSocialImage ? site.brand.name : 'lomi homepage and desktop workspace preview');
+const organizationId = siteUrl ? `${siteUrl.href}#organization` : undefined;
+const isHomepage = Astro.url.pathname === '/';
+const structuredData = siteUrl ? {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Organization',
+      '@id': organizationId,
+      name: site.brand.name,
+      url: siteUrl.href,
+      sameAs: [site.githubUrl],
+      ...(brandLogo ? { logo: { '@type': 'ImageObject', url: brandLogo.url, ...(brandLogo.alt ? { caption: brandLogo.alt } : {}) } } : {}),
+    },
+    {
+      '@type': 'WebSite',
+      '@id': `${siteUrl.href}#website`,
+      name: site.brand.name,
+      url: siteUrl.href,
+      publisher: { '@id': organizationId },
+    },
+    ...(isHomepage ? [{
+      '@type': 'SoftwareApplication',
+      '@id': `${siteUrl.href}#software`,
+      name: site.brand.name,
+      url: siteUrl.href,
+      description,
+      applicationCategory: 'DeveloperApplication',
+      operatingSystem: 'macOS, Windows, Linux',
+      license: 'https://www.apache.org/licenses/LICENSE-2.0',
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+      publisher: { '@id': organizationId },
+    }] : []),
+    ...(article ? [{
+      '@type': 'Article',
+      headline: title,
+      description,
+      ...(canonical ? { mainEntityOfPage: { '@id': canonical.href } } : {}),
+      ...(article.publishedTime ? { datePublished: article.publishedTime } : {}),
+      ...(article.modifiedTime ? { dateModified: article.modifiedTime } : {}),
+      publisher: { '@id': organizationId },
+    }] : []),
+    ...(breadcrumbs?.length ? [{
+      '@type': 'BreadcrumbList',
+      itemListElement: breadcrumbs.map((item, index) => ({
+        '@type': 'ListItem',
+        position: index + 1,
+        name: item.name,
+        item: Astro.site ? new URL(item.href, Astro.site).href : item.href,
+      })),
+    }] : []),
+  ],
+} : undefined;
+const additionalStructuredData = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
 ---
 <!doctype html>
 <html lang={site.language} style={{ '--page-edge-background': edgeColor, '--color-lime': theme.accent, '--color-lime-hover': theme.accentHover, '--color-lime-pressed': theme.accentPressed, '--color-ink': theme.ink, '--color-chalk': theme.background, '--color-paper': theme.paper, '--color-text-secondary': theme.muted, '--color-focus': theme.focus, '--color-dark': theme.dark, '--color-dark-text': theme.darkText, '--line': theme.line }}>
@@ -23,6 +95,7 @@ const socialImage = uploadedSocialImage?.url ?? (Astro.site ? new URL('/social-c
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content={themeColor ?? theme.dark} />
     <meta name="description" content={description} />
+    <meta name="robots" content={robots} />
     <meta name="color-scheme" content="light" />
     <title>{title}</title>
     {favicon ? <link rel="icon" href={favicon.url} /> : <>
@@ -33,15 +106,25 @@ const socialImage = uploadedSocialImage?.url ?? (Astro.site ? new URL('/social-c
     </>}
     <link rel="preload" href={geistFont} as="font" type="font/woff2" crossorigin />
     {canonical && <link rel="canonical" href={canonical} />}
-    <meta property="og:type" content="website" />
+    {Astro.site && <link rel="sitemap" type="application/xml" href={new URL('sitemap-index.xml', Astro.site)} />}
+    <meta property="og:type" content={article ? 'article' : 'website'} />
     <meta property="og:site_name" content={site.brand.name} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     {canonical && <meta property="og:url" content={canonical} />}
     {socialImage && <meta property="og:image" content={socialImage} />}
+    {socialImage && socialImageAlt && <meta property="og:image:alt" content={socialImageAlt} />}
     {socialImage && !uploadedSocialImage && <meta property="og:image:width" content="1200" />}
     {socialImage && !uploadedSocialImage && <meta property="og:image:height" content="630" />}
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    {socialImage && <meta name="twitter:image" content={socialImage} />}
+    {socialImage && socialImageAlt && <meta name="twitter:image:alt" content={socialImageAlt} />}
+    {article?.publishedTime && <meta property="article:published_time" content={article.publishedTime} />}
+    {article?.modifiedTime && <meta property="article:modified_time" content={article.modifiedTime} />}
+    {structuredData && <script type="application/ld+json" set:html={serializeJsonLd(structuredData)} />}
+    {additionalStructuredData.map((data) => <script type="application/ld+json" set:html={serializeJsonLd(data)} />)}
     <slot name="head" />
   </head>
   <body id="top">

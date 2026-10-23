@@ -3,6 +3,7 @@ import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
 import Hero from '../components/Hero.astro';
 import FeatureGallery from '../components/FeatureGallery.astro';
+import AgentWorkflows from '../components/AgentWorkflows.astro';
 import Roadmap from '../components/Roadmap.astro';
 import NewsletterSection from '../components/NewsletterSection.astro';
 import Footer from '../components/Footer.astro';
@@ -26,7 +27,7 @@ const footerContent = {
       <main id="main" tabindex="-1" data-scroll-surface style="--scroll-surface-color: var(--color-chalk)">
         {!content.layout.some((row) => row.section === 'hero' && row.enabled) && <h1 class="sr-only">{content.seo.title}</h1>}
         {content.layout.filter((row) => row.enabled).map(({ section }) => section === 'hero' ? <Hero content={hero} layout={content.layout} placeholderLogo={content.site.brand.logo} />
-          : section === 'features' ? <FeatureGallery content={features} placeholderLogo={content.site.brand.logo} />
+          : section === 'features' ? <><FeatureGallery content={features} placeholderLogo={content.site.brand.logo} /><AgentWorkflows /></>
           : section === 'roadmap' ? <Roadmap content={roadmap} />
           : section === 'newsletter' ? <NewsletterSection content={newsletter} site={content.site} /> : null)}
       </main>

@@ -1,6 +1,6 @@
 {
   "seo": {
-    "title": "lomi — The terminal ADE for your coding agents",
+    "title": "Lomi — Open-source workspace for AI coding agents",
     "description": "Run Codex, Claude Code, OpenCode and your CLI agents beside native terminals, an editor, browser previews and Git. One open-source desktop workspace."
   },
   "navigation": {
@@ -28,7 +28,7 @@
     "eyebrow": "The terminal ADE",
     "title": "Your agents.",
     "accent": "One home base.",
-    "description": "Run your coding agents beside your editor, browser and Git. A desktop workspace that fits the way you build.",
+    "description": "Run Claude Code, Codex CLI and OpenCode beside your editor, browser previews and Git. One free, open-source desktop workspace for your coding agents.",
     "primaryLabel": "Download lomi",
     "secondaryLabel": "Meet the workspace",
     "note": "Free & open source · macOS, Windows & Linux",

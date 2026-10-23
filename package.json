@@ -12,6 +12,7 @@
     "check": "astro check",
     "build": "astro check && astro build",
     "preview": "astro preview --host 127.0.0.1",
+    "verify:seo": "node scripts/verify-seo.mjs",
     "verify": "node scripts/verify.mjs",
     "verify:footer": "node scripts/verify-footer.mjs",
     "verify:newsletter": "node scripts/verify-newsletter.mjs",
@@ -29,12 +30,14 @@
     "test:downloads": "bun test tests/downloads.test.ts",
     "test:content": "bun test tests/content.test.ts",
     "test:devlog": "bun test tests/devlog.test.ts",
+    "test:seo": "bun test tests/seo.test.ts",
     "cms:dev": "bun run --cwd cms dev",
     "cms:seed": "bun run --cwd cms seed",
     "cms:check": "bun run --cwd cms check"
   },
   "dependencies": {
     "@astrojs/react": "^6.0.6",
+    "@astrojs/sitemap": "^3.7.4",
     "@fontsource-variable/geist": "^5.3.0",
     "@tailwindcss/vite": "^4.3.3",
     "astro": "^7.3.3",
