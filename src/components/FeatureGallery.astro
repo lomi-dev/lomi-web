@@ -20,12 +20,12 @@ const count = content.items.length;
 
     <div class="gallery-grid" data-feature-grid data-layout={count >= 3 ? 'editorial' : 'compact'}>
       {content.items.map((item, index) => <article class="gallery-tile" data-feature-card>
-        <a class="gallery-preview" href={`#feature-description-${index}`} data-feature-open={index} aria-labelledby={`feature-title-${index}`}>
+        <a class="gallery-preview" href={`#feature-description-${index}`} data-feature-open={index} aria-labelledby={`feature-title-${index} feature-detail-${index}`}>
           <div class="gallery-media" data-feature-card-media>
             <ContentMedia image={item.image} video={item.video} placeholderLogo={placeholderLogo} placeholderFeature={item.icon} alt={mediaAlt(item)} controls={false} widths={[640, 960, 1440, 1920]} sizes={index === 0 ? '(min-width: 1600px) 960px, (min-width: 900px) 62vw, calc(100vw - 40px)' : '(min-width: 1600px) 470px, (min-width: 900px) 31vw, (min-width: 600px) 46vw, calc(100vw - 40px)'} loading="lazy" />
             <span class="gallery-open" aria-hidden="true"><Icon name="expand" width={19} height={19} /></span>
           </div>
-          <div class="gallery-caption"><h3 id={`feature-title-${index}`}>{item.title}</h3><span>{item.detail}</span></div>
+          <div class="gallery-caption"><h3 id={`feature-title-${index}`}>{item.title}</h3><span id={`feature-detail-${index}`}>{item.detail}</span></div>
         </a>
         <p class="gallery-fallback-description" id={`feature-description-${index}`} tabindex="-1">{item.description}</p>
       </article>)}

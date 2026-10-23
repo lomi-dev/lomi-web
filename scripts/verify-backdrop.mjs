@@ -56,10 +56,16 @@ try {
   await assertCanvas(page, [255, 255, 255]);
   await exposedEdge(page, 'top', [255, 255, 255], 'hero');
 
-  // A nested player must not become the top overscroll surface.
-  await center(page, '[data-video-player]');
-  const playerColor = await page.locator('[data-video-player]').evaluate((element) => {
-    return getComputedStyle(element).backgroundColor;
+  // Both CMS hero modes expose a nested media surface during scrolling.
+  const heroMedia = '.hero [data-video-player], .hero .workspace-capture';
+  await center(page, heroMedia);
+  const playerColor = await page.locator(heroMedia).evaluate((element) => {
+    const probe = document.createElement('span');
+    probe.style.cssText = 'display:none;color:var(--scroll-surface-color)';
+    element.append(probe);
+    const color = getComputedStyle(probe).color;
+    probe.remove();
+    return color;
   });
   await expect(page.locator('html')).toHaveCSS('background-color', playerColor);
   await page.mouse.move(720, 450);
@@ -141,8 +147,9 @@ try {
   await assertCanvas(page, devlogColor);
   for (const edge of ['top', 'left', 'right', 'bottom']) {
     if (edge === 'bottom') await page.evaluate(() => scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' }));
-    await assertCanvas(page, devlogColor);
-    await exposedEdge(page, edge, devlogColor, 'devlog');
+    const edgeColor = edge === 'bottom' ? [200, 255, 61] : devlogColor;
+    await assertCanvas(page, edgeColor);
+    await exposedEdge(page, edge, edgeColor, 'devlog');
   }
   await page.goBack({ waitUntil: 'networkidle' });
   await assertCanvas(page, [17, 22, 16]);

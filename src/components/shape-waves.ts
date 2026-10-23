@@ -145,10 +145,17 @@ export function registerShapeWaves() {
       this.height = 0;
       this.dataset.renderer = 'fallback';
       try {
-        this.context = this.canvas?.getContext('2d', { alpha: false }) ?? null;
-        if (!this.context || typeof Path2D === 'undefined') return this.fail();
         this.preference = matchMedia('(prefers-reduced-motion: reduce)');
         this.finePointer = matchMedia('(any-pointer: fine)');
+        // The server-rendered SVG is the same initial field. Coarse-pointer
+        // devices cannot use the canvas interaction, so keep that complete
+        // visual fallback instead of starting its continuous CPU-heavy loop.
+        if (!this.finePointer.matches) {
+          this.dataset.state = this.preference.matches ? 'reduced' : 'fallback';
+          return;
+        }
+        this.context = this.canvas?.getContext('2d', { alpha: false }) ?? null;
+        if (!this.context || typeof Path2D === 'undefined') return this.fail();
         const bounds = this.getBoundingClientRect();
         this.visible = bounds.bottom > 0 && bounds.top < innerHeight && bounds.right > 0 && bounds.left < innerWidth;
         const style = getComputedStyle(this);
