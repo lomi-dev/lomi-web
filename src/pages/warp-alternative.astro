@@ -1,0 +1,96 @@
+---
+import ResourceLayout from '../layouts/ResourceLayout.astro';
+
+const sections = [
+  { id: 'short-answer', label: 'The short answer' },
+  { id: 'workflow-differences', label: 'How the workflows differ' },
+  { id: 'try-lomi', label: 'Try a Lomi workflow' },
+  { id: 'choose-warp', label: 'When Warp may fit better' },
+  { id: 'limits-and-costs', label: 'Limits, licensing and access' },
+  { id: 'sources', label: 'Sources and review' },
+];
+
+---
+
+<ResourceLayout
+  title="An Open-Source Warp Alternative for Coding Agents | Lomi"
+  description="Looking for an open-source Warp alternative? Compare Lomi and Warp for CLI coding agents, local project tools, licensing, costs and platform support."
+  heading="Looking for an open-source Warp alternative?"
+  summary="Lomi is an Apache 2.0 desktop workspace for the coding-agent CLIs you already use. Compare its local project workflow with Warp’s terminal, editor and agent features before you switch."
+  eyebrow="Lomi vs Warp for coding-agent workflows"
+  breadcrumbs={[{ name: 'Home', href: '/' }, { name: 'Compare workspaces', href: '/compare/' }]}
+  sections={sections}
+  reviewedAt="2026-10-23"
+>
+  <section id="short-answer" aria-labelledby="short-answer-title">
+    <h2 id="short-answer-title">The short answer</h2>
+    <p><strong>Try Lomi if you want an open-source desktop workspace for an existing local CLI agent.</strong> It puts a project’s files, editor, terminals, local browser preview and Git view together. On macOS and Linux, Lomi can detect and launch supported coding-agent CLIs from its Agents menu; on Windows, use a regular terminal and start the CLI yourself.</p>
+    <p><strong>Choose Warp if you want its terminal and integrated agent ecosystem.</strong> Warp also has a native code editor, Git diff review, worktree support and third-party CLI integrations. Its broader product line includes cloud software-factory workflows.</p>
+    <p><strong>Both products are open source.</strong> Lomi uses Apache 2.0. Warp’s client repository lists AGPL v3 for most code and MIT for its warpui crates. Both offer a free desktop option; the useful comparison is the workflow, license and agent access you need.</p>
+  </section>
+
+  <section id="workflow-differences" aria-labelledby="workflow-differences-title">
+    <h2 id="workflow-differences-title">How the workflows differ</h2>
+    <div class="table-scroll" role="region" aria-label="Lomi and Warp workflow comparison" tabindex="0">
+      <table>
+        <caption>Published workflow differences checked against Lomi and Warp product documentation on October 23, 2026</caption>
+        <thead><tr><th scope="col">Question</th><th scope="col">Lomi</th><th scope="col">Warp</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">What is the main workspace?</th><td>A desktop project workspace for files, editor, terminal panes, local browser preview and Git.</td><td>A terminal with a native code editor, agent integrations and connected cloud products.</td></tr>
+          <tr><th scope="row">How do you use Claude Code or Codex?</th><td>Launch a supported installed CLI from Agents on macOS or Linux. On Windows, launch it manually in a regular Lomi terminal.</td><td>Warp documents use of third-party CLI agents from its terminal. Check its current agent docs for the supported setup steps.</td></tr>
+          <tr><th scope="row">Where is the local app preview?</th><td>Open a local development URL in Lomi’s built-in browser while the app runs in a terminal.</td><td>A comparable local preview pane was not verified in the sources reviewed. Warp’s cloud browser tools are a separate workflow.</td></tr>
+          <tr><th scope="row">Can you edit and review code?</th><td>Edit local files and inspect project Git changes in the same workspace.</td><td>A <a href="https://docs.warp.dev/code/code-editor/">native editor</a> supports LSP and a file tree. The <a href="https://docs.warp.dev/code/code-review/">Code Review panel</a> displays diffs and sends review comments to supported agents.</td></tr>
+          <tr><th scope="row">How are parallel working trees handled?</th><td>Create Git worktrees yourself and open each folder as a separate project. Lomi does not create or coordinate them automatically.</td><td>Warp <a href="https://docs.warp.dev/code/git-worktrees/">detects Git worktrees</a> for Code Review, codebase context and agent workflows.</td></tr>
+          <tr><th scope="row">What is the license?</th><td><a href="https://github.com/lomi-dev/lomi/blob/main/LICENSE">Apache 2.0</a>.</td><td>The <a href="https://github.com/warpdotdev/warp#licensing">client repository</a> lists AGPL v3 for most code; warpui_core and warpui use MIT.</td></tr>
+          <tr><th scope="row">Do you need an account?</th><td>Local desktop use needs no Lomi account. Sign in separately to any CLI provider you choose.</td><td><a href="https://docs.warp.dev/getting-started/quickstart/installation-and-setup/">Desktop setup</a> allows skipping sign-in. Warp Agent CLI has its own account requirement.</td></tr>
+          <tr><th scope="row">What does agent access cost?</th><td>The Lomi app is free. You bring the CLI, account and model access; provider charges or subscription terms still apply.</td><td>A <a href="https://www.warp.dev/pricing">Free plan</a> covers core terminal features. Warp Agent usage and paid-plan allowances are separate; third-party providers retain their own terms.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>This is a workflow comparison based on published product descriptions, not a benchmark. Warp’s product and plan details can change; confirm current terms with Warp before switching.</p>
+  </section>
+
+  <section id="try-lomi" aria-labelledby="try-lomi-title">
+    <h2 id="try-lomi-title">Try a Lomi workflow with your current CLI</h2>
+    <p>You do not need to change coding-agent providers just to try the workspace. Keep the CLI installed and signed in according to its own documentation, then open a local project in Lomi.</p>
+    <ol>
+      <li><strong>Open a project folder.</strong> Lomi’s terminal and project tools start from the local workspace. Use a Git repository if you want a clear checkpoint before making changes.</li>
+      <li><strong>Launch the CLI.</strong> On macOS or Linux, choose <em>+</em>, open <em>Agents</em> and select an installed supported tool. If you have just installed a CLI, refresh the available-tool list. On Windows, choose a regular terminal and run the provider’s command manually.</li>
+      <li><strong>Keep the local app running.</strong> Open another terminal for the development server or test command. When the server prints its localhost URL, open that address in Lomi’s browser.</li>
+      <li><strong>Review the diff.</strong> Inspect the files and Git changes in Lomi and run your project’s checks before you commit.</li>
+    </ol>
+    <p>For exact provider prerequisites and platform notes, use the <a href="/claude-code/">Claude Code setup guide</a>, <a href="/codex/">Codex CLI setup guide</a> or the <a href="https://docs.lomi.dev/features/">Lomi feature documentation</a>.</p>
+  </section>
+
+  <section id="choose-warp" aria-labelledby="choose-warp-title">
+    <h2 id="choose-warp-title">When Warp may fit better</h2>
+    <p>Warp deserves a closer look if its terminal experience is a core part of how you work. Its product documentation describes built-in agent capabilities and support for third-party agent CLIs. Its broader product line includes cloud software factories for running fleets of coding agents across a development lifecycle.</p>
+    <ul>
+      <li>You want Warp’s own integrated terminal agent and command-line experience.</li>
+      <li>You use Warp’s cloud agent automation or software-factory products.</li>
+      <li>You rely on Warp’s command blocks, native code editor, diff review or worktree integrations.</li>
+      <li>You need a capability that Lomi’s current feature set or platform support does not provide.</li>
+    </ul>
+    <p>If those are your needs, moving to Lomi may remove workflows you rely on. Compare the relevant Warp feature directly with the <a href="/compare/">other coding-agent workspaces and terminals</a> before changing tools.</p>
+  </section>
+
+  <section id="limits-and-costs" aria-labelledby="limits-and-costs-title">
+    <h2 id="limits-and-costs-title">Limits, licensing and access</h2>
+    <p>Lomi is an open-source desktop app under the Apache License 2.0. The application is free to download. Agent access, model subscriptions, API keys and usage charges are managed by each CLI provider and are not bundled by Lomi.</p>
+    <p>The managed Agents launcher is available on macOS and Linux. On Windows, Lomi provides regular terminals, but no one-click managed CLI detection; follow the agent provider’s Windows or WSL instructions and start it yourself. Lomi does not describe a Warp cloud-factory equivalent or automatic parallel-worktree orchestration.</p>
+    <p>Open source alone is not a deciding factor: Warp, Terax and Wave Terminal also publish open-source code. Compare each current license file and product terms if licensing is important for your team. Lomi’s Apache 2.0 license is a concrete difference from the licenses listed in Warp’s client repository.</p>
+  </section>
+
+  <section id="sources" aria-labelledby="sources-title">
+    <h2 id="sources-title">Sources and review</h2>
+    <p>Product details were checked against first-party pages on October 23, 2026. Lomi’s workflow was checked against its application guides and feature docs. This page was written by Lomi and is not an independent product test. Revisit the vendor sources before making a decision because features and plans change.</p>
+    <ul class="source-list">
+      <li><a href="https://www.warp.dev/terminal" target="_blank" rel="noopener noreferrer">Warp Terminal product page</a></li>
+      <li><a href="https://docs.warp.dev/agents/" target="_blank" rel="noopener noreferrer">Warp agents documentation</a></li>
+      <li><a href="https://docs.warp.dev/code/code-editor/" target="_blank" rel="noopener noreferrer">Warp code editor</a> · <a href="https://docs.warp.dev/code/code-review/" target="_blank" rel="noopener noreferrer">Code Review</a> · <a href="https://docs.warp.dev/code/git-worktrees/" target="_blank" rel="noopener noreferrer">Git worktrees</a></li>
+      <li><a href="https://github.com/warpdotdev/warp#licensing" target="_blank" rel="noopener noreferrer">Warp client licensing</a> · <a href="https://www.warp.dev/pricing" target="_blank" rel="noopener noreferrer">Warp pricing</a> · <a href="https://docs.warp.dev/agents/cli/quickstart/" target="_blank" rel="noopener noreferrer">Warp Agent CLI requirements</a></li>
+      <li><a href="https://docs.warp.dev/getting-started/migrate-to-warp/migrate-to-warp-from-claude-code/" target="_blank" rel="noopener noreferrer">Warp’s Claude Code migration guide</a></li>
+      <li><a href="https://docs.lomi.dev/features/">Lomi features and platform support</a> · <a href="/claude-code/">Claude Code in Lomi</a> · <a href="/codex/">Codex CLI in Lomi</a></li>
+    </ul>
+  </section>
+</ResourceLayout>

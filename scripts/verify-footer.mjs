@@ -202,6 +202,9 @@ try {
 
   const mobile = await openPage({ viewport: viewports[2], hasTouch: true });
   await showFooter(mobile.page);
+  // Authored navigation can place the artwork below the footer's scrollport.
+  // Exercise its lazy canvas only after the artwork itself becomes visible.
+  await mobile.page.locator('[data-footer-wordmark]').scrollIntoViewIfNeeded();
   await expect(mobile.page.locator('[data-footer-wordmark]')).toHaveAttribute('data-wordmark-ready', 'true');
   await mobile.page.waitForTimeout(1000);
   await assertIdle(mobile.page);

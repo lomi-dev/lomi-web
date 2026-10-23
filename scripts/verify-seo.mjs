@@ -79,6 +79,9 @@ const pagePaths = ['index.html', ...(await readdir(outputDirectory, { withFileTy
   .filter((entry) => entry.isDirectory() && !entry.name.startsWith('_'))
   .map((entry) => `${entry.name}/index.html`)];
 const canonicalUrls = new Set();
+const titles = new Set();
+const descriptions = new Set();
+const pages = new Map();
 for (const path of pagePaths) {
   let html;
   try { html = await readFile(new URL(path, outputDirectory), 'utf8'); }
@@ -89,8 +92,63 @@ for (const path of pagePaths) {
   assert.equal(new URL(url).origin, expectedSite.origin, `${path}: canonical uses the configured origin`);
   assert.ok(!canonicalUrls.has(url), `${path}: canonical is unique`);
   canonicalUrls.add(url);
+  pages.set(url, html);
+  const title = html.match(/<title>(.*?)<\/title>/i)?.[1];
+  const description = metadata(html, 'name', 'description');
+  assert.ok(title, `${path}: page has a title`);
+  assert.ok(description, `${path}: page has a description`);
+  assert.ok(!titles.has(title), `${path}: page title is unique`);
+  assert.ok(!descriptions.has(description), `${path}: page description is unique`);
+  titles.add(title);
+  descriptions.add(description);
   assert.equal(metadata(html, 'property', 'og:url'), url, `${path}: social URL agrees with canonical`);
   assert.equal(sitemapUrls.includes(url), !/\bnoindex\b/i.test(robotsContent(html)), `${path}: sitemap follows indexing intent`);
+}
+
+// New acquisition pages must be readable without JavaScript, internally linked,
+// and have working article navigation. A sitemap alone does not make them useful.
+const resourcePaths = ['/compare/', '/warp-alternative/', '/claude-code-and-codex/'];
+const discovered = new Set([homepageCanonical.href]);
+const queue = [homepageCanonical.href];
+while (queue.length) {
+  const current = queue.shift();
+  for (const { attributes } of tags(pages.get(current), 'a')) {
+    if (!attributes.href) continue;
+    const target = new URL(attributes.href, current);
+    target.hash = '';
+    if (pages.has(target.href) && !discovered.has(target.href)) {
+      discovered.add(target.href);
+      queue.push(target.href);
+    }
+  }
+}
+for (const path of resourcePaths) {
+  const url = new URL(path, expectedSite).href;
+  const html = pages.get(url);
+  assert.ok(html, `${path}: resource is statically rendered`);
+  assert.ok(discovered.has(url), `${path}: reachable through crawlable links from the homepage`);
+  assert.equal(tags(html, 'h1').length, 1, `${path}: one primary heading`);
+  assert.ok(tags(html, 'a').some(({ attributes }) => attributes.href === '/download/'), `${path}: download is reachable`);
+  const resourceGraph = [...html.matchAll(/<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)]
+    .flatMap(([, json]) => JSON.parse(json)['@graph'] ?? []);
+  const breadcrumb = resourceGraph.find((node) => node['@type'] === 'BreadcrumbList');
+  assert.equal(breadcrumb?.itemListElement.at(-1)?.item, url, `${path}: breadcrumb ends at this page`);
+  const article = resourceGraph.find((node) => node['@type'] === 'Article');
+  assert.ok(article?.dateModified, `${path}: review date is present in article metadata`);
+  assert.ok(html.includes(`datetime="${article.dateModified}"`), `${path}: review date is also visible`);
+  for (const { attributes } of tags(html, 'a')) {
+    if (!attributes.href) continue;
+    const target = new URL(attributes.href, url);
+    if (target.origin !== expectedSite.origin) continue;
+    const hash = target.hash;
+    target.hash = '';
+    const targetHtml = pages.get(target.href);
+    assert.ok(targetHtml, `${path}: local link ${attributes.href} resolves to a rendered page`);
+    if (hash) {
+      const id = decodeURIComponent(hash.slice(1));
+      assert.ok([...targetHtml.matchAll(/\bid=(["'])(.*?)\1/g)].some(([, , value]) => value === id), `${path}: anchor ${attributes.href} exists`);
+    }
+  }
 }
 
 console.log('SEO output checks passed.');

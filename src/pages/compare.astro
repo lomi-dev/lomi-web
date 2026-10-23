@@ -1,0 +1,100 @@
+---
+import ResourceLayout from '../layouts/ResourceLayout.astro';
+
+const sections = [
+  { id: 'quick-answer', label: 'Quick answer' },
+  { id: 'compare-products', label: 'Compare the products' },
+  { id: 'choose-by-workflow', label: 'Choose by workflow' },
+  { id: 'where-lomi-fits', label: 'Where Lomi fits' },
+  { id: 'sources-and-method', label: 'Sources and method' },
+];
+
+---
+
+<ResourceLayout
+  title="Compare AI Coding Workspaces and Terminals | Lomi"
+  description="Compare eight coding-agent workspaces, AI terminals and agent products by workflow, local setup and platform. Find where Lomi fits and what each tool does best."
+  heading="Compare workspaces for AI coding agents"
+  summary="A practical guide to Lomi, Devin, Terax, Warp, Wave Terminal, Orca, T3 Code, Superset and BridgeMind. Compare how each fits a developer’s daily workflow, then choose the kind of tool you need."
+  eyebrow="AI coding workspace comparison"
+  breadcrumbs={[{ name: 'Home', href: '/' }]}
+  sections={sections}
+  reviewedAt="2026-10-23"
+>
+  <section id="quick-answer" aria-labelledby="quick-answer-title">
+    <h2 id="quick-answer-title">Start with the kind of work you want to do</h2>
+    <p>These products overlap around developer tools and coding agents, but they are not all the same kind of product. Some are terminals, some coordinate local agents, and Devin also offers its own autonomous software engineer. Compare the workflow first, then look at license, platforms and the tools you already use.</p>
+    <ul>
+      <li><strong>Choose Lomi</strong> if you want an open-source desktop workspace for your local project, existing CLI coding agents, files, a local browser preview and Git. Its managed Agents launcher currently covers macOS and Linux; Windows uses a regular terminal.</li>
+      <li><strong>Choose a terminal-first tool</strong> such as Warp, Wave Terminal or Terax if terminal interaction is your main need. Their additional features differ: review their own current docs for AI assistance, shell, SSH, editor and preview details.</li>
+      <li><strong>Choose an agent workspace</strong> such as Orca or Superset if managing several agents in separate Git worktrees is central to your work. T3 Code describes itself as an open-source control plane for coding agents.</li>
+      <li><strong>Evaluate Devin as its own agent product family</strong> if you want its cloud engineer, local CLI or Devin Desktop in the comparison. These provide a different level of agent product than a workspace around CLIs you already install.</li>
+    </ul>
+    <p>Lomi does not make a CLI provider’s account, model access or usage free. Claude Code and Codex use their own sign-in and usage terms. The links below lead to each vendor’s product or documentation pages; feature details can change.</p>
+  </section>
+
+  <section id="compare-products" aria-labelledby="compare-products-title">
+    <h2 id="compare-products-title">What each product emphasizes</h2>
+    <p>This comparison describes each product’s published focus. It is not a benchmark: Lomi did not run a controlled performance, security or agent-quality test against these products.</p>
+    <div class="table-scroll" role="region" aria-label="Coding workspace product comparison" tabindex="0">
+      <table>
+        <caption>Product type and published workflow emphasis, checked October 23, 2026</caption>
+        <thead><tr><th scope="col">Product</th><th scope="col">Product type</th><th scope="col">Published workflow emphasis</th><th scope="col">Start with this if…</th></tr></thead>
+        <tbody>
+          <tr><th scope="row"><a href="https://lomi.dev/" target="_blank" rel="noopener noreferrer">Lomi</a></th><td>Local desktop workspace</td><td>Project files, terminals, supported local CLI-agent launch, local browser preview and Git in one workspace. Apache 2.0.</td><td>You want a project-centered home for CLIs you install and sign into yourself.</td></tr>
+          <tr><th scope="row"><a href="https://devin.ai/cli" target="_blank" rel="noopener noreferrer">Devin</a></th><td>Cloud coding agent, local CLI and desktop IDE</td><td>Autonomous software-engineering tasks plus Devin CLI and Devin Desktop for working with agents.</td><td>You are choosing an agent product and its desktop environment, not only a local shell workspace.</td></tr>
+          <tr><th scope="row"><a href="https://terax.app/" target="_blank" rel="noopener noreferrer">Terax</a></th><td>Local AI-native terminal workspace</td><td>Terminal, built-in editor, Git, live preview and AI features. Its site lists an Apache 2.0 license and macOS, Linux and Windows downloads.</td><td>You want a terminal-first workspace and want to compare its editor and built-in AI workflow.</td></tr>
+          <tr><th scope="row"><a href="https://www.warp.dev/terminal" target="_blank" rel="noopener noreferrer">Warp</a></th><td>Open-source AI terminal and agent platform</td><td>Terminal, native editor, Git diff review, worktree support, third-party agent CLIs and cloud workflows.</td><td>You value Warp’s terminal, code-review and connected agent workflows.</td></tr>
+          <tr><th scope="row"><a href="https://www.waveterm.dev/" target="_blank" rel="noopener noreferrer">Wave Terminal</a></th><td>Open-source graphical terminal</td><td>Workspace layouts, SSH connections, remote files, inline previews, browser views and widgets.</td><td>You work across terminals or remote machines and want Wave’s graphical terminal tools.</td></tr>
+          <tr><th scope="row"><a href="https://www.onorca.dev/" target="_blank" rel="noopener noreferrer">Orca</a></th><td>Agent development environment</td><td>Run Claude Code, Codex and other agents in parallel, each in its own Git worktree, with review and automation features.</td><td>You want parallel, isolated agent work and Orca’s agent-management workflow.</td></tr>
+          <tr><th scope="row"><a href="https://t3.codes/" target="_blank" rel="noopener noreferrer">T3 Code</a></th><td>Open-source control plane for coding agents</td><td>Coordinate coding agents while bringing your own agent subscriptions and using its published GitHub workflow.</td><td>You want to compare agent coordination and the subscription model described by T3.</td></tr>
+          <tr><th scope="row"><a href="https://superset.sh/" target="_blank" rel="noopener noreferrer">Superset</a></th><td>Agent workspace</td><td>Run multiple coding agents in parallel Git worktrees. Its documentation identifies the Elastic License 2.0.</td><td>You want the worktree-centered multi-agent setup and have checked its current name and license.</td></tr>
+          <tr><th scope="row"><a href="https://docs.bridgemind.ai/docs" target="_blank" rel="noopener noreferrer">BridgeMind</a></th><td>Desktop environment for coding agents</td><td>Agent detection, panes, Code Mode and a guided setup workflow in its documentation.</td><td>You want to explore its desktop environment and agent setup details.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Terax also uses Apache 2.0; Wave Terminal is open source, and Warp’s client repository lists AGPL v3 for most code with MIT-licensed UI crates. Open-source licensing alone does not distinguish Lomi; inspect each project’s license and repository for the precise permissions that matter to you. Superset’s current site says it plans to adopt a new name, so check its latest product and license pages before comparing the label in this guide.</p>
+  </section>
+
+  <section id="choose-by-workflow" aria-labelledby="choose-by-workflow-title">
+    <h2 id="choose-by-workflow-title">Choose by the workflow you want to keep</h2>
+
+    <h3>You already use Claude Code or Codex from a terminal</h3>
+    <p>Start with Lomi’s <a href="/claude-code/">Claude Code guide</a> or <a href="/codex/">Codex CLI guide</a>. Lomi keeps the local project, terminal, browser preview and Git review in one desktop workspace. On macOS and Linux, its Agents launcher can detect and launch supported CLIs. On Windows, open a regular terminal and follow the CLI provider’s platform instructions.</p>
+    <p>If comparing Lomi with a product that runs agents in isolated worktrees, verify how each product handles concurrent edits. Lomi’s guides explain using your own Git checkpoints; they do not promise automatic worktree orchestration.</p>
+
+    <h3>You want several agents working independently</h3>
+    <p>Read the current Orca and Superset documentation and compare their worktree setup, supported agents, review steps, platform support and license. Their websites emphasize parallel agents. The value depends on whether you need that managed isolation or prefer to open one project at a time in a local workspace.</p>
+    <p><a href="/claude-code-and-codex/">See a local Claude Code and Codex workflow in Lomi</a> for a manual setup that uses separate Git worktrees. It does not set up an agent orchestrator for you.</p>
+
+    <h3>Your main goal is a more capable terminal</h3>
+    <p>Compare Warp, Wave Terminal and Terax directly against the features you use daily: shell behavior, command history, remote access, AI features, editor, previews and operating systems. Warp documents both terminal agent features and third-party agent CLI setup. Wave highlights SSH and remote-file workflows; Terax positions itself as a terminal-first workspace with an editor, Git and preview.</p>
+    <p>For a focused look at moving from Warp’s terminal-centric workflow, read <a href="/warp-alternative/">Lomi as an open-source Warp alternative</a>.</p>
+
+    <h3>You are evaluating an autonomous agent product</h3>
+    <p>Devin is a broader product comparison: its current site presents a cloud software engineer, Devin CLI and Devin Desktop. Compare what runs locally or in the cloud, how work is reviewed, which account and plan are required, and how repository access is handled. A desktop product may include or coordinate an agent; that is different from providing a workspace for the separate CLI you already chose.</p>
+  </section>
+
+  <section id="where-lomi-fits" aria-labelledby="where-lomi-fits-title">
+    <h2 id="where-lomi-fits-title">Where Lomi fits</h2>
+    <p>Lomi is a free, Apache 2.0 desktop app for developers who want a local project workspace around command-line coding agents. It brings project files, a built-in editor, terminal sessions, local browser previews and Git tools together. The CLI remains its own program: set it up with its provider, sign in there, then open the project in Lomi.</p>
+    <p>Lomi’s managed agent detection and launch are available on macOS and Linux. Windows users can open a normal Lomi terminal and start a CLI manually, following the CLI provider’s current Windows or WSL requirements. Lomi does not include agent subscriptions, model access or API usage. It does not present the cloud execution and automatic parallel worktree orchestration advertised by some products above.</p>
+    <p>That makes Lomi a sensible candidate when you value an open license, local project context and a focused workspace for CLIs. If you need an autonomous cloud engineer, remote-machine manager, built-in terminal AI or coordinated fleets of agents, compare those dedicated workflows directly before choosing.</p>
+    <p><a href="https://docs.lomi.dev/features/">Read the Lomi feature and platform guide</a> or <a href="/download/">download Lomi</a> to evaluate it with your own project.</p>
+  </section>
+
+  <section id="sources-and-method" aria-labelledby="sources-and-method-title">
+    <h2 id="sources-and-method-title">Sources and method</h2>
+    <p>We checked the products’ own websites and documentation on October 23, 2026. Descriptions reflect their published product focus, not hands-on verification of each competitor app. Names, supported systems, plans and features can change; follow the linked vendor pages before switching or buying.</p>
+    <ul class="source-list">
+      <li><a href="https://devin.ai/cli" target="_blank" rel="noopener noreferrer">Devin CLI</a> · <a href="https://devin.ai/desktop" target="_blank" rel="noopener noreferrer">Devin Desktop</a></li>
+      <li><a href="https://terax.app/" target="_blank" rel="noopener noreferrer">Terax product and downloads</a> · <a href="https://terax.app/features" target="_blank" rel="noopener noreferrer">Terax features</a></li>
+      <li><a href="https://www.warp.dev/terminal" target="_blank" rel="noopener noreferrer">Warp Terminal</a> · <a href="https://docs.warp.dev/agents/" target="_blank" rel="noopener noreferrer">Warp agent documentation</a> · <a href="https://github.com/warpdotdev/warp#licensing" target="_blank" rel="noopener noreferrer">Warp client license</a></li>
+      <li><a href="https://www.waveterm.dev/" target="_blank" rel="noopener noreferrer">Wave Terminal</a> · <a href="https://docs.waveterm.dev/" target="_blank" rel="noopener noreferrer">Wave documentation</a></li>
+      <li><a href="https://www.onorca.dev/" target="_blank" rel="noopener noreferrer">Orca</a> · <a href="https://www.onorca.dev/docs" target="_blank" rel="noopener noreferrer">Orca documentation</a></li>
+      <li><a href="https://t3.codes/" target="_blank" rel="noopener noreferrer">T3 Code</a></li>
+      <li><a href="https://superset.sh/" target="_blank" rel="noopener noreferrer">Superset</a> · <a href="https://docs.superset.sh/agent-integration" target="_blank" rel="noopener noreferrer">Superset agent integrations and license</a></li>
+      <li><a href="https://docs.bridgemind.ai/docs" target="_blank" rel="noopener noreferrer">BridgeMind documentation</a></li>
+    </ul>
+  </section>
+</ResourceLayout>

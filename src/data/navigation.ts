@@ -8,6 +8,21 @@ export const agentWorkflowLinks = [
   { label: 'Codex CLI in lomi', href: '/codex/' },
 ];
 
+export const workspaceResourceLinks = [
+  {
+    label: 'Compare coding workspaces',
+    footerLabel: 'Compare workspaces',
+    href: '/compare/',
+    description: 'Find the right fit among terminals, agent workspaces and coding agents.',
+  },
+  {
+    label: 'Claude Code + Codex together',
+    footerLabel: 'Claude + Codex',
+    href: '/claude-code-and-codex/',
+    description: 'A practical workflow for implementation, review and separate working trees.',
+  },
+];
+
 // Older CMS drafts may still contain links to sections removed from the page.
 export function activeLandingLinks(links: Landing['navigation']['links'], layout?: readonly { section: string; enabled: boolean }[]): Landing['navigation']['links'] {
   return links.flatMap((link) => {

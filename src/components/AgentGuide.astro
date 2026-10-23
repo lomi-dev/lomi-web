@@ -12,6 +12,7 @@ const sections = [
   { href: '#windows', label: 'Windows' },
   { href: '#workflow', label: 'The local workflow' },
   { href: '#limits', label: 'What to expect' },
+  { href: '#troubleshooting', label: 'Troubleshooting' },
 ];
 ---
 
@@ -105,9 +106,29 @@ const sections = [
           </ul>
         </section>
 
+        <section id="troubleshooting" aria-labelledby="troubleshooting-title">
+          <h2 id="troubleshooting-title">If {guide.providerName} does not start</h2>
+          <ol class="guide-steps guide-steps-compact">
+            <li><div>
+              <h3>Check the shell used by Agents</h3>
+              <p>On macOS and Linux, open a regular terminal with the same local shell selected in Agents. Run <code>command -v {guide.command}</code> to check that the shell can find the CLI. If it cannot, follow the vendor’s installation and shell-path instructions, then use Refresh installed CLI in Lomi.</p>
+            </div></li>
+            <li><div>
+              <h3>Confirm the project directory</h3>
+              <p>Check the terminal’s working directory before asking the agent to edit files. Use <code>pwd</code> on macOS and Linux or <code>Get-Location</code> in PowerShell. If it is the wrong project, open the intended folder in Lomi and start a terminal there.</p>
+            </div></li>
+            <li><div>
+              <h3>Start your development server separately</h3>
+              <p>An agent terminal does not automatically start your app. Run the project’s normal development command in another terminal, wait for its local URL, then open that address in Lomi’s browser. Use the actual port printed by the server.</p>
+            </div></li>
+          </ol>
+          <p>For a two-agent workflow, see <a href="/claude-code-and-codex/">using Claude Code and Codex together</a>, including when to keep edits in separate Git working trees.</p>
+        </section>
+
         <nav class="guide-resources" aria-label="More about Lomi and coding agents">
           <h2>Continue</h2>
           <a href={guide.related.href}>{guide.related.label}<Icon name="arrow" width={15} height={15} /></a>
+          <a href="/compare/">Compare coding workspaces<Icon name="arrow" width={15} height={15} /></a>
           <a href="https://docs.lomi.dev">Read the Lomi documentation<Icon name="diagonal" width={14} height={14} /></a>
           <a href="https://github.com/lomi-dev/lomi">Browse Lomi on GitHub<Icon name="diagonal" width={14} height={14} /></a>
           <a href="/download/">Download Lomi<Icon name="arrow" width={15} height={15} /></a>
@@ -156,6 +177,8 @@ const sections = [
   .guide-checklist li { position: relative; padding-left: 18px; color: #364032; font-size: 13px; line-height: 1.75; text-wrap: pretty; }
   .guide-checklist li::before { position: absolute; top: .68em; left: 0; width: 5px; height: 5px; border-radius: 50%; background: #657654; content: ''; }
   .guide-copy .guide-resource { font-size: 12px; }
+  .guide-copy p a { color: #304719; text-decoration: underline; text-underline-offset: 3px; }
+  .guide-copy p code { padding: 2px 4px; border: 1px solid var(--line); border-radius: 4px; font: .92em/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; overflow-wrap: anywhere; }
   .guide-resource a { display: inline; color: #304719; text-decoration: underline; text-decoration-color: #a2b091; text-underline-offset: 3px; }
   .guide-resource a svg { display: inline-block; vertical-align: -2px; margin-left: 3px; }
   .guide-steps { counter-reset: guide-step; display: grid; margin: 26px 0 0; padding: 0; list-style: none; }

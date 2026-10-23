@@ -1,0 +1,92 @@
+---
+import ResourceLayout from '../layouts/ResourceLayout.astro';
+
+const sections = [
+  { id: 'choose-a-workflow', label: 'Choose a workflow' },
+  { id: 'one-project-review', label: 'One project, one reviewer' },
+  { id: 'separate-worktrees', label: 'Parallel work with Git worktrees' },
+  { id: 'review-and-merge', label: 'Review and combine changes' },
+  { id: 'limits-and-setup', label: 'Setup and limits' },
+];
+---
+
+<ResourceLayout
+  title="Run Claude Code and Codex Together | Lomi"
+  description="Use Claude Code and Codex CLI in one local coding workflow. Compare sequential review with separate Git worktrees, then inspect changes in Lomi."
+  heading="Use Claude Code and Codex together in one local workflow"
+  eyebrow="Coding agent workflow"
+  summary="Let one CLI make a focused change and the other review it, with your project, terminals, local preview and Git changes nearby in Lomi. Choose sequential review for simplicity, or create separate Git worktrees when you need both agents editing at once."
+  breadcrumbs={[{ name: 'Home', href: '/' }, { name: 'Claude Code and Codex together', href: '/claude-code-and-codex/' }]}
+  sections={sections}
+  reviewedAt="2026-10-23"
+>
+  <p>Claude Code and Codex CLI can work on the same local codebase, but their sessions do not automatically share context. Give each CLI a specific role, keep a Git checkpoint, and decide whether the second agent should review or edit. Lomi keeps the project files, local terminals, browser preview and Git view in one desktop workspace while you do that.</p>
+
+  <section id="choose-a-workflow" aria-labelledby="choose-a-workflow-title">
+    <h2 id="choose-a-workflow-title">Choose a workflow before opening both agents</h2>
+    <p>Start with one agent at a time unless you have a reason to work in parallel:</p>
+    <ul>
+      <li><strong>Sequential review:</strong> one agent edits the current project; after it finishes, the other reads the diff and reports issues. This is the simplest way to try a second opinion.</li>
+      <li><strong>Parallel implementation:</strong> each agent edits its own Git worktree and branch. This reduces accidental overlap in files, but you still need to resolve and review changes before combining them.</li>
+    </ul>
+    <p>For either path, begin with a clean or understood working tree. In the project terminal, check <code>git status --short</code> and commit or otherwise protect any work you want to keep. A Git checkpoint makes the agents’ edits easier to review and recover.</p>
+  </section>
+
+  <section id="one-project-review" aria-labelledby="one-project-review-title">
+    <h2 id="one-project-review-title">Use one agent to implement and the other to review</h2>
+    <ol>
+      <li>Open the repository in Lomi. On macOS or Linux, use <strong>+</strong> → <strong>Agents</strong> to detect an installed CLI and launch it in a terminal at the project directory. You can also start each CLI from an ordinary terminal.</li>
+      <li>Ask the first agent for one bounded change. Include relevant files, expected behavior and the checks to run. Ask it to explain its plan first when the task affects unfamiliar code.</li>
+      <li>Wait until the first agent has stopped editing. Inspect the result in Lomi’s Git view or run <code>git diff --check</code> and <code>git diff</code> in a project terminal.</li>
+      <li>Start the second CLI in another terminal in the same project and give it a review-only task. Do not ask both agents to edit the same files at the same time.</li>
+      <li>Consider each finding, make any follow-up changes, run the project checks, and inspect the final diff before you commit.</li>
+    </ol>
+
+    <p>For example, after Claude Code has completed an implementation, ask Codex to review the diff without changing it:</p>
+    <pre><code>Review the current Git diff for correctness, edge cases, and missing tests.
+Read the relevant surrounding code. Do not edit files or run commands that
+change the working tree. Report each finding with its file and line, or say
+that you found no actionable issues. The implementation task is: [describe it].</code></pre>
+
+    <p>This is an instruction to Codex, not a technical read-only permission boundary. Review the files and Git diff yourself. If the reviewer begins editing, stop it and restore your intended workflow before continuing.</p>
+    <p>Swap the roles when it suits the task. You can also ask the first agent for a plan, then hand that plan to the second agent for an independent implementation. Keep the plan and implementation as separate steps so you can decide whether the approaches are compatible.</p>
+  </section>
+
+  <section id="separate-worktrees" aria-labelledby="separate-worktrees-title">
+    <h2 id="separate-worktrees-title">Run Claude Code and Codex in parallel with Git worktrees</h2>
+    <p>If both agents need to edit at once, create a separate working directory and branch for each. A Git worktree checks out another branch from the same repository into another directory. It separates the working files; it does not sandbox agent processes, grant permissions, or guarantee that two agents will avoid conflicting changes.</p>
+
+    <ol>
+      <li>Keep your original project open in Lomi and confirm its current branch and working tree are ready.</li>
+      <li>From the repository root, create a second worktree at a new path. Use a branch name and directory that do not already exist:</li>
+    </ol>
+    <pre><code>git worktree add -b codex-task ../my-project-codex HEAD
+git worktree list</code></pre>
+    <ol start="3">
+      <li>Open <code>../my-project-codex</code> as a separate project in Lomi and start Codex there. Leave Claude Code in the original project, or create a second worktree for it too.</li>
+      <li>Tell each agent which branch, task and files it owns. Avoid assigning overlapping changes, and do not ask either agent to merge the other’s work.</li>
+      <li>Install the project’s dependencies in each checkout when needed. If both agents run development servers, use different ports so their local browser previews do not collide.</li>
+    </ol>
+
+    <p>The example creates one new branch from the current commit and uses a sibling directory. Choose another path if that directory or branch already exists. Read Git’s <a href="https://git-scm.com/docs/git-worktree">worktree documentation</a> for the complete command behavior. Git worktrees share repository data, so this is a way to keep changes apart, not a security boundary or a way to isolate secrets.</p>
+  </section>
+
+  <section id="review-and-merge" aria-labelledby="review-and-merge-title">
+    <h2 id="review-and-merge-title">Review and combine the work yourself</h2>
+    <p>When the agents finish, inspect each worktree’s Git status, uncommitted diff and any commits the agent already created, comparing those commits with your starting point. Run the tests and checks for each change, then commit any intended uncommitted edits on their own branch. Merging a branch or cherry-picking a commit transfers committed changes; it does not transfer another worktree’s uncommitted edits.</p>
+    <p>Make sure your target working tree is clean, then merge the completed branch or cherry-pick its selected commits using your normal Git workflow. Resolve any conflicts, inspect the combined diff and run the project’s checks again before keeping the result.</p>
+    <p>Worktrees do not share uncommitted files: an edit in one directory will not appear in the other. They also do not guarantee that dependency installs, generated files, environment settings or local services are ready in both directories. Check each project independently and avoid copying credentials into agent prompts.</p>
+    <p>If you just need a second opinion, return to the sequential review workflow instead. It has fewer moving pieces and is a good fit for changes that touch the same files.</p>
+  </section>
+
+  <section id="limits-and-setup" aria-labelledby="limits-and-setup-title">
+    <h2 id="limits-and-setup-title">What Lomi provides, and what you set up</h2>
+    <p>Lomi provides the local workspace around the command-line tools: project folders, terminals, an editor, browser previews and Git review. It does not make Claude Code and Codex share a conversation or coordinate tasks, create worktrees for you, or replace either CLI’s own interface and permissions.</p>
+    <ul>
+      <li>Install and sign in to <a href="https://code.claude.com/docs/en/getting-started">Claude Code</a> and <a href="https://developers.openai.com/codex/cli/">Codex CLI</a> using their official setup instructions. Their accounts, eligibility and usage charges are separate from Lomi.</li>
+      <li>Lomi’s one-click Agents detection and launch are available on macOS and Linux. On Windows, use a regular Lomi terminal and follow the CLI vendor’s current Windows or WSL setup guidance; the managed Agents launcher is not qualified there.</li>
+      <li>Each CLI runs locally in its project terminal. Its own permission settings still apply. You remain responsible for the prompts, changes, tests and final merge.</li>
+    </ul>
+    <p>See the individual <a href="/claude-code/">Claude Code setup guide</a> and <a href="/codex/">Codex CLI setup guide</a> for launch details. To compare Lomi’s workflow with other coding workspaces, read the <a href="/compare/">coding workspace comparison</a> or the <a href="/warp-alternative/">Warp alternative guide</a>. Explore <a href="https://docs.lomi.dev/features/">Lomi features</a> or <a href="/download/">download Lomi</a>.</p>
+  </section>
+</ResourceLayout>
