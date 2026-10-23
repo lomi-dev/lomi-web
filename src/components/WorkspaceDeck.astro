@@ -1,5 +1,6 @@
 ---
-import HeroVideo from './HeroVideo.astro';
+// Temporarily disabled until the hero video is ready.
+// import HeroVideo from './HeroVideo.astro';
 import ContentMedia from './ContentMedia.astro';
 import type { Landing } from '../../content/landing-schema';
 import type { MediaAsset } from '../../content/editor-schema';
@@ -9,9 +10,14 @@ const { content, placeholderLogo } = Astro.props;
 ---
 
 <figure class="workspace-showcase" id="workspace" aria-label={content.previewAlt}>
-  {content.mediaMode === 'youtube' || content.mediaMode === 'video' && content.video ? <HeroVideo content={content} placeholderLogo={placeholderLogo} /> : <div class="workspace-capture" data-scroll-surface data-product-capture={!content.poster || undefined} style={!content.poster ? '--scroll-surface-color: color-mix(in srgb, var(--color-ink) 3%, var(--color-chalk))' : undefined}>
-    <ContentMedia image={content.poster} video={content.mediaMode === 'video' ? content.video : null} alt={content.previewAlt} placeholderLogo={placeholderLogo} placeholderVariant="hero" loading="eager" />
-  </div>}
+  {/* Restore this media switch and the HeroVideo import when the video is ready.
+    {content.mediaMode === 'youtube' || content.mediaMode === 'video' && content.video ? <HeroVideo content={content} placeholderLogo={placeholderLogo} /> : <div class="workspace-capture" data-scroll-surface data-product-capture={!content.poster || undefined} style={!content.poster ? '--scroll-surface-color: color-mix(in srgb, var(--color-ink) 3%, var(--color-chalk))' : undefined}>
+      <ContentMedia image={content.poster} video={content.mediaMode === 'video' ? content.video : null} alt={content.previewAlt} placeholderLogo={placeholderLogo} placeholderVariant="hero" loading="eager" />
+    </div>}
+  */}
+  <div class="workspace-capture" data-scroll-surface data-product-capture={!content.poster || undefined} style={!content.poster ? '--scroll-surface-color: color-mix(in srgb, var(--color-ink) 3%, var(--color-chalk))' : undefined}>
+    <ContentMedia image={content.poster} alt={content.previewAlt} placeholderLogo={placeholderLogo} placeholderVariant="hero" loading="eager" />
+  </div>
 </figure>
 
 <style>
