@@ -183,7 +183,7 @@ export async function requestSiteRebuild(): Promise<void> {
   let response: Response
   try {
     response = await fetch(siteRebuildSettings.url, {
-      method: 'GET',
+      method: 'POST',
       headers: {
         Accept: 'application/json',
         Authorization: `Bearer ${siteRebuildSettings.token}`,

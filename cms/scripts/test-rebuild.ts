@@ -330,7 +330,7 @@ try {
         await requestSiteRebuild()
         assert.equal(fetchCalls.length, 1)
         assert.equal(fetchCalls[0]?.input, rebuildUrl)
-        assert.equal(fetchCalls[0]?.init?.method, 'GET')
+        assert.equal(fetchCalls[0]?.init?.method, 'POST')
         assert.equal(fetchCalls[0]?.init?.redirect, 'error')
         assert.equal(new Headers(fetchCalls[0]?.init?.headers).get('authorization'), `Bearer ${rebuildToken}`)
 

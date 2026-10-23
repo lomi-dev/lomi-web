@@ -90,10 +90,12 @@ original content through the CMS.
 Set the following on the CMS at **runtime only**:
 
 ```dotenv
-SITE_REBUILD_URL=https://<coolify-host>/api/v1/deploy?uuid=<website-uuid>
+SITE_REBUILD_URL=https://<coolify-host>/api/v1/deploy?uuid=<website-uuid>&force=true
 SITE_REBUILD_TOKEN=<Coolify API token with deployment permission>
 ```
 
+Keep `force=true`: CMS publication does not change the Git commit, so reusing
+an existing image or cached build would retain the previous static content.
 Use the website application's UUID, never the CMS UUID. Limit the token's team
 and abilities to the deployment needs of this integration. Its bearer token
 stays server-side and is not stored in content or queue input.
