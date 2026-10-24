@@ -46,8 +46,9 @@ When Download has no uploaded screenshot, it uses the same genuine app capture
 inside its existing showcase box. The contextual image alt text describes the
 Explorer, editor, and terminal visible in the workspace. Other missing product
 media uses a pale background, thin border, and 16px corners. Feature cards and
-dialogs use six animated GIF captures of the real Lomi workspace with static
-WebP posters; see [feature previews](feature-gallery.md). Devlog and Remote
+dialogs use six Retina captures of the real Lomi workspace, composed as
+windowed desktop renders on the supplied Tahoe wallpaper with magnified
+details; see [feature previews](feature-gallery.md). Devlog and Remote
 use a centered faint Lomi wordmark; an uploaded site logo supplies their
 placeholder branding. Wordmark fallbacks are decorative, while app captures
 have descriptive alt text for their workspace interfaces.

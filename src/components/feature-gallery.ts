@@ -60,14 +60,7 @@ export function initFeatureGallery(root: HTMLElement) {
 
   function outgoingLayer(source: HTMLElement) {
     const layer = source.cloneNode(true) as HTMLElement;
-    // The outgoing slide is a brief static snapshot; never leave a GIF looping in the detached layer.
-    for (const scene of layer.querySelectorAll<HTMLElement>('[data-feature-preview]')) {
-      scene.removeAttribute('data-preview-running');
-      scene.removeAttribute('data-preview-ready');
-      scene.querySelector<HTMLImageElement>('[data-feature-gif]')?.removeAttribute('src');
-    }
     for (const element of [layer, ...layer.querySelectorAll<HTMLElement>('*')]) {
-      element.removeAttribute('data-preview-running');
       for (const attribute of Array.from(element.attributes)) {
         if (['id', 'tabindex', 'aria-labelledby', 'aria-describedby', 'role'].includes(attribute.name)
           || attribute.name.startsWith('data-feature-')) element.removeAttribute(attribute.name);

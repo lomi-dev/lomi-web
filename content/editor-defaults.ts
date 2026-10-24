@@ -23,7 +23,7 @@ export const editorDefaults = {
   newsletter: {
     form: { ariaLabel: 'Newsletter signup', emailLabel: 'Email address', placeholder: 'you@example.com', submitLabel: 'Keep me posted', pendingLabel: 'Subscribing', successLabel: 'Subscribed', unavailableMessage: 'Newsletter signup is temporarily unavailable.', pendingMessage: 'Sending your signup', successMessage: 'Subscribed. Thanks for joining.', rateLimitMessage: 'Too many attempts. Please wait a moment and try again.', errorMessage: 'We couldn’t complete your signup. Please try again.', note: 'Occasional updates. Unsubscribe anytime.', noscript: 'Enable JavaScript to subscribe to the newsletter.' }, stampLabel: 'You’re on the list',
   },
-  hero: { poster: null, video: null, mediaMode: 'youtube', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', primaryHref: '/download/', secondaryHref: '#workspace', player: {
+  hero: { poster: null, video: null, mediaMode: 'youtube', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', primaryHref: '/download/', secondaryHref: '#newsletter', player: {
     videoTitle: 'Lomi product walkthrough', privacyLabel: 'Video privacy settings', watchLabel: 'Watch the Lomi walkthrough on YouTube', loadingLabel: 'Loading video.', readyLabel: 'Video controls are ready.', errorLabel: 'The video could not load.',
     controlsLabel: 'Video controls', playLabel: 'Play video', pauseLabel: 'Pause video', replayLabel: 'Replay video', muteLabel: 'Mute video', unmuteLabel: 'Unmute video', volumeLabel: 'Volume', seekLabel: 'Seek video', fullscreenLabel: 'Enter fullscreen', exitFullscreenLabel: 'Exit fullscreen', retryLabel: 'Try again', timeLabel: '{current} of {duration}',
   } },

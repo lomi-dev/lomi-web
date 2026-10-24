@@ -8,15 +8,17 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 // Shared by the static-site check and the existing isolated CMS fixture builds.
 export async function assertPlaceholder(placeholder, { logo = '/placeholders/lomi-mark.svg', aspect, variant = 'brand' } = {}) {
   if (variant !== 'feature') await expect(placeholder).toHaveAttribute('aria-hidden', 'true');
-  const image = placeholder.locator(variant === 'feature' ? ':scope > img[data-feature-poster]' : 'img');
+  const image = placeholder.locator(variant === 'feature' ? 'img[data-feature-poster]' : 'img');
   await expect(image).toHaveCount(1);
   if (variant === 'feature') {
     await expect(placeholder).toHaveAttribute('data-placeholder-variant', 'feature');
     await expect(placeholder).toHaveAttribute('data-feature-preview', /^(terminal|panels|code|expand|git|spark)$/);
     await expect(image).toHaveAttribute('alt', /.+/);
-    await expect(placeholder.locator(':scope > img[data-feature-gif]')).toHaveAttribute('data-feature-gif-src', /\.gif(?:\?|$)/);
-    await expect(placeholder.locator(':scope > img')).toHaveCount(2);
-    await expect(placeholder.locator('video, svg')).toHaveCount(0);
+    await expect(placeholder.locator(':scope > img.feature-desktop[aria-hidden="true"]')).toHaveCount(1);
+    await expect(placeholder.locator(':scope > [data-render-window] img[data-feature-poster]')).toHaveCount(1);
+    await expect(placeholder.locator(':scope > [data-render-detail][aria-hidden="true"] img[alt=""]')).toHaveCount(1);
+    await expect(placeholder.locator('img')).toHaveCount(3);
+    await expect(placeholder.locator('video, svg, [data-feature-gif]')).toHaveCount(0);
   } else {
     await expect(image).toHaveAttribute('alt', '');
     const illustration = { hero: '/placeholders/hero-workspace.svg', download: '/placeholders/download-workspace.svg' }[variant];
@@ -28,11 +30,11 @@ export async function assertPlaceholder(placeholder, { logo = '/placeholders/lom
   await expect.poll(() => image.evaluate((element) => element.complete && element.naturalWidth > 0)).toBe(true);
   await expect(placeholder).toHaveCSS('border-radius', '16px');
   if (aspect) await expect(placeholder).toHaveCSS('aspect-ratio', aspect);
-  const geometry = await placeholder.evaluate((element) => {
+  const geometry = await placeholder.evaluate((element, variant) => {
     const frame = element.getBoundingClientRect();
-    const mark = element.querySelector('img, svg').getBoundingClientRect();
+    const mark = element.querySelector(variant === 'feature' ? ':scope > .feature-desktop' : 'img, svg').getBoundingClientRect();
     const style = getComputedStyle(element);
-    return {
+    const result = {
       width: frame.width, height: frame.height, background: style.backgroundColor,
       border: parseFloat(style.borderTopWidth),
       centered: Math.abs(mark.left + mark.width / 2 - frame.left - frame.width / 2) <= 1 && Math.abs(mark.top + mark.height / 2 - frame.top - frame.height / 2) <= 1,
@@ -40,11 +42,56 @@ export async function assertPlaceholder(placeholder, { logo = '/placeholders/lom
       restrained: mark.width <= frame.width * .46 && mark.height <= frame.height * .46,
       fills: Math.abs(mark.width - frame.width) <= 3 && Math.abs(mark.height - frame.height) <= 3,
     };
-  });
+    if (variant !== 'feature') return result;
+    const app = element.querySelector('[data-render-window]');
+    const detail = element.querySelector('[data-render-detail]');
+    const crop = detail?.querySelector('img');
+    const appBox = app?.getBoundingClientRect();
+    const detailBox = detail?.getBoundingClientRect();
+    const cropBox = crop?.getBoundingClientRect();
+    const appWidthRatio = appBox?.width / element.clientWidth;
+    const appCenterRatio = appBox && (appBox.left + appBox.width / 2 - frame.left) / element.clientWidth;
+    const contained = (box) => box && box.left >= frame.left - 2 && box.top >= frame.top - 2
+      && box.right <= frame.right + 2 && box.bottom <= frame.bottom + 2;
+    return {
+      ...result,
+      overflow: style.overflow,
+      aspect: frame.width / frame.height,
+      detailWidth: detailBox?.width,
+      detailHeight: detailBox?.height,
+      detailVisible: !!detailBox && detailBox.width > 0 && detailBox.height > 0,
+      appWidthRatio,
+      appCenterRatio,
+      appFits: contained(appBox),
+      detailFits: contained(detailBox),
+      detailOverflow: detail && getComputedStyle(detail).overflow,
+      magnifiedWidthRatio: cropBox?.width / detailBox?.width,
+      magnifiedHeightRatio: cropBox?.height / detailBox?.height,
+      detailImageClipped: cropBox && detailBox && (cropBox.left < detailBox.left - 2 || cropBox.top < detailBox.top - 2
+        || cropBox.right > detailBox.right + 2 || cropBox.bottom > detailBox.bottom + 2),
+    };
+  }, variant);
   assert.ok(geometry.width > 0 && geometry.height > 0, 'Placeholder reserves a visible frame');
   assert.ok(geometry.border > 0, 'Placeholder keeps its border');
-  assert.notEqual(geometry.background, 'rgba(0, 0, 0, 0)', 'Placeholder has a visible pale background');
-  assert.ok(geometry.centered && geometry.fits && (variant !== 'brand' ? geometry.fills : geometry.restrained), `Decorative ${variant !== 'brand' ? 'contextual illustration fills its frame' : 'logo stays restrained'}, centered and unclipped: ${JSON.stringify(geometry)}`);
+  if (variant === 'feature') {
+    assert.notEqual(geometry.background, 'rgba(0, 0, 0, 0)', 'Feature capture has a visible background');
+    assert.ok(geometry.fills && geometry.fits, `Feature wallpaper fills its frame: ${JSON.stringify(geometry)}`);
+    assert.match(geometry.overflow, /^(hidden|clip)$/);
+    assert.ok(geometry.appWidthRatio > 0 && geometry.appWidthRatio <= .825,
+      `App window fits within 80% of the wallpaper: ${JSON.stringify(geometry)}`);
+    assert.ok(Math.abs(geometry.appCenterRatio - .5) < .025, `App window is centered over the wallpaper: ${JSON.stringify(geometry)}`);
+    if (geometry.aspect <= 1.65) {
+      assert.ok(Math.abs(geometry.appWidthRatio - .8) < .025, `App window spans 80% of a standard capture: ${JSON.stringify(geometry)}`);
+    }
+    assert.ok(geometry.appFits && geometry.detailFits, `App window and detail stay within the capture: ${JSON.stringify(geometry)}`);
+    assert.ok(geometry.detailVisible, `Magnified detail remains visible at this viewport: ${JSON.stringify(geometry)}`);
+    assert.match(geometry.detailOverflow, /^(hidden|clip)$/);
+    assert.ok(geometry.magnifiedWidthRatio > 1.5 && geometry.magnifiedHeightRatio > 1.5 && geometry.detailImageClipped,
+      `Detail shows a magnified crop of the app capture: ${JSON.stringify(geometry)}`);
+  } else {
+    assert.notEqual(geometry.background, 'rgba(0, 0, 0, 0)', 'Placeholder has a visible pale background');
+    assert.ok(geometry.centered && geometry.fits && (variant !== 'brand' ? geometry.fills : geometry.restrained), `Decorative ${variant !== 'brand' ? 'contextual illustration fills its frame' : 'logo stays restrained'}, centered and unclipped: ${JSON.stringify(geometry)}`);
+  }
   return geometry;
 }
 
@@ -81,7 +128,7 @@ async function verify() {
       const external = [];
       await context.route(/^https:\/\/(?:[^/]+\.)?(?:youtube\.com|youtube-nocookie\.com|youtu\.be|ytimg\.com|googlevideo\.com)\//, (route) => { external.push(route.request().url()); return route.abort(); });
       const page = await context.newPage();
-      let background;
+      let background, featureBackground;
       for (const width of [320, 1440]) {
         await page.setViewportSize({ width, height: 1000 });
         for (const route of ['/', '/download/', '/remote/', '/devlog/']) {
@@ -100,8 +147,13 @@ async function verify() {
           for (const placeholder of await placeholders.all()) {
             const variant = await placeholder.evaluate((element) => element.closest('#workspace') ? 'hero' : element.closest('[data-feature-card], [data-feature-slide]') ? 'feature' : element.closest('.product-showcase') ? 'download' : 'brand');
             const geometry = await assertPlaceholder(placeholder, { aspect: route === '/devlog/' ? '16 / 9' : '8 / 5', variant });
-            background ??= geometry.background;
-            assert.equal(geometry.background, background, 'All fallback surfaces share the Devlog background');
+            if (variant === 'feature') {
+              featureBackground ??= geometry.background;
+              assert.equal(geometry.background, featureBackground, 'Feature captures share the Tahoe wallpaper surface');
+            } else {
+              background ??= geometry.background;
+              assert.equal(geometry.background, background, 'Branded fallback surfaces share the Devlog background');
+            }
           }
           const oldRefs = await page.locator('img, video, source').evaluateAll((elements) => elements.flatMap((element) => ['src', 'srcset', 'poster'].map((name) => element.getAttribute(name) || '')).filter((value) => /(?:placeholder|\/_astro\/(?:workspace|detail|mobile|workbench|source-control)[.])[^\s]*\.png/i.test(value)));
           assert.deepEqual(oldRefs, [], 'No legacy numeric PNG fallback references');
@@ -131,7 +183,7 @@ async function verify() {
               const dialog = page.locator('#feature-dialog');
               await expect(dialog).toBeVisible();
               const geometry = await assertPlaceholder(dialog.locator('[data-feature-slide]:visible [data-media-placeholder]'), { aspect: '8 / 5', variant: 'feature' });
-              assert.equal(geometry.background, background, 'Modal fallback matches the card background');
+              assert.equal(geometry.background, featureBackground, 'Modal fallback matches the card wallpaper surface');
               if (index === 0) await page.screenshot({ path: `artifacts/placeholders-modal-${width}.png` });
               await dialog.locator('[data-feature-close]').click();
               await expect(dialog).not.toBeVisible();

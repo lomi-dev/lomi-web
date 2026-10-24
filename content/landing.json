@@ -25,13 +25,14 @@
     "actionLabel": "Download lomi"
   },
   "hero": {
-    "eyebrow": "The terminal ADE",
+    "eyebrow": "",
     "title": "Your agents.",
     "accent": "One home base.",
-    "description": "Run Claude Code, Codex CLI and OpenCode in one desktop app, with terminals, an editor, browser previews and Git.",
+    "description": "Run any CLI agent in one desktop app, with terminals, an editor, source control and more.",
     "primaryLabel": "Download lomi",
-    "secondaryLabel": "Meet the workspace",
-    "note": "Free & open source · macOS, Windows & Linux",
+    "secondaryLabel": "Join newsletter",
+    "secondaryHref": "#newsletter",
+    "note": "",
     "previewCaption": "The lomi workspace: project files, an editor and a running terminal.",
     "previewAlt": "Lomi's workspace with its project explorer, TypeScript editor and integrated terminal."
   },

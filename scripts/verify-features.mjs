@@ -433,8 +433,9 @@ try {
   await expect(root.locator('[data-feature-open]')).toHaveCount(6);
   await expect(root.locator('[data-feature-card-media] [data-feature-preview]')).toHaveCount(6);
   await expect(root.locator('video, iframe')).toHaveCount(0);
+  await expect(root.locator('[data-feature-gif], img[src$=".gif"], img[src*=".gif?"]')).toHaveCount(0);
   for (const image of await root.locator('img').all()) {
-    for (const source of [await image.getAttribute('src'), await image.getAttribute('data-feature-gif-src')].filter(Boolean)) {
+    for (const source of [await image.getAttribute('src')].filter(Boolean)) {
       expect(new URL(source, url).origin, 'Feature imagery stays local').toBe(new URL(url).origin);
     }
   }

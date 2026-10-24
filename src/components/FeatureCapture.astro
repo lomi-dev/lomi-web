@@ -1,18 +1,13 @@
 ---
+import { getImage } from 'astro:assets';
 import type { Landing } from '../../content/landing-schema';
-
-import terminalGif from '../assets/product/features/terminal.gif';
-import terminalPoster from '../assets/product/features/terminal-poster.webp';
-import panelsGif from '../assets/product/features/panels.gif';
-import panelsPoster from '../assets/product/features/panels-poster.webp';
-import codeGif from '../assets/product/features/code.gif';
-import codePoster from '../assets/product/features/code-poster.webp';
-import expandGif from '../assets/product/features/expand.gif';
-import expandPoster from '../assets/product/features/expand-poster.webp';
-import gitGif from '../assets/product/features/git.gif';
-import gitPoster from '../assets/product/features/git-poster.webp';
-import sparkGif from '../assets/product/features/spark.gif';
-import sparkPoster from '../assets/product/features/spark-poster.webp';
+import wallpaper from '../assets/product/renders/tahoe-light.jpg';
+import terminalPoster from '../assets/product/renders/terminal.webp';
+import panelsPoster from '../assets/product/renders/panels.webp';
+import codePoster from '../assets/product/renders/code.webp';
+import expandPoster from '../assets/product/renders/expand.webp';
+import gitPoster from '../assets/product/renders/git.webp';
+import sparkPoster from '../assets/product/renders/spark.webp';
 
 interface Props {
   kind: Landing['features']['items'][number]['icon'];
@@ -23,26 +18,75 @@ interface Props {
 
 const { kind, alt, class: className, loading = 'lazy' } = Astro.props;
 const media = {
-  terminal: { gif: terminalGif, poster: terminalPoster },
-  panels: { gif: panelsGif, poster: panelsPoster },
-  code: { gif: codeGif, poster: codePoster },
-  expand: { gif: expandGif, poster: expandPoster },
-  git: { gif: gitGif, poster: gitPoster },
-  spark: { gif: sparkGif, poster: sparkPoster },
+  terminal: { poster: terminalPoster, focus: { x: 260, y: 575, width: 540, height: 150 } },
+  panels: { poster: panelsPoster, focus: { x: 0, y: 45, width: 250, height: 260 } },
+  code: { poster: codePoster, focus: { x: 295, y: 285, width: 500, height: 150 } },
+  expand: { poster: expandPoster, focus: { x: 490, y: 400, width: 650, height: 300 } },
+  git: { poster: gitPoster, focus: { x: 1184, y: 85, width: 256, height: 375 } },
+  spark: { poster: sparkPoster, focus: { x: 432, y: 208, width: 520, height: 210 } },
 }[kind];
+const [desktop, capture] = await Promise.all([
+  getImage({ src: wallpaper, width: 1600, format: 'webp', quality: 85 }),
+  getImage({ src: media.poster, format: 'webp', quality: 94 }),
+]);
+const { focus } = media;
+const cropStyle = `--detail-aspect: ${focus.width} / ${focus.height}; --crop-width: ${1440 / focus.width * 100}%; --crop-height: ${900 / focus.height * 100}%; --crop-x: ${-focus.x / focus.width * 100}%; --crop-y: ${-focus.y / focus.height * 100}%;`;
 ---
 
-<div class:list={['feature-capture', className]} data-feature-preview={kind} data-media-placeholder data-placeholder-variant="feature">
-  <img class="feature-capture-poster" data-feature-poster src={media.poster.src} alt={alt}
-    width={media.poster.width} height={media.poster.height} loading={loading} decoding="async" />
-  <img class="feature-capture-loop" data-feature-gif data-feature-gif-src={media.gif.src} alt="" aria-hidden="true"
-    width={media.poster.width} height={media.poster.height} decoding="async" />
+<div class:list={['feature-capture', `feature-capture-${kind}`, className]} data-feature-preview={kind} data-feature-render data-media-placeholder data-placeholder-variant="feature">
+  <img class="feature-desktop" src={desktop.src} alt="" aria-hidden="true"
+    width={desktop.attributes.width} height={desktop.attributes.height} loading={loading} decoding="async" />
+  <div class="feature-window" data-render-window>
+    <div class="feature-window-chrome" aria-hidden="true">
+      <span class="feature-window-controls"><i></i><i></i><i></i></span>
+      <span class="feature-window-title">lomi</span>
+    </div>
+    <img class="feature-capture-poster" data-feature-poster src={capture.src} alt={alt}
+      width={capture.attributes.width} height={capture.attributes.height} loading={loading} decoding="async" />
+  </div>
+  <div class="feature-render-detail" data-render-detail aria-hidden="true" style={cropStyle}>
+    <img src={capture.src} alt="" width={capture.attributes.width} height={capture.attributes.height}
+      loading={loading} decoding="async" />
+  </div>
 </div>
 
 <style>
-  .feature-capture { position: relative; display: block; width: 100%; height: 100%; min-width: 0; min-height: 0; aspect-ratio: 8 / 5; overflow: hidden; border: 1px solid color-mix(in srgb, var(--line) 70%, transparent); border-radius: 16px; background: color-mix(in srgb, var(--color-ink) 3%, var(--color-chalk)); }
-  .feature-capture img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: contain; }
-  .feature-capture-loop { opacity: 0; }
-  .feature-capture[data-preview-running][data-preview-ready] .feature-capture-loop { opacity: 1; }
-  .feature-capture[data-preview-running][data-preview-ready] .feature-capture-poster { opacity: 0; }
+  .feature-capture {
+    position: relative; display: block; container-type: size; isolation: isolate;
+    width: 100%; height: 100%; min-width: 0; min-height: 0; aspect-ratio: 8 / 5;
+    overflow: hidden; border: 1px solid rgb(20 54 83 / 12%); border-radius: 16px; background: #76a8cc;
+  }
+  .feature-capture > .feature-desktop {
+    position: absolute; inset: 0; display: block; width: 100%; height: 100%;
+    object-fit: cover; object-position: center; pointer-events: none;
+  }
+  .feature-window {
+    position: absolute; z-index: 1; top: 48%; left: 50%; width: min(80cqw, 128cqh);
+    transform: translate(-50%, -50%); overflow: hidden;
+    border: 1px solid rgb(255 255 255 / 70%); border-radius: 1.15cqw;
+    background: #f0f2ec;
+    box-shadow: 0 .2cqw .5cqw rgb(9 30 60 / 22%), 0 2cqw 4cqw -.8cqw rgb(9 30 60 / 35%), 0 5cqw 8cqw -3cqw rgb(9 30 60 / 32%);
+  }
+  .feature-window-chrome {
+    position: relative; display: flex; align-items: center; justify-content: center; height: min(3.1cqw, 5cqh);
+    border-bottom: 1px solid rgb(38 49 30 / 9%); background: linear-gradient(#f8f9f5, #eef0e8);
+  }
+  .feature-window-controls { position: absolute; left: 1.05cqw; display: flex; gap: .55cqw; }
+  .feature-window-controls i { width: .85cqw; height: .85cqw; border: 1px solid rgb(0 0 0 / 10%); border-radius: 50%; background: #ff5f57; }
+  .feature-window-controls i:nth-child(2) { background: #febc2e; }
+  .feature-window-controls i:nth-child(3) { background: #28c840; }
+  .feature-window-title { color: #66705e; font-size: 1.15cqw; font-weight: 500; line-height: 1; }
+  .feature-window > .feature-capture-poster { display: block; width: 100%; height: auto; aspect-ratio: 8 / 5; object-fit: contain; }
+  .feature-render-detail {
+    position: absolute; z-index: 2; right: 6%; bottom: 6%; width: min(50cqw, 110cqh); aspect-ratio: var(--detail-aspect);
+    overflow: hidden; border: 1px solid rgb(255 255 255 / 90%); border-radius: 1.2cqw; background: #fff;
+    box-shadow: 0 0 0 1px rgb(19 39 58 / 10%), 0 1cqw 2cqw -.5cqw rgb(7 27 52 / 24%), 0 3cqw 5cqw -1cqw rgb(7 27 52 / 28%);
+    pointer-events: none;
+  }
+  .feature-render-detail > img {
+    position: absolute; display: block; max-width: none;
+    width: var(--crop-width); height: var(--crop-height); left: var(--crop-x); top: var(--crop-y); object-fit: fill;
+  }
+  .feature-capture-git .feature-render-detail { width: min(29cqw, 48cqh); }
+  .feature-capture-panels .feature-render-detail { width: min(34cqw, 54cqh); }
 </style>

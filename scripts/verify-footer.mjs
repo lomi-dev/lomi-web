@@ -122,7 +122,7 @@ try {
   await showFooter(page);
   await expect(page.locator('html'), 'Native overscroll canvas matches the footer').toHaveCSS('background-color', await page.locator('.site-footer').evaluate((element) => getComputedStyle(element).backgroundColor));
   await expect(page.locator('html'), 'Firefox requires a solid canvas color').toHaveCSS('background-image', 'none');
-  await expect(page.locator('html'), 'Native overscroll remains enabled').toHaveCSS('overscroll-behavior-y', 'auto');
+  await expect(page.locator('html'), 'Homepage vertical edge scrolling is contained through the footer').toHaveCSS('overscroll-behavior-y', 'none');
   await expect(wordmark).toHaveAttribute('data-wordmark-ready', 'true');
   await page.waitForTimeout(1000);
   await assertIdle(page);

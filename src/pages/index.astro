@@ -3,7 +3,6 @@ import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
 import Hero from '../components/Hero.astro';
 import FeatureGallery from '../components/FeatureGallery.astro';
-import AgentWorkflows from '../components/AgentWorkflows.astro';
 import Roadmap from '../components/Roadmap.astro';
 import NewsletterSection from '../components/NewsletterSection.astro';
 import Footer from '../components/Footer.astro';
@@ -12,6 +11,7 @@ import { loadLanding } from '../../content/load-landing';
 
 const content = await loadLanding(import.meta.env.CMS_URL);
 const { hero, features, roadmap, newsletter } = content;
+const startsWithHero = content.layout.find((row) => row.enabled)?.section === 'hero';
 const footerContent = {
   ...content.footer,
   groups: content.footer.groups
@@ -20,29 +20,24 @@ const footerContent = {
 };
 ---
 
-<Layout website={content} title={content.seo.title} description={content.seo.description} themeColor={content.site.theme.paper} edgeColor="var(--color-lime)">
-  <Header content={content.navigation} site={content.site} layout={content.layout} />
-  <div class="home-pull-viewport" data-scroll-surface style="--scroll-surface-color: var(--color-paper)">
-    <div class="home-pull-content">
-      <main id="main" tabindex="-1" data-scroll-surface style="--scroll-surface-color: var(--color-chalk)">
-        {!content.layout.some((row) => row.section === 'hero' && row.enabled) && <h1 class="sr-only">{content.seo.title}</h1>}
-        {content.layout.filter((row) => row.enabled).map(({ section }) => section === 'hero' ? <Hero content={hero} layout={content.layout} placeholderLogo={content.site.brand.logo} />
-          : section === 'features' ? <><FeatureGallery content={features} placeholderLogo={content.site.brand.logo} /><AgentWorkflows /></>
-          : section === 'roadmap' ? <Roadmap content={roadmap} />
-          : section === 'newsletter' ? <NewsletterSection content={newsletter} site={content.site} /> : null)}
-      </main>
-      <Footer content={footerContent} site={content.site} layout={content.layout} />
-    </div>
-  </div>
+<Layout website={content} title={content.seo.title} description={content.seo.description} themeColor={startsWithHero ? '#ffffff' : content.site.theme.paper} edgeColor={startsWithHero ? '#ffffff' : 'var(--color-lime)'}>
+  <Header content={content.navigation} site={content.site} layout={content.layout} theme={startsWithHero ? 'light' : undefined} />
+  <main id="main" class="home-main" tabindex="-1" data-scroll-surface style="--scroll-surface-color: var(--color-chalk)">
+    {!content.layout.some((row) => row.section === 'hero' && row.enabled) && <h1 class="sr-only">{content.seo.title}</h1>}
+    {content.layout.filter((row) => row.enabled).map(({ section }) => section === 'hero' ? <Hero content={hero} layout={content.layout} placeholderLogo={content.site.brand.logo} />
+      : section === 'features' ? <FeatureGallery content={features} placeholderLogo={content.site.brand.logo} />
+      : section === 'roadmap' ? <Roadmap content={roadmap} />
+      : section === 'newsletter' ? <NewsletterSection content={newsletter} site={content.site} /> : null)}
+  </main>
+  <Footer content={footerContent} site={content.site} layout={content.layout} />
 </Layout>
 
 <script>
-  import { initHeroPull } from '../components/hero-pull';
   import { alignInitialSectionAnchor } from '../components/initial-section-anchor';
   alignInitialSectionAnchor();
-  initHeroPull();
 </script>
 
 <style>
-  .home-pull-viewport { overflow: clip; }
+  .home-main { overflow-x: clip; }
+  :global(html:has(.hero)) { overscroll-behavior-y: none; }
 </style>

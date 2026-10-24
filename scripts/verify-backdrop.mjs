@@ -18,7 +18,8 @@ async function assertCanvas(page, color) {
   await expect(page.locator('html')).toHaveCSS('background-color', `rgb(${color.join(', ')})`);
   await expect(page.locator('html')).toHaveCSS('background-image', 'none');
   await expect(page.locator('html')).toHaveCSS('overscroll-behavior-x', 'auto');
-  await expect(page.locator('html')).toHaveCSS('overscroll-behavior-y', 'auto');
+  const homepage = await page.locator('.hero').count() > 0;
+  await expect(page.locator('html')).toHaveCSS('overscroll-behavior-y', homepage ? 'none' : 'auto');
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(await page.evaluate(() => document.documentElement.clientWidth));
 }
 

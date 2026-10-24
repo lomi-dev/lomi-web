@@ -1,33 +1,46 @@
 ---
-// Temporarily disabled until the hero video is ready.
-// import HeroVideo from './HeroVideo.astro';
-import ContentMedia from './ContentMedia.astro';
+import { getImage, Picture } from 'astro:assets';
+import laptop from '../assets/hero/laptop-concrete.png';
+import workbench from '../assets/product/workbench.png';
+import { resolveMedia, type MediaAsset } from '../../content/editor-schema';
 import type { Landing } from '../../content/landing-schema';
-import type { MediaAsset } from '../../content/editor-schema';
+import { buildScreenMesh, screenOutline } from '../lib/laptop-screen';
 
 interface Props { content: Landing['hero']; placeholderLogo?: MediaAsset | null }
-const { content, placeholderLogo } = Astro.props;
+const { content } = Astro.props;
+const poster = resolveMedia(content.poster, import.meta.env.CMS_URL);
+const screen = poster ? poster.url : (await getImage({ src: workbench, width: 1920, format: 'webp', quality: 90 })).src;
+const mesh = buildScreenMesh();
 ---
 
-<figure class="workspace-showcase" id="workspace" aria-label={content.previewAlt}>
-  {/* Restore this media switch and the HeroVideo import when the video is ready.
-    {content.mediaMode === 'youtube' || content.mediaMode === 'video' && content.video ? <HeroVideo content={content} placeholderLogo={placeholderLogo} /> : <div class="workspace-capture" data-scroll-surface data-product-capture={!content.poster || undefined} style={!content.poster ? '--scroll-surface-color: color-mix(in srgb, var(--color-ink) 3%, var(--color-chalk))' : undefined}>
-      <ContentMedia image={content.poster} video={content.mediaMode === 'video' ? content.video : null} alt={content.previewAlt} placeholderLogo={placeholderLogo} placeholderVariant="hero" loading="eager" />
-    </div>}
-  */}
-  <div class="workspace-capture" data-scroll-surface data-product-capture={!content.poster || undefined} style={!content.poster ? '--scroll-surface-color: color-mix(in srgb, var(--color-ink) 3%, var(--color-chalk))' : undefined}>
-    <ContentMedia image={content.poster} alt={content.previewAlt} placeholderLogo={placeholderLogo} placeholderVariant="hero" loading="eager" />
-  </div>
+<figure class="workspace-showcase" id="workspace" role="img" aria-label={content.previewAlt}>
+  <Picture src={laptop} alt="" aria-hidden="true" class="laptop-render" widths={[768, 1200, 1536]}
+    sizes="(min-width: 1874px) 1536px, (min-width: 1200px) 82vw, calc(100vw + 28px)"
+    formats={['webp']} quality={88} loading="eager" fetchpriority="high" />
+  {/* Build-time affine tiles keep perspective identical across browsers. The
+      single source image is shared by every tile and downloaded only once. */}
+  <svg class="laptop-display" viewBox="0 0 1536 1024" aria-hidden="true">
+    <defs>
+      <image id="lomi-screen-capture" data-screen-source href={screen} width="900" height="562" preserveAspectRatio="xMidYMid slice" />
+      <clipPath id="lomi-screen-bezel"><polygon points={screenOutline} /></clipPath>
+      {mesh.map((tile, index) => <clipPath id={`lomi-screen-tile-${index}`}><polygon points={tile.points} /></clipPath>)}
+      <linearGradient id="lomi-screen-glass" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="white" stop-opacity=".035" />
+        <stop offset=".5" stop-color="white" stop-opacity="0" />
+        <stop offset="1" stop-color="black" stop-opacity=".1" />
+      </linearGradient>
+    </defs>
+    <g data-laptop-screen clip-path="url(#lomi-screen-bezel)">
+      {mesh.map((tile, index) => <g clip-path={`url(#lomi-screen-tile-${index})`}><use href="#lomi-screen-capture" transform={tile.transform} /></g>)}
+      <polygon points={screenOutline} fill="url(#lomi-screen-glass)" />
+    </g>
+    <polygon data-screen-boundary points={screenOutline} fill="none" />
+  </svg>
 </figure>
 
 <style>
-  .workspace-showcase {
-    margin: 0;
-    min-width: 0;
-  }
-  .workspace-capture { --scroll-surface-color: #080a08; width: 100%; min-height: 200px; aspect-ratio: 8 / 5; overflow: hidden; border: 0; border-radius: 16px; background: transparent; }
-  /* Match the poster matte so antialiased corners cannot expose a dark fringe. */
-  .workspace-capture[data-product-capture] { background: #eef2e8; }
-  .workspace-capture[data-product-capture] :global(img) { object-fit: cover; }
-  .workspace-capture :global([data-media-placeholder]) { border: 0; border-radius: 0; }
+  .workspace-showcase { position: relative; width: 100%; aspect-ratio: 3 / 2; margin: 0; isolation: isolate; }
+  .workspace-showcase > :global(picture) { display: block; width: 100%; height: 100%; }
+  .workspace-showcase :global(.laptop-render) { display: block; width: 100%; height: 100%; object-fit: contain; }
+  .laptop-display { position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden; pointer-events: none; }
 </style>

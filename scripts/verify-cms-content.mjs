@@ -225,7 +225,7 @@ try {
     await expect(page.locator('.mobile-download')).toHaveAttribute('href', route === '/' ? '#newsletter' : '/#newsletter');
     await assertMedia(page, '.site-header img[alt="CMS logo alt sentinel"]', fixture.site.brand.logoAlt);
     if (route === '/') {
-      assert.deepEqual(await page.locator('main > section').evaluateAll((items) => items.map((el) => el.id || 'hero')), ['roadmap', 'hero', 'features', 'agent-workflows', 'newsletter']);
+      assert.deepEqual(await page.locator('main > section').evaluateAll((items) => items.map((el) => el.id || 'hero')), ['roadmap', 'hero', 'features', 'newsletter']);
       await expect(page.locator('.hero h1')).toContainText(fixture.hero.title);
       await expect(page.locator('[data-hero-video]')).toHaveAttribute('data-video-id', youtubeId);
       await expect(page.locator('[data-video-player]')).toHaveAttribute('aria-label', fixture.hero.player.videoTitle);

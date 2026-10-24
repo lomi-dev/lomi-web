@@ -69,10 +69,11 @@ An uploaded video uses the same custom controls and does not require YouTube.
 If the hero **Poster** is empty, the current Lomi app screenshot shows project
 files, an editor and terminal panes. Selecting a poster replaces this capture
 in image and video modes.
-Feature cards and dialogs use animated captures of the matching Lomi UI when
+Feature cards and dialogs use Retina renders of the matching Lomi UI on the
+supplied Tahoe wallpaper, with an enlarged detail, when
 both media fields are empty. **Preview scene** selects which function to show
-and stays with the feature when you reorder it. **Features → Controls** contains
-the pause/resume labels. Uploaded images and videos replace these captures.
+and stays with the feature when you reorder it. Uploaded images and videos
+replace these renders.
 Download shows the current Lomi app capture while its **Screenshot → Image**
 field is empty. Selecting an image replaces the capture inside the same
 showcase box. Devlog thumbnails and Remote use a pale placeholder with a
