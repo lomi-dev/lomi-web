@@ -3,21 +3,17 @@ import Icon from './Icon';
 import CookieSettingsLink from './CookieSettingsLink.astro';
 import { editorDefaults } from '../../content/editor-defaults';
 import { resolveMedia } from '../../content/editor-schema';
-import { activeLandingLinks, agentWorkflowLinks, workspaceResourceLinks } from '../data/navigation';
+import { activeLandingLinks } from '../data/navigation';
 import logo from '../assets/lomi-wordmark.svg?raw';
 import type { Landing } from '../../content/landing-schema';
 
 interface Props { content: Landing['footer']; site?: Landing['site']; layout?: Landing['layout'] }
 const { content, site = editorDefaults.site, layout = editorDefaults.layout } = Astro.props;
 const brandLogo = resolveMedia(site.brand.logo, import.meta.env.CMS_URL);
-const guideLinks = [
-  ...agentWorkflowLinks,
-  ...workspaceResourceLinks.map(({ href, footerLabel }) => ({ href, label: footerLabel })),
-];
 const groups = [
-  ...content.groups.map((group, index) => ({
+  ...content.groups.map((group) => ({
     ...group,
-    links: activeLandingLinks([...group.links, ...(index === 0 ? guideLinks.filter((guide) => !group.links.some((link) => link.href === guide.href)) : [])], layout).map((link) => ({
+    links: activeLandingLinks(group.links, layout).map((link) => ({
       ...link,
       label: link.label.trim().toLowerCase() === 'lomi remote' ? 'Remote' : link.label,
     })),
