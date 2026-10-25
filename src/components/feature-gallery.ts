@@ -17,8 +17,7 @@ export function initFeatureGallery(root: HTMLElement) {
 
   const previousButton = dialog.querySelector<HTMLButtonElement>('[data-feature-prev]');
   const nextButton = dialog.querySelector<HTMLButtonElement>('[data-feature-next]');
-  const dots = Array.from(dialog.querySelectorAll<HTMLButtonElement>('[data-feature-dot]'));
-  const count = dialog.querySelector<HTMLElement>('[data-feature-count]');
+  const announcement = dialog.querySelector<HTMLElement>('[data-feature-announcement]');
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   const navigationEasing = getComputedStyle(root).getPropertyValue('--ease-out').trim() || 'cubic-bezier(0.23, 1, 0.32, 1)';
   const animations = new Set<Animation>();
@@ -60,6 +59,31 @@ export function initFeatureGallery(root: HTMLElement) {
 
   function outgoingLayer(source: HTMLElement) {
     const layer = source.cloneNode(true) as HTMLElement;
+    // Freeze the displayed native frame; cloned videos start at time zero.
+    const originals = source.querySelectorAll<HTMLElement>('[data-feature-preview]');
+    layer.querySelectorAll<HTMLElement>('[data-feature-preview]').forEach((preview, index) => {
+      const video = originals[index]?.querySelector<HTMLVideoElement>('[data-feature-video]');
+      const poster = preview.querySelector<HTMLImageElement>('[data-feature-poster]');
+      if (video && poster && video.readyState >= 2) {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          const context = canvas.getContext('2d');
+          if (context) {
+            context.drawImage(video, 0, 0);
+            canvas.className = poster.className;
+            for (const attribute of Array.from(poster.attributes)) {
+              if (attribute.name.startsWith('data-astro-')) canvas.setAttribute(attribute.name, attribute.value);
+            }
+            poster.replaceWith(canvas);
+          }
+        } catch { /* The first-frame poster also works if drawing is unavailable. */ }
+      }
+      preview.querySelectorAll('[data-feature-video]').forEach((video) => video.remove());
+      preview.removeAttribute('data-video-ready');
+      preview.removeAttribute('data-preview-running');
+    });
     for (const element of [layer, ...layer.querySelectorAll<HTMLElement>('*')]) {
       for (const attribute of Array.from(element.attributes)) {
         if (['id', 'tabindex', 'aria-labelledby', 'aria-describedby', 'role'].includes(attribute.name)
@@ -131,6 +155,7 @@ export function initFeatureGallery(root: HTMLElement) {
     closing = false;
     backdropPointer = false;
     delete dialog!.dataset.state;
+    if (announcement) announcement.textContent = '';
     if (!savedStyles) return;
     for (const { element, name, value, priority } of savedStyles.reverse()) {
       if (value) element.style.setProperty(name, value, priority);
@@ -143,8 +168,6 @@ export function initFeatureGallery(root: HTMLElement) {
 
   function select(index: number) {
     selected = (index + slides.length) % slides.length;
-    // Keep one live set of controls inside the moving feature, with its handlers.
-    if (navigation!.parentElement !== slides[selected]) slides[selected]!.append(navigation!);
     slides.forEach((slide, slideIndex) => {
       slide.hidden = slideIndex !== selected;
       if (slide.hidden) pauseVideos(slide);
@@ -153,11 +176,7 @@ export function initFeatureGallery(root: HTMLElement) {
     if (copy) copy.scrollTop = 0;
     dialog!.setAttribute('aria-labelledby', `feature-dialog-title-${selected}`);
     dialog!.setAttribute('aria-describedby', `feature-dialog-description-${selected}`);
-    dots.forEach((dot) => {
-      if (Number(dot.dataset.featureDot) === selected) dot.setAttribute('aria-current', 'true');
-      else dot.removeAttribute('aria-current');
-    });
-    if (count) count.textContent = `${String(selected + 1).padStart(2, '0')} / ${String(slides.length).padStart(2, '0')}`;
+    if (dialog!.open && announcement) announcement.textContent = slides[selected]?.querySelector('h3')?.textContent ?? '';
   }
 
   function restoreSlideFocus(focused: Element | null, focusInSlide: boolean) {
@@ -177,7 +196,7 @@ export function initFeatureGallery(root: HTMLElement) {
     const focused = document.activeElement;
     const focusInSlide = outgoing.contains(focused);
     cancelAnimations();
-    // Snapshot the old counter and controls before select moves and updates them.
+    // Freeze the outgoing content while the edge controls stay in place.
     const layer = reducedMotion.matches ? null : outgoingLayer(outgoing);
     select(requested);
     const version = generation;
@@ -336,10 +355,7 @@ export function initFeatureGallery(root: HTMLElement) {
   nextButton?.addEventListener('click', () => navigate(requested + 1, 1));
   if (previousButton) previousButton.disabled = slides.length < 2;
   if (nextButton) nextButton.disabled = slides.length < 2;
-  dots.forEach((dot) => dot.addEventListener('click', () => {
-    const index = Number(dot.dataset.featureDot);
-    if (Number.isInteger(index) && index >= 0 && index < slides.length) navigate(index);
-  }));
+  navigation.hidden = slides.length < 2;
 
   dialog.addEventListener('keydown', (event) => {
     if (!dialog.open || closing || event.altKey || event.ctrlKey || event.metaKey || event.defaultPrevented) return;

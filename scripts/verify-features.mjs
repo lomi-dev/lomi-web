@@ -70,13 +70,19 @@ async function selected(page, index, count = 6, title = seed.features.items[inde
   if (title) await expect(modal).toHaveAccessibleName(title);
   await expect(modal.locator('[data-feature-slide]:not([hidden])')).toHaveCount(1);
   await expect(modal.locator('[data-feature-navigation]')).toHaveCount(1);
-  await expect(modal.locator('[data-feature-slide]:not([hidden]) [data-feature-navigation]')).toHaveCount(1);
+  await expect(modal.locator(':scope > [data-feature-navigation]')).toHaveCount(1);
+  await expect(modal.locator('[data-feature-slide] [data-feature-navigation]')).toHaveCount(0);
+  await expect(modal.locator('[data-feature-count], [data-feature-dot], .feature-modal-paging, .feature-modal-dots')).toHaveCount(0);
   await expect(page.locator(`#feature-dialog-title-${index}`)).toBeVisible();
   await expect(page.locator(`#feature-dialog-description-${index}`)).toBeVisible();
   if (count === 6) await expect(page.locator(`#feature-dialog-description-${index}`)).toHaveText(seed.features.items[index].description);
-  await expect(modal.locator('[data-feature-dot][aria-current="true"]')).toHaveCount(1);
-  await expect(modal.locator(`[data-feature-dot="${index}"]`)).toHaveAttribute('aria-current', 'true');
-  await expect(modal.locator('[data-feature-count]')).toHaveText(`${String(index + 1).padStart(2, '0')} / ${String(count).padStart(2, '0')}`);
+  if (count === 1) {
+    await expect(modal.locator('[data-feature-navigation]')).toBeHidden();
+    expect(await modal.locator('[data-feature-prev], [data-feature-next]').evaluateAll((buttons) => buttons.length === 2 && buttons.every((button) => button.disabled))).toBe(true);
+  } else {
+    await expect(modal.locator('[data-feature-navigation]')).toBeVisible();
+    expect(await modal.locator('[data-feature-prev], [data-feature-next]').evaluateAll((buttons) => buttons.length === 2 && buttons.every((button) => !button.disabled))).toBe(true);
+  }
 }
 
 async function noOverflow(page) {
@@ -84,24 +90,99 @@ async function noOverflow(page) {
 }
 
 async function controlsVisible(page) {
-  for (const control of await dialog(page).locator('[data-feature-close], [data-feature-prev], [data-feature-next], [data-feature-dot]').all()) {
+  const modal = dialog(page);
+  const slideCount = await modal.locator('[data-feature-slide]').count();
+  const navigation = modal.locator('[data-feature-navigation]');
+  await expect(navigation).toHaveCount(1);
+  if (slideCount === 1) {
+    await expect(navigation).toBeHidden();
+    expect(await modal.locator('[data-feature-prev], [data-feature-next]').evaluateAll((buttons) => buttons.length === 2 && buttons.every((button) => button.disabled))).toBe(true);
+  } else {
+    await expect(navigation).toBeVisible();
+  }
+  const controls = [modal.locator('[data-feature-close]')];
+  if (slideCount > 1) controls.push(modal.locator('[data-feature-prev]'), modal.locator('[data-feature-next]'));
+  for (const control of controls) {
     await expect(control).toBeVisible();
     expect(await control.evaluate((element) => {
       const rect = element.getBoundingClientRect();
-      let left = 0, top = 0, right = innerWidth, bottom = innerHeight;
-      for (let parent = element.parentElement; parent; parent = parent.parentElement) {
-        const style = getComputedStyle(parent), box = parent.getBoundingClientRect();
-        if (/(auto|scroll|hidden|clip)/.test(style.overflowX)) {
-          left = Math.max(left, box.left); right = Math.min(right, box.right);
-        }
-        if (/(auto|scroll|hidden|clip)/.test(style.overflowY)) {
-          top = Math.max(top, box.top); bottom = Math.min(bottom, box.bottom);
-        }
-      }
-      return rect.width > 0 && rect.height > 0 && rect.left >= left - 1 && rect.right <= right + 1 && rect.top >= top - 1 && rect.bottom <= bottom + 1;
-    }), 'Modal controls remain fully visible without scrolling').toBe(true);
+      return rect.width >= 44 && rect.height >= 44 && rect.left >= -1 && rect.right <= innerWidth + 1
+        && rect.top >= -1 && rect.bottom <= innerHeight + 1;
+    }), 'Modal controls meet touch size and viewport bounds').toBe(true);
   }
   await noOverflow(page);
+}
+
+async function edgeNavigationGeometry(page) {
+  const geometry = await dialog(page).evaluate((modal) => {
+    const navigation = modal.querySelector('[data-feature-navigation]');
+    const previous = navigation.querySelector('[data-feature-prev]');
+    const next = navigation.querySelector('[data-feature-next]');
+    const panel = modal.querySelector('[data-feature-panel]');
+    const slides = modal.querySelector('[data-feature-pages]');
+    const rect = (element) => {
+      const { left, right, top, bottom, width, height } = element.getBoundingClientRect();
+      return { left, right, top, bottom, width, height, centerX: (left + right) / 2, centerY: (top + bottom) / 2 };
+    };
+    const previousBox = rect(previous), nextBox = rect(next), modalBox = rect(modal);
+    previousBox.borderRadius = Number.parseFloat(getComputedStyle(previous).borderTopLeftRadius);
+    nextBox.borderRadius = Number.parseFloat(getComputedStyle(next).borderTopLeftRadius);
+    const previousProbe = { x: previousBox.left + previousBox.width * .25, y: previousBox.centerY };
+    const nextProbe = { x: nextBox.right - nextBox.width * .25, y: nextBox.centerY };
+    const targetAt = (point) => document.elementFromPoint(point.x, point.y)?.closest('button');
+    const width = innerWidth;
+    const expectedWidth = Math.min(width >= 900 ? 1360 : 660, width - (width >= 900 ? 112 : 64));
+    return {
+      parentIsDialog: navigation.parentElement === modal,
+      directChild: [...modal.children].includes(navigation),
+      noCountOrDots: !modal.querySelector('[data-feature-count], [data-feature-dot], .feature-modal-paging, .feature-modal-dots'),
+      modalOverflow: getComputedStyle(modal).overflowX,
+      panelOverflow: getComputedStyle(panel).overflowX,
+      panelRadius: Number.parseFloat(getComputedStyle(panel).borderTopLeftRadius),
+      modalBox, panelBox: rect(panel), slidesBox: rect(slides), previousBox, nextBox,
+      expectedWidth, viewportWidth: width,
+      previousOuterHalfHits: targetAt(previousProbe) === previous,
+      nextOuterHalfHits: targetAt(nextProbe) === next,
+      previousProbe, nextProbe,
+      previousProbeInViewport: previousProbe.x >= 0 && previousProbe.x < innerWidth,
+      nextProbeInViewport: nextProbe.x >= 0 && nextProbe.x < innerWidth,
+    };
+  });
+  expect(geometry.parentIsDialog && geometry.directChild, 'Navigation stays a direct dialog child').toBe(true);
+  expect(geometry.noCountOrDots, 'The modal has no counter or pagination dots').toBe(true);
+  expect(geometry.modalOverflow, 'Dialog overflow stays visible for edge controls').toBe('visible');
+  expect(['hidden', 'clip'].includes(geometry.panelOverflow), 'The panel clips moving slides').toBe(true);
+  expect(geometry.panelRadius, 'The clipped panel keeps rounded corners').toBeGreaterThan(0);
+  expect(Math.abs(geometry.modalBox.width - geometry.expectedWidth), 'Modal width preserves its responsive outer gutters').toBeLessThanOrEqual(2);
+  for (const [side, button, edge] of [
+    ['previous', geometry.previousBox, geometry.modalBox.left],
+    ['next', geometry.nextBox, geometry.modalBox.right],
+  ]) {
+    const expectedSize = geometry.viewportWidth < 900 ? 44 : 48;
+    expect(Math.abs(button.width - expectedSize), `${side} arrow has the expected touch diameter`).toBeLessThanOrEqual(1);
+    expect(Math.abs(button.height - expectedSize), `${side} arrow is circular`).toBeLessThanOrEqual(1);
+    expect(button.borderRadius, `${side} arrow is round`).toBeGreaterThanOrEqual(expectedSize / 2 - 1);
+    expect(Math.abs(button.centerX - edge), `${side} arrow sits half outside the modal edge`).toBeLessThanOrEqual(2);
+    expect(Math.abs(button.centerY - geometry.modalBox.centerY), `${side} arrow is centered on the full modal`).toBeLessThanOrEqual(2);
+    expect(button.left >= -1 && button.right <= geometry.viewportWidth + 1,
+      `${side} arrow stays inside the viewport: ${JSON.stringify(button)}`).toBe(true);
+  }
+  expect(geometry.previousProbeInViewport && geometry.nextProbeInViewport, 'The outside halves of both arrows remain inside the viewport').toBe(true);
+  expect(geometry.previousOuterHalfHits, 'The outer half of the previous arrow receives pointer hits').toBe(true);
+  expect(geometry.nextOuterHalfHits, 'The outer half of the next arrow receives pointer hits').toBe(true);
+  return geometry;
+}
+
+async function hitTestEdgeNavigation(page, currentIndex, count = 6) {
+  const geometry = await edgeNavigationGeometry(page);
+  await page.mouse.click(geometry.previousProbe.x, geometry.previousProbe.y);
+  await selected(page, (currentIndex + count - 1) % count, count,
+    count === 6 ? seed.features.items[(currentIndex + count - 1) % count]?.title : `Published feature ${(currentIndex + count - 1) % count + 1}`);
+  await page.mouse.click(geometry.nextProbe.x, geometry.nextProbe.y);
+  await selected(page, currentIndex, count,
+    count === 6 ? seed.features.items[currentIndex]?.title : `Published feature ${currentIndex + 1}`);
+  await expect.poll(() => dialog(page).evaluate((element) => element.getAnimations({ subtree: true })
+    .filter((animation) => animation.constructor.name === 'Animation' && ['running', 'paused'].includes(animation.playState)).length)).toBe(0);
 }
 
 async function layout(page) {
@@ -218,13 +299,9 @@ async function directionStep(page, control, index, direction) {
     const left = (root, selector) => root.querySelector(selector).getBoundingClientRect().left;
     const box = (item) => { const rect = item.getBoundingClientRect(); return { x: rect.x, y: rect.y, width: rect.width, height: rect.height }; };
     const navigation = element.querySelector('[data-feature-navigation]');
-    const navigationState = (nav) => ({
-      count: nav.querySelector('.feature-modal-paging > span').textContent.trim(),
-      current: [...nav.querySelectorAll('.feature-modal-dots button')].findIndex((dot) => dot.getAttribute('aria-current') === 'true'),
-      countColor: getComputedStyle(nav.querySelector('.feature-modal-paging > span')).color,
-      countNumerals: getComputedStyle(nav.querySelector('.feature-modal-paging > span')).fontVariantNumeric,
-      previousIcon: getComputedStyle(nav.querySelector('.feature-modal-arrows button:first-child svg')).transform,
-    });
+    const navigationBox = box(navigation);
+    const previousBox = box(navigation.querySelector('[data-feature-prev]'));
+    const nextBox = box(navigation.querySelector('[data-feature-next]'));
     const before = {
       slide: beforeSlide.getBoundingClientRect().left,
       media: left(beforeSlide, '[data-feature-modal-media]'),
@@ -232,11 +309,9 @@ async function directionStep(page, control, index, direction) {
       copy: left(beforeSlide, '[data-feature-copy]'),
       description: left(beforeSlide, '.feature-modal-description'),
       close: box(element.querySelector('[data-feature-close]')),
-      navigation: left(beforeSlide, '[data-feature-navigation]'),
-      count: left(navigation, '.feature-modal-paging > span'),
-      arrows: left(navigation, '.feature-modal-arrows'),
-      dots: left(navigation, '.feature-modal-dots'),
-      navigationState: navigationState(navigation),
+      navigationBox,
+      previousBox,
+      nextBox,
     };
     const trigger = element.querySelector(selector);
     trigger.focus({ preventScroll: true });
@@ -252,6 +327,7 @@ async function directionStep(page, control, index, direction) {
     const copy = slide.querySelector('[data-feature-copy]');
     const layers = [...element.querySelectorAll('[data-feature-motion-layer]')];
     return {
+      before,
       incoming: slide.getBoundingClientRect().left - before.slide,
       outgoing: outgoing ? outgoing.getBoundingClientRect().left - before.slide : null,
       displacements: {
@@ -259,20 +335,12 @@ async function directionStep(page, control, index, direction) {
         picture: left(slide, 'picture, [data-placeholder-variant="feature"]') - before.picture,
         copy: left(slide, '[data-feature-copy]') - before.copy,
         description: left(slide, '.feature-modal-description') - before.description,
-        navigation: left(slide, '[data-feature-navigation]') - before.navigation,
-        count: left(navigation, '.feature-modal-paging > span') - before.count,
-        arrows: left(navigation, '.feature-modal-arrows') - before.arrows,
-        dots: left(navigation, '.feature-modal-dots') - before.dots,
       },
       outgoingDisplacements: outgoing ? {
         media: left(outgoing, '.feature-modal-media') - before.media,
         picture: left(outgoing, 'picture, [data-placeholder-variant="feature"]') - before.picture,
         copy: left(outgoing, '.feature-modal-copy') - before.copy,
         description: left(outgoing, '.feature-modal-description') - before.description,
-        navigation: left(outgoing, '.feature-modal-navigation') - before.navigation,
-        count: left(outgoing, '.feature-modal-paging > span') - before.count,
-        arrows: left(outgoing, '.feature-modal-arrows') - before.arrows,
-        dots: left(outgoing, '.feature-modal-dots') - before.dots,
       } : null,
       opacity: [slide, copy, slide.querySelector('.feature-modal-description'), slide.querySelector('picture, [data-placeholder-variant="feature"]'), slide.querySelector('[data-feature-modal-media]'),
         outgoing, outgoing?.querySelector('.feature-modal-copy'), outgoing?.querySelector('picture, [data-placeholder-variant="feature"]'), outgoing?.querySelector('.feature-modal-media')]
@@ -281,12 +349,16 @@ async function directionStep(page, control, index, direction) {
       clipped: ['hidden', 'clip'].includes(getComputedStyle(frame).overflowX),
       close: { before: before.close, after: box(element.querySelector('[data-feature-close]')) },
       navigationIdentity: element.querySelector('[data-feature-navigation]') === navigation,
+      navigationParentIsDialog: navigation.parentElement === element,
+      navigationBox: box(navigation),
+      previousBox: box(navigation.querySelector('[data-feature-prev]')),
+      nextBox: box(navigation.querySelector('[data-feature-next]')),
       triggerFocused: document.activeElement === trigger,
-      navigationSnapshot: { before: before.navigationState, outgoing: outgoing ? navigationState(outgoing.querySelector('.feature-modal-navigation')) : null },
+      staleControls: Boolean(element.querySelector('[data-feature-count], [data-feature-dot], .feature-modal-paging, .feature-modal-dots')),
       layers: layers.map((layer) => ({ kind: layer.dataset.featureMotionLayer,
         inert: layer.inert, hidden: layer.getAttribute('aria-hidden'), ids: layer.querySelectorAll('[id]').length + Number(layer.hasAttribute('id')),
         media: layer.querySelectorAll('.feature-modal-media').length, copy: layer.querySelectorAll('.feature-modal-copy').length,
-        navigation: layer.querySelectorAll('.feature-modal-navigation').length, liveHooks: layer.querySelectorAll('[data-feature-navigation], [data-feature-count], [data-feature-prev], [data-feature-next], [data-feature-dot]').length })),
+        navigation: layer.querySelectorAll('[data-feature-navigation]').length, liveHooks: layer.querySelectorAll('[data-feature-navigation], [data-feature-count], [data-feature-prev], [data-feature-next], [data-feature-dot]').length })),
       duplicateIds: [...element.querySelectorAll('[id]')].map((item) => item.id).filter((id, index, all) => all.indexOf(id) !== index),
     };
   }, control);
@@ -297,20 +369,23 @@ async function directionStep(page, control, index, direction) {
   expect(motion.incoming * direction, 'Incoming feature enters from the requested side').toBeGreaterThan(1);
   expect(motion.outgoing * direction, 'Outgoing feature moves in the opposite direction').toBeLessThan(-1);
   for (const [part, displacement] of Object.entries(motion.displacements)) {
-    expect(Math.abs(displacement - motion.incoming), `Incoming ${part} moves with the whole slide`).toBeLessThanOrEqual(1);
+    expect(Math.abs(displacement - motion.incoming), `Incoming ${part} moves with the whole slide (part ${displacement.toFixed(2)}px, slide ${motion.incoming.toFixed(2)}px)`).toBeLessThanOrEqual(1);
   }
   for (const [part, displacement] of Object.entries(motion.outgoingDisplacements || {})) {
-    expect(Math.abs(displacement - motion.outgoing), `Outgoing ${part} moves with the whole slide`).toBeLessThanOrEqual(1);
+    expect(Math.abs(displacement - motion.outgoing), `Outgoing ${part} moves with the whole slide (part ${displacement.toFixed(2)}px, slide ${motion.outgoing.toFixed(2)}px)`).toBeLessThanOrEqual(1);
   }
   expect(motion.opacity, 'Media and copy retain full opacity during the swipe').toEqual([1, 1, 1, 1, 1, 1, 1, 1, 1]);
   expect(motion.ownership.sort(), 'Only the incoming and outgoing whole slides own motion').toEqual(['incoming', 'outgoing']);
   expect(motion.clipped, 'Both complete features stay inside the shared clipped viewport').toBe(true);
   expect(motion.close.after, 'Close remains stationary while navigation swipes').toEqual(motion.close.before);
-  expect(motion.navigationIdentity, 'The same live navigation moves into the incoming feature').toBe(true);
-  expect(motion.triggerFocused, 'Focused navigation control survives reparenting').toBe(true);
-  expect(motion.navigationSnapshot.outgoing, 'Outgoing navigation preserves its old count, current dot and styling').toEqual(motion.navigationSnapshot.before);
+  expect(motion.navigationIdentity && motion.navigationParentIsDialog, 'The same navigation remains fixed as a direct dialog child').toBe(true);
+  expect(motion.navigationBox, 'Navigation stays fixed during slide movement').toEqual(motion.before.navigationBox);
+  expect(motion.previousBox, 'Previous arrow stays fixed during slide movement').toEqual(motion.before.previousBox);
+  expect(motion.nextBox, 'Next arrow stays fixed during slide movement').toEqual(motion.before.nextBox);
+  expect(motion.triggerFocused, 'Focused navigation control retains focus').toBe(true);
+  expect(motion.staleControls, 'The modal has no counter or dots').toBe(false);
   expect(motion.layers.map((layer) => layer.kind)).toEqual(['slide']);
-  for (const layer of motion.layers) expect(layer, 'One outgoing feature contains image, copy and a passive navigation snapshot').toMatchObject({ inert: true, hidden: 'true', ids: 0, media: 1, copy: 1, navigation: 1, liveHooks: 0 });
+  for (const layer of motion.layers) expect(layer, 'Outgoing visual copy contains the media and copy without cloned controls').toMatchObject({ inert: true, hidden: 'true', ids: 0, media: 1, copy: 1, navigation: 0, liveHooks: 0 });
   expect(motion.duplicateIds, 'Visual copies do not duplicate accessible IDs').toEqual([]);
   if (index === 1 && direction === 1) {
     for (let step = 0; step < 24; step++) {
@@ -342,6 +417,12 @@ async function verifyNavigationMotion(page) {
   await page.keyboard.press('ArrowLeft');
   await settled(page, 0);
   await expect(dialog(page).locator('[data-feature-next]')).toBeFocused();
+  await page.keyboard.press('End');
+  await settled(page, 5);
+  await expect(dialog(page).locator('[data-feature-next]')).toBeFocused();
+  await page.keyboard.press('Home');
+  await settled(page, 0);
+  await expect(dialog(page).locator('[data-feature-next]')).toBeFocused();
 
   await dialog(page).evaluate((element) => {
     const probe = { starts: 0, maxSlides: 0 };
@@ -367,9 +448,9 @@ async function verifyNavigationMotion(page) {
   expect(rapid.starts, 'Fifteen clicks animate the current transition and latest intent only').toBeGreaterThan(0);
   expect(rapid.starts).toBeLessThanOrEqual(2);
   expect(rapid.maxSlides, 'Whole-slide layers never stack across queued intents').toBeLessThanOrEqual(1);
-  expect(rapid.focused, 'The same live arrow keeps focus through queued reparenting').toBe(true);
+  expect(rapid.focused, 'The same fixed live arrow keeps focus through queued transitions').toBe(true);
 
-  await dialog(page).locator('[data-feature-dot="0"]').click();
+  await page.keyboard.press('Home');
   await settled(page, 0);
   await dialog(page).evaluate((element) => {
     element.querySelector('[data-feature-next]').click();
@@ -378,12 +459,14 @@ async function verifyNavigationMotion(page) {
   await settled(page, 0);
   await dialog(page).evaluate((element) => {
     element.querySelector('[data-feature-next]').click();
-    element.querySelector('[data-feature-dot="4"]').click();
+    element.querySelector('[data-feature-next]').click();
+    element.querySelector('[data-feature-next]').click();
     element.querySelector('[data-feature-prev]').click();
   });
-  await settled(page, 3);
+  await settled(page, 2);
 
   await dialog(page).evaluate((element) => {
+    element.querySelector('[data-feature-next]').click();
     element.querySelector('[data-feature-next]').click();
     element.querySelector('[data-feature-next]').click();
     element.getAnimations({ subtree: true }).filter((animation) => animation.constructor.name === 'Animation').forEach((animation) => animation.pause());
@@ -413,7 +496,7 @@ async function verifyNavigationMotion(page) {
 
   await dialog(page).evaluate((element) => {
     element.querySelector('[data-feature-next]').click();
-    element.querySelector('[data-feature-dot="5"]').click();
+    element.querySelector('[data-feature-next]').click();
     element.getAnimations({ subtree: true }).filter((animation) => animation.constructor.name === 'Animation').forEach((animation) => animation.pause());
   });
   await close(page, card(page, 0));
@@ -432,7 +515,9 @@ try {
   expect(await root.getAttribute('data-scroll-surface')).not.toBeNull();
   await expect(root.locator('[data-feature-open]')).toHaveCount(6);
   await expect(root.locator('[data-feature-card-media] [data-feature-preview]')).toHaveCount(6);
-  await expect(root.locator('video, iframe')).toHaveCount(0);
+  await expect(root.locator('video[data-feature-video]')).toHaveCount(12);
+  await expect(root.locator('[data-feature-playback]')).toHaveCount(0);
+  await expect(root.locator('[data-feature-count], [data-feature-dot], .feature-modal-paging, .feature-modal-dots')).toHaveCount(0);
   await expect(root.locator('[data-feature-gif], img[src$=".gif"], img[src*=".gif?"]')).toHaveCount(0);
   for (const image of await root.locator('img').all()) {
     for (const source of [await image.getAttribute('src')].filter(Boolean)) {
@@ -462,7 +547,11 @@ try {
   await selected(page, 5);
   await page.keyboard.press('ArrowRight');
   await selected(page, 0);
-  await dialog(page).locator('[data-feature-dot="3"]').click();
+  await page.keyboard.press('Home');
+  await selected(page, 0);
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowRight');
   await selected(page, 3);
   // Several events in one task expose stale animation callbacks and lost input.
   await dialog(page).evaluate((element) => {
@@ -475,7 +564,8 @@ try {
     await selected(page, index);
     await expect(dialog(page).locator('[data-feature-slide]:not([hidden]) [data-feature-copy]')).toBeFocused();
   }
-  await dialog(page).locator('[data-feature-dot="0"]').click();
+  await settled(page, 2);
+  await dialog(page).locator('[data-feature-next]').focus();
   for (let index = 0; index < 18; index++) {
     await page.keyboard.press(index < 9 ? 'Tab' : 'Shift+Tab');
     expect(await dialog(page).evaluate((element) => element.contains(document.activeElement)), 'Native modal keeps keyboard focus inside').toBe(true);
@@ -516,10 +606,15 @@ try {
   await page.waitForTimeout(450);
   await selected(page, 1);
 
-  for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }, { width: 768, height: 1024 }, { width: 1440, height: 500 }]) {
+  for (const viewport of [
+    { width: 320, height: 568 }, { width: 390, height: 844 }, { width: 768, height: 1024 },
+    { width: 1440, height: 500 }, { width: 1920, height: 1080 },
+    { width: 568, height: 320 }, { width: 844, height: 390 }, { width: 1024, height: 768 },
+  ]) {
     await page.setViewportSize(viewport);
     await settled(page, 1);
     await controlsVisible(page);
+    await hitTestEdgeNavigation(page, 1);
     await layout(page);
     await dialog(page).locator('[data-feature-next]').click();
     await selected(page, 2);
@@ -553,16 +648,19 @@ try {
       const cardTemplate = firstCard.cloneNode(true), cards = firstCard.parentElement;
       const firstSlide = root.querySelector('[data-feature-slide]');
       const slideTemplate = firstSlide.cloneNode(true), slides = firstSlide.parentElement;
+      const navigation = root.querySelector('[data-feature-navigation]').cloneNode(true);
+      const arrows = navigation.querySelector('.feature-modal-arrows');
+      if (arrows) navigation.replaceChildren(arrows);
+      navigation.querySelectorAll('[data-feature-count], [data-feature-dot], .feature-modal-dots').forEach((element) => element.remove());
+      navigation.querySelectorAll('[hidden], [disabled]').forEach((element) => { element.hidden = false; element.disabled = false; });
       slideTemplate.querySelector('[data-feature-navigation]')?.remove();
-      const navigation = root.querySelector('[data-feature-navigation]');
-      navigation.remove();
-      const firstDot = navigation.querySelector('[data-feature-dot]');
-      const dotTemplate = firstDot.cloneNode(true), dots = firstDot.parentElement;
+      const dialog = root.querySelector('#feature-dialog');
+      root.querySelector('[data-feature-navigation]')?.remove();
+      dialog.append(navigation);
       root.querySelectorAll('[data-feature-card]').forEach((element) => element.remove());
       root.querySelectorAll('[data-feature-slide]').forEach((element) => element.remove());
-      dots.replaceChildren();
       for (let index = 0; index < count; index++) {
-        const card = cardTemplate.cloneNode(true), slide = slideTemplate.cloneNode(true), dot = dotTemplate.cloneNode(true);
+        const card = cardTemplate.cloneNode(true), slide = slideTemplate.cloneNode(true);
         const opener = card.querySelector('[data-feature-open]');
         opener.dataset.featureOpen = String(index); opener.setAttribute('href', `#feature-description-${index}`);
         opener.setAttribute('aria-labelledby', `feature-title-${index}`);
@@ -572,19 +670,14 @@ try {
         slide.querySelector('[id^="feature-dialog-description-"]').id = `feature-dialog-description-${index}`;
         slide.id = `feature-slide-${index}`;
         slide.dataset.featureSlide = String(index);
-        dot.dataset.featureDot = String(index);
-        dot.setAttribute('aria-label', `Show published feature ${index + 1}`);
-        dot.removeAttribute('aria-current');
-        if (dot.hasAttribute('aria-controls')) dot.setAttribute('aria-controls', slide.id || `feature-dialog-title-${index}`);
+        slide.hidden = index !== 0;
         const title = `Published feature ${index + 1}`;
         slide.querySelector('[id^="feature-dialog-title-"]').textContent = title;
         const description = longCopy ? 'Published feature context with enough detail to require scrolling. '.repeat(40).slice(0, 2000) : `Published feature description ${index + 1}`;
         slide.querySelector('[id^="feature-dialog-description-"]').textContent = description;
         card.querySelector('[id^="feature-description-"]').textContent = description;
-        cards.append(card); slides.append(slide); dots.append(dot);
+        cards.append(card); slides.append(slide);
       }
-      navigation.querySelector('[data-feature-count]').textContent = `01 / ${String(count).padStart(2, '0')}`;
-      slides.querySelector('[data-feature-slide]').append(navigation);
       return '<!doctype html>' + doc.documentElement.outerHTML;
     }, { original: serverHTML, count, longCopy });
     const fixture = await open({}, html);
@@ -598,6 +691,8 @@ try {
       await fixture.page.setViewportSize(viewport);
       await card(fixture.page, count - 1).click();
       await selected(fixture.page, count - 1, count, `Published feature ${count}`);
+      await expect.poll(() => dialog(fixture.page).evaluate((element) => element.getAnimations({ subtree: true })
+        .filter((animation) => animation.constructor.name === 'Animation' && ['running', 'paused'].includes(animation.playState)).length)).toBe(0);
       await controlsVisible(fixture.page);
       if (longCopy) {
         const copy = fixture.page.locator(`#feature-dialog-description-${count - 1}`);
@@ -615,6 +710,7 @@ try {
       if (count === 1) {
         await expect(dialog(fixture.page).locator('[data-feature-next]')).toBeDisabled();
         await expect(dialog(fixture.page).locator('[data-feature-prev]')).toBeDisabled();
+        await expect(dialog(fixture.page).locator('[data-feature-navigation]')).toBeHidden();
       } else if (longCopy) {
         const geometry = await dialog(fixture.page).evaluate((element) => {
           const copy = element.querySelector('[data-feature-slide]:not([hidden]) [data-feature-copy]');
@@ -646,8 +742,17 @@ try {
         }));
         expect(after, 'Outgoing copy does not change the incoming scroller geometry').toEqual(geometry.incoming);
       } else {
-        await dialog(fixture.page).locator('[data-feature-next]').click();
+        await fixture.page.keyboard.press('Home');
+        await selected(fixture.page, 0, count, 'Published feature 1');
+        await fixture.page.keyboard.press('End');
+        await selected(fixture.page, count - 1, count, `Published feature ${count}`);
+        await fixture.page.keyboard.press('ArrowRight');
+        await selected(fixture.page, 0, count, 'Published feature 1');
+        await fixture.page.keyboard.press('ArrowLeft');
+        await selected(fixture.page, count - 1, count, `Published feature ${count}`);
+        await hitTestEdgeNavigation(fixture.page, count - 1, count);
       }
+      if (count > 1 && !longCopy) await fixture.page.keyboard.press('Home');
       await selected(fixture.page, 0, count, 'Published feature 1');
       await close(fixture.page, card(fixture.page, count - 1));
     }
@@ -695,7 +800,7 @@ try {
     await staticRun.context.close();
   }
   expect(errors, 'No runtime errors in feature scenarios').toEqual([]);
-  console.log(`Passed (${browserType.name()}): whole-dialog card-origin entry/exit and interrupted opening on desktop/mobile, all feature cards, accessible names/descriptions, wrapping arrows/dots/keyboard, directional whole-feature swipes with image/copy/navigation in lockstep, bounded latest-intent queue, reverse/resize/reduced-motion/close cleanup, rapid input and reopen, native focus containment/Escape/backdrop, focus and scroll restoration, resize/mobile/tablet/short desktop, reduced motion/live cancellation, CMS 1/12 items and long copy, no-JS fallback, local app captures, no overflow and axe.`);
+  console.log(`Passed (${browserType.name()}): whole-dialog card-origin entry/exit and interrupted opening on desktop/mobile, all feature cards, accessible names/descriptions, wrapping arrows and Home/End keyboard navigation, fixed edge controls with outer-half hit testing, directional whole-feature swipes with image/copy in lockstep, bounded latest-intent queue, reverse/resize/reduced-motion/close cleanup, rapid input and reopen, native focus containment/Escape/backdrop, focus and scroll restoration, portrait/landscape modal geometry, CMS 1/12 items and long copy, no-JS fallback, local app captures, no overflow and axe.`);
 } finally {
   await browser.close();
 }

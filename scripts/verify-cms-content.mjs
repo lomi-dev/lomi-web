@@ -269,11 +269,20 @@ try {
     } else if (route === '/remote/') {
       await expect(page.locator('h1')).toHaveText(fixture.pages.remote.title);
       await assertMedia(page, '.remote-showcase img', fixture.pages.remote.screenshot.alt);
-      await expect(page.locator('[data-remote-platform="unix"] code')).toHaveText(fixture.pages.remote.platforms.unix.command);
-      await page.locator('input[value="windows"]').check();
-      await expect(page.locator('[data-remote-platform="windows"] code')).toBeVisible();
-      await expect(page.locator('[data-remote-platform="windows"] code')).toHaveText(fixture.pages.remote.platforms.windows.command);
-      assert.equal(JSON.parse(await page.locator('[data-remote-copy]').getAttribute('data-remote-copy')).copied, fixture.pages.remote.feedback.copied);
+      await expect(page.locator('[data-remote-cli-preview]')).toHaveCount(0);
+      await expect(page.locator('.remote-platform')).toHaveCount(3);
+      for (const platform of ['macOS', 'Windows', 'Linux']) {
+        await expect(page.getByRole('button', { name: new RegExp(`${platform}.*coming soon`, 'i') })).toBeDisabled();
+      }
+      await expect(page.locator('[data-remote-installer], [data-remote-copy], [data-remote-command], input[type="radio"]')).toHaveCount(0);
+      const remoteText = await page.locator('body').innerText();
+      for (const legacy of ['CMS_UNIX_SENTINEL', 'CMS_WINDOWS_SENTINEL', 'CMS copied {platform} sentinel', 'curl -fsSL', 'Invoke-RestMethod', 'Invoke-Expression']) {
+        assert.ok(!remoteText.includes(legacy), `Remote does not render legacy installer field: ${legacy}`);
+      }
+      await expect(page.locator('#remote-newsletter .newsletter')).toHaveAttribute('aria-label', 'Lomi Remote launch newsletter');
+      await expect(page.locator('#remote-newsletter #newsletter-note')).toHaveCount(0);
+      await expect(page.locator('#remote-newsletter #newsletter-email')).toHaveAttribute('aria-describedby', 'newsletter-status');
+      await expect(page.getByLabel('CMS email sentinel', { exact: true })).toBeVisible();
     } else if (route === '/devlog/') {
       await expect(page.locator('h1')).toContainText(fixture.pages.devlog.title[0].text);
       await expect(page.locator('.devlog-description')).toHaveText(fixture.pages.devlog.description[0].text);
@@ -364,7 +373,25 @@ try {
   await expect(second.locator('a[href="#newsletter"], a[href="/#newsletter"]')).toHaveCount(0);
   await expect(second.locator('a[href="/cookies/#preferences"]').first()).toHaveCount(1);
   await expect(second.locator('#product-menu, #mobile-product, .header-action, .mobile-download')).toHaveCount(0);
-  await assertPlaceholder(second.locator('.remote-showcase [data-media-placeholder]'), { logo: `${cmsOrigin}${mediaPath}`, aspect: '8 / 5' });
+  const remotePreview = second.locator('[data-remote-cli-preview]');
+  await expect(remotePreview).toBeVisible();
+  await expect(remotePreview).toHaveAttribute('aria-label', /Lomi Remote.*preview/i);
+  const remoteArtwork = remotePreview.locator('img');
+  await expect(remoteArtwork).toHaveCount(1);
+  await expect(remoteArtwork).toHaveAttribute('alt', /sample local workspaces/i);
+  await remoteArtwork.scrollIntoViewIfNeeded();
+  await expect.poll(() => remoteArtwork.evaluate((image) => image.complete && image.naturalWidth > 0)).toBe(true);
+  expect(Math.abs(await remoteArtwork.evaluate((image) => image.naturalWidth / image.naturalHeight) - 8 / 5)).toBeLessThan(0.012);
+  await expect(remotePreview.locator('video, audio, canvas, figcaption, button, input, select, textarea, a[href], script')).toHaveCount(0);
+  await expect(remotePreview.locator('.cli-titlebar, .cli-window-title, [data-cli-workspace-list], [data-cli-static-list], [data-cli-workspace-controls], [data-cli-detail-content], [data-cli-help-button], [data-cli-help-content], [data-cli-help-static], [data-cli-panel-title]')).toHaveCount(0);
+  expect((await remotePreview.innerText()).trim()).toBe('');
+  const remoteText = await second.locator('body').innerText();
+  for (const legacy of ['CMS_UNIX_SENTINEL', 'CMS_WINDOWS_SENTINEL', 'CMS copied {platform} sentinel', 'curl -fsSL', 'Invoke-RestMethod', 'Invoke-Expression']) {
+    assert.ok(!remoteText.includes(legacy), `Remote image render does not expose legacy installer field: ${legacy}`);
+  }
+  await expect(second.locator('#remote-newsletter, a[href="#remote-newsletter"]')).toHaveCount(0);
+  await expect(second.locator('h1')).toBeVisible();
+  await expect(second.locator('.remote-showcase')).toBeVisible();
   await second.goto(preview + '/download/', { waitUntil: 'networkidle' });
   const downloadCapture = second.locator('.product-showcase img');
   await expect(downloadCapture).toBeVisible();
@@ -373,9 +400,30 @@ try {
   await second.goto(preview + '/cookies/', { waitUntil: 'networkidle' });
   await expect(second.locator('.cookies-page dl')).toContainText('CMS storage table sentinel');
   await second.close();
+
+  // A CMS editor can hide the artwork without removing the launch signup.
+  fixture.layout.find((row) => row.section === 'newsletter').enabled = true;
+  fixture.pages.remote.showScreenshot = false;
+  await build('remote-preview-hidden');
+  const third = await browser.newPage({ reducedMotion: 'reduce' });
+  third.on('pageerror', (error) => browserErrors.push(error.message));
+  await third.goto(preview + '/remote/', { waitUntil: 'networkidle' });
+  await expect(third.locator('h1')).toHaveText(fixture.pages.remote.title);
+  await expect(third.locator('.remote-showcase, [data-remote-cli-preview], .remote-preview')).toHaveCount(0);
+  await expect(third.locator('#remote-newsletter')).toBeVisible();
+  await expect(third.locator('#remote-newsletter > h2')).toHaveText(/^Get Remote launch news\.?$/);
+  await expect(third.locator('#remote-newsletter .newsletter')).toHaveAttribute('aria-label', 'Lomi Remote launch newsletter');
+  await expect(third.locator('#remote-newsletter #newsletter-note')).toHaveCount(0);
+  await expect(third.locator('#remote-newsletter #newsletter-email')).toHaveAttribute('aria-describedby', 'newsletter-status');
+  await expect(third.getByLabel(fixture.newsletter.form.emailLabel, { exact: true })).toBeEnabled();
+  const hiddenPreviewText = await third.locator('body').innerText();
+  for (const legacy of ['CMS_UNIX_SENTINEL', 'CMS_WINDOWS_SENTINEL', 'CMS copied {platform} sentinel', 'curl -fsSL', 'Invoke-RestMethod', 'Invoke-Expression']) {
+    assert.ok(!hiddenPreviewText.includes(legacy), `Remote hidden preview does not render legacy installer field: ${legacy}`);
+  }
+  await third.close();
   assert.deepEqual(browserErrors, [], 'No runtime errors with authored CMS content');
   assert.ok(await absent(marker));
-  console.log('Passed: two isolated published-CMS builds; five routes with edited SEO/brand/theme/nav/copy/uploads; consent and form labels/client messages; feature modal and roadmap copy; custom YouTube ID; real native-video playback/control keys and preview/slide/close pausing; reordered sections; disabled newsletter link filtering with legal anchors preserved; commands displayed without execution.');
+  console.log('Passed: three isolated published-CMS builds; five routes with edited SEO/brand/theme/nav/copy/uploads; consent and form labels/client messages; feature modal and roadmap copy; custom YouTube ID; real native-video playback/control keys and preview/slide/close pausing; Remote custom media and static sample artwork; showScreenshot hides only artwork; disabled newsletter filtering with signup availability preserved; legacy installer fields never render or execute.');
 } finally {
   await browser?.close();
   await Promise.all(servers.map((server) => new Promise((resolveClose) => { server.close(resolveClose); server.closeAllConnections(); })));

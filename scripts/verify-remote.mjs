@@ -1,265 +1,245 @@
-import { chromium, firefox, expect } from '@playwright/test';
+import { chromium, firefox, webkit, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { mkdir, writeFile } from 'node:fs/promises';
 
 const origin = process.env.VERIFY_URL || 'http://127.0.0.1:4322';
-const browserType = process.env.VERIFY_BROWSER === 'firefox' ? firefox : chromium;
+const browserType = { chromium, firefox, webkit }[process.env.VERIFY_BROWSER || 'chromium'];
+if (!browserType) throw new Error('VERIFY_BROWSER must be chromium, firefox or webkit');
 const browser = await browserType.launch();
-const unix = 'curl -fsSL https://lomi.dev/download/remote | bash';
-const windows = 'Invoke-RestMethod "https://lomi.dev/download/remote.ps1" | Invoke-Expression';
-const systems = [['macOS / Linux', 'unix', unix], ['Windows', 'windows', windows]];
 const errors = [];
-const installerRequests = [];
+const requests = [];
+const scriptRequests = [];
 const reports = [];
 await mkdir('artifacts', { recursive: true });
 
-async function makePage({ os = 'macOS', clipboard = 'success', javaScriptEnabled = true, ...options } = {}) {
-  const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, javaScriptEnabled, ...options });
+async function makePage({ width = 1440, height = 900, javaScriptEnabled = true } = {}) {
+  const context = await browser.newContext({ viewport: { width, height }, javaScriptEnabled, reducedMotion: 'reduce' });
   await context.addInitScript(() => {
-    try { localStorage.setItem('lomi.cookie-consent', JSON.stringify({ version: 1, externalMedia: true, savedAt: Date.now() })); } catch { /* Storage may be unavailable in fallback checks. */ }
+    try { localStorage.setItem('lomi.cookie-consent', JSON.stringify({ version: 1, externalMedia: false, savedAt: Date.now() })); } catch { /* Storage may be unavailable in fallback checks. */ }
   });
-  await context.addInitScript(({ os, clipboard }) => {
-    Object.defineProperty(navigator, 'platform', { configurable: true, value: os === 'macOS' ? 'MacIntel' : os === 'Windows' ? 'Win32' : os });
-    Object.defineProperty(navigator, 'userAgentData', { configurable: true, value: { platform: os } });
-    window.__copyMode = clipboard;
-    window.__copies = [];
-    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: clipboard === 'missing' ? undefined : { writeText: async (text) => {
-      if (window.__copyMode === 'reject') throw new DOMException('Clipboard denied', 'NotAllowedError');
-      if (window.__copyMode === 'pending') await new Promise((resolve, reject) => {
-        window.__resolveCopy = resolve;
-        window.__rejectCopy = () => reject(new DOMException('Clipboard denied', 'NotAllowedError'));
-      });
-      window.__copies.push(text);
-    } } });
-  }, { os, clipboard });
   const page = await context.newPage();
   page.on('pageerror', (error) => errors.push(error.message));
-  await page.route('https://lomi.dev/download/remote**', async (route) => { installerRequests.push(route.request().url()); await route.abort(); });
+  page.on('request', (request) => {
+    requests.push(request.url());
+    if (request.resourceType() === 'script') scriptRequests.push(request.url());
+  });
   return { context, page };
 }
-const panel = (page) => page.locator('.command-panel:visible');
-const feedback = (page) => page.locator('[data-remote-copy-status]');
-async function selectSystem(page, label, id, command) {
-  await page.getByRole('radio', { name: label, exact: true }).check();
-  await expect(panel(page)).toHaveCount(1);
-  await expect(panel(page)).toHaveAttribute('data-remote-platform', id);
-  await expect(panel(page).locator('[data-remote-command]')).toHaveText(command);
-  await expect(panel(page).getByRole('button')).toHaveAttribute('aria-label', `Copy ${label} install command`);
-  await expect(panel(page).getByRole('button')).toHaveAttribute('title', `Copy ${label} install command`);
+
+async function verifyLaunchPage(page, { noJs = false } = {}) {
+  await expect(page.locator('[data-remote-page]')).toHaveCount(1);
+  await expect(page.getByRole('heading', { level: 1, name: 'Lomi Remote.' })).toBeVisible();
+  await expect(page.locator('.remote-opening a, .remote-opening [role="status"], .remote-opening [data-remote-status]')).toHaveCount(0);
+  await expect(page).toHaveTitle(/Lomi Remote/i);
+  const description = await page.locator('meta[name="description"]').getAttribute('content');
+  expect(description).toMatch(/launch|coming soon|upcoming/i);
+  expect(description).not.toMatch(/installation command|install.*macOS.*Linux.*Windows/i);
+
+  const badges = page.locator('.remote-platform');
+  await expect(badges).toHaveCount(3);
+  for (const platform of ['macOS', 'Windows', 'Linux']) {
+    const badge = page.getByRole('button', { name: new RegExp(`${platform}.*coming soon`, 'i') });
+    await expect(badge).toBeDisabled();
+    await expect(badge).not.toHaveAttribute('href', /.+/);
+    await expect(badge).toHaveCSS('background-color', 'rgb(229, 232, 226)');
+    await expect(badge.locator('img')).toHaveAttribute('alt', '');
+  }
+  await expect(page.locator('.remote-platform-soon')).toHaveCount(3);
+  for (const label of await page.locator('.remote-platform-soon').all()) await expect(label).toHaveText('Coming soon');
+
+  await expect(page.locator('[data-remote-installer], [data-remote-copy], [data-remote-command], input[type="radio"]')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /copy.*install|install.*command/i })).toHaveCount(0);
+  const pageText = await page.locator('body').innerText();
+  for (const legacy of ['curl -fsSL https://lomi.dev/download/remote', 'Invoke-RestMethod', 'Invoke-Expression']) {
+    expect(pageText).not.toContain(legacy);
+  }
+  const installLinks = await page.locator('a[href], img[src], script[src]').evaluateAll((elements) => elements
+    .map((element) => element.getAttribute('href') || element.getAttribute('src') || '')
+    .filter((value) => /lomi\.dev\/download\/remote(?:\.ps1)?/i.test(value)));
+  expect(installLinks, 'No installer URLs are present in rendered links or resources').toEqual([]);
+
+  const preview = page.locator('[data-remote-cli-preview]');
+  await expect(preview).toHaveCount(1);
+  await expect(preview).toBeVisible();
+  await expect(preview).toHaveAttribute('aria-label', /Lomi Remote.*preview/i);
+  await expect(preview).not.toHaveAttribute('data-enhanced', 'true');
+  await expect(preview.locator('img')).toHaveCount(1);
+  const image = preview.locator('img');
+  await expect(image).toHaveAttribute('alt', /sample local workspaces/i);
+  await image.scrollIntoViewIfNeeded();
+  await expect.poll(() => image.evaluate((element) => element.complete && element.naturalWidth > 0)).toBe(true);
+  const artwork = await image.evaluate((element) => {
+    const bounds = element.getBoundingClientRect();
+    return {
+      naturalWidth: element.naturalWidth,
+      naturalHeight: element.naturalHeight,
+      source: element.currentSrc,
+      x: bounds.x,
+      right: bounds.right,
+      width: bounds.width,
+      height: bounds.height,
+    };
+  });
+  expect(artwork.naturalWidth).toBeGreaterThan(0);
+  expect(artwork.naturalHeight).toBeGreaterThan(0);
+  expect(Math.abs(artwork.naturalWidth / artwork.naturalHeight - 8 / 5)).toBeLessThan(0.012);
+  expect(artwork.source).not.toMatch(/\.gif(?:[?#]|$)/i);
+  expect(artwork.x).toBeGreaterThanOrEqual(0);
+  expect(artwork.right).toBeLessThanOrEqual(page.viewportSize().width);
+  await expect(preview.locator('video, audio, canvas, figcaption, button, input, select, textarea, a[href], script')).toHaveCount(0);
+  await expect(preview.locator('.cli-titlebar, .cli-window-title, [data-cli-workspace-list], [data-cli-static-list], [data-cli-workspace-controls], [data-cli-detail-content], [data-cli-help-button], [data-cli-help-content], [data-cli-help-static], [data-cli-panel-title]')).toHaveCount(0);
+  const previewText = await preview.innerText();
+  expect(previewText).not.toMatch(/Development preview|Interface preview only|Local IPC connected|Sharing policy/i);
+  expect(previewText.trim()).toBe('');
+  const bodyText = await page.locator('body').innerText();
+  expect(bodyText).not.toContain('Development preview');
+  expect(bodyText).not.toContain('Interface preview only; no live host is connected.');
+  const scripts = await page.locator('script').evaluateAll((items) => items.map((script) => `${script.getAttribute('src') || ''}\n${script.textContent || ''}`));
+  expect(scripts.filter((script) => /RemoteCliPreview|remote-cli-preview|enhanceRemoteCliPreview|data-cli-workspace/i.test(script)), 'No Remote preview controller is loaded').toEqual([]);
+
+  const previewGeometry = await preview.evaluate((element) => {
+    const bounds = element.getBoundingClientRect();
+    return {
+      x: bounds.x, right: bounds.right, width: bounds.width,
+      stage: element.closest('.remote-showcase')?.getBoundingClientRect().toJSON(),
+      newsletter: document.querySelector('#remote-newsletter')?.getBoundingClientRect().toJSON(),
+    };
+  });
+  expect(previewGeometry.width).toBeGreaterThan(200);
+  expect(previewGeometry.x).toBeGreaterThanOrEqual(0);
+  expect(previewGeometry.right).toBeLessThanOrEqual(page.viewportSize().width);
+  expect(previewGeometry.stage.width).toBeLessThanOrEqual(1000);
+  expect(Math.abs(previewGeometry.stage.x + previewGeometry.stage.width / 2 - page.viewportSize().width / 2)).toBeLessThanOrEqual(1);
+  expect(Math.abs(previewGeometry.x + previewGeometry.width / 2 - page.viewportSize().width / 2)).toBeLessThanOrEqual(2);
+  expect(previewGeometry.newsletter.width).toBeLessThanOrEqual(620);
+  expect(Math.abs(previewGeometry.newsletter.x + previewGeometry.newsletter.width / 2 - page.viewportSize().width / 2)).toBeLessThanOrEqual(1);
+  expect(previewGeometry.newsletter.y).toBeGreaterThanOrEqual(previewGeometry.stage.bottom + (page.viewportSize().width <= 767 ? 40 : 60));
+  await expect(page.locator('.remote-showcase-copy')).toHaveCount(0);
+  await expect(page.locator('.remote-showcase')).not.toHaveCSS('background-color', 'rgb(237, 241, 231)');
+
+  await expect(page.locator('#remote-newsletter .newsletter')).toBeVisible();
+  await expect(page.locator('#remote-newsletter .newsletter')).toHaveAttribute('aria-label', 'Lomi Remote launch newsletter');
+  await expect(page.locator('#remote-newsletter > h2')).toHaveText(/^Get Remote launch news\.?$/);
+  await expect(page.locator('#remote-newsletter #newsletter-note')).toHaveCount(0);
+  await expect(page.locator('#remote-newsletter #newsletter-email')).toHaveAttribute('aria-describedby', 'newsletter-status');
+  await expect(page.locator('#remote-newsletter #newsletter-status')).toHaveCount(1);
+  if (noJs) {
+    await expect(page.locator('#remote-newsletter input')).toBeDisabled();
+    await expect(page.locator('#remote-newsletter button')).toBeDisabled();
+    await expect(page.locator('#remote-newsletter .newsletter-noscript')).toBeVisible();
+  }
 }
+
+async function verifyProductNavigation(page, width) {
+  await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
+  const product = page.locator(width < 768 ? '#mobile-product' : '#product-menu');
+  if (width < 768) await page.locator('#mobile-navigation > summary').click();
+  await product.locator(':scope > summary').click();
+  await expect(product).toHaveAttribute('open', '');
+  const links = product.locator('.product-link');
+  await expect(links.first()).toContainText('Features');
+  await expect(product.getByRole('link', { name: /^Overview$/i })).toHaveCount(0);
+  await expect(product.getByRole('link', { name: 'Remote', exact: true })).toHaveAttribute('href', '/remote/');
+  await expect(product.getByRole('link', { name: 'Remote', exact: true })).toHaveAttribute('aria-current', 'page');
+  await product.evaluate((element) => { element.open = false; });
+  if (width < 768) await page.locator('#mobile-navigation').evaluate((element) => { element.open = false; });
+}
+
+async function verifyResponsive(page) {
+  for (const width of [320, 390, 768, 999, 1000, 1440, 1920]) {
+    await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth), `${width}px: no horizontal overflow`).toBe(width);
+    const preview = page.locator('[data-remote-cli-preview]');
+    const image = preview.locator('img');
+    await image.scrollIntoViewIfNeeded();
+    await expect.poll(() => image.evaluate((element) => element.complete && element.naturalWidth > 0), `${width}px: static artwork loads`).toBe(true);
+    const geometry = await image.evaluate((element) => {
+      const bounds = element.getBoundingClientRect();
+      const frame = element.closest('picture') || element;
+      const frameBounds = frame.getBoundingClientRect();
+      return {
+        naturalWidth: element.naturalWidth,
+        naturalHeight: element.naturalHeight,
+        x: bounds.x,
+        right: bounds.right,
+        width: bounds.width,
+        ratio: bounds.width / bounds.height,
+        frameRatio: frameBounds.width / frameBounds.height,
+      };
+    });
+    expect(Math.abs(geometry.naturalWidth / geometry.naturalHeight - 8 / 5), `${width}px: source art keeps its 8:5 aspect`).toBeLessThan(0.012);
+    expect(Math.abs(geometry.frameRatio - 8 / 5), `${width}px: picture frame keeps its 8:5 aspect`).toBeLessThan(0.012);
+    expect(geometry.x, `${width}px: preview stays inside the viewport`).toBeGreaterThanOrEqual(0);
+    expect(geometry.right, `${width}px: preview stays inside the viewport`).toBeLessThanOrEqual(width);
+    expect(Math.abs(geometry.x + geometry.width / 2 - width / 2), `${width}px: preview stays centered`).toBeLessThanOrEqual(2);
+    const stage = await page.locator('.remote-showcase').boundingBox();
+    const newsletter = await page.locator('#remote-newsletter').boundingBox();
+    expect(stage.width, `${width}px: the preview stays within the centered 1000px stage`).toBeLessThanOrEqual(1000);
+    expect(Math.abs(stage.x + stage.width / 2 - width / 2), `${width}px: the preview stage stays centered`).toBeLessThanOrEqual(1);
+    expect(newsletter.width, `${width}px: the launch form stays within 620px`).toBeLessThanOrEqual(620);
+    expect(Math.abs(newsletter.x + newsletter.width / 2 - width / 2), `${width}px: the launch form stays centered`).toBeLessThanOrEqual(1);
+    expect(newsletter.y, `${width}px: signup follows the full-width preview`).toBeGreaterThanOrEqual(stage.y + stage.height + (width <= 767 ? 40 : 60));
+    await expect(page.locator('.remote-showcase')).not.toHaveCSS('background-color', 'rgb(237, 241, 231)');
+  }
+}
+
 async function axe(page, label) {
   const result = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
   reports.push({ label, violations: result.violations });
   expect(result.violations, `${label}: accessibility`).toEqual([]);
 }
+
 async function capture(page, label) {
   await page.evaluate(() => { document.activeElement?.blur(); getSelection()?.removeAllRanges(); scrollTo({ top: 0, left: 0, behavior: 'instant' }); });
   await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   await page.screenshot({ path: `artifacts/remote-${browserType.name()}-${label}.png`, fullPage: true });
 }
-async function verifyCardLayout(page) {
-  const card = await page.locator('.command-box').boundingBox();
-  const toolbar = await page.locator('.command-toolbar').boundingBox();
-  const picker = await page.locator('.remote-system-picker').boundingBox();
-  const command = await panel(page).locator('.command-bar').boundingBox();
-  expect(card).not.toBeNull();
-  expect(toolbar).not.toBeNull();
-  expect(picker).not.toBeNull();
-  expect(command).not.toBeNull();
-  expect(picker.x).toBeGreaterThanOrEqual(card.x);
-  expect(picker.y).toBeGreaterThanOrEqual(card.y);
-  expect(picker.x + picker.width).toBeLessThanOrEqual(card.x + card.width + 1);
-  expect(card.x + card.width - picker.x - picker.width, 'The picker sits at the upper-right of the shared card').toBeLessThanOrEqual(32);
-  expect(picker.y).toBeGreaterThanOrEqual(toolbar.y);
-  expect(picker.y + picker.height).toBeLessThanOrEqual(toolbar.y + toolbar.height + 1);
-  expect(picker.y + picker.height, 'The picker sits above the command row').toBeLessThanOrEqual(command.y + 1);
-  expect(command.y + command.height).toBeLessThanOrEqual(card.y + card.height + 1);
-}
-async function verifyShowcase(page) {
-  const figure = page.locator('figure.remote-showcase');
-  const screenshot = figure.locator('img');
-  await expect(figure).toHaveCount(1);
-  await expect(screenshot).toHaveCount(1);
-  await screenshot.scrollIntoViewIfNeeded();
-  await expect(screenshot).toBeVisible();
-  await expect(screenshot).toHaveAttribute('src', '/placeholders/lomi-mark.svg');
-  await expect(screenshot).toHaveAttribute('alt', '');
-  await expect.poll(() => screenshot.evaluate((element) => element.complete && element.naturalWidth > 0)).toBe(true);
-  const frame = figure.locator('[data-media-placeholder]');
-  await expect(frame).toHaveCSS('aspect-ratio', '8 / 5');
-  const installer = await page.locator('[data-remote-installer]').boundingBox();
-  const image = await frame.boundingBox();
-  expect(Math.abs(image.height - image.width * 5 / 8), 'The preview reserves its aspect ratio within one CSS pixel').toBeLessThanOrEqual(1);
-  expect(image.y, 'The screenshot follows the installer').toBeGreaterThanOrEqual(installer.y + installer.height);
-  expect(image.x).toBeGreaterThanOrEqual(0);
-  expect(image.x + image.width).toBeLessThanOrEqual(page.viewportSize().width);
-}
 
 try {
   const { context, page } = await makePage();
   for (const path of ['/remote', '/remote/']) {
+    const requestStart = requests.length;
     const response = await page.goto(`${origin}${path}`);
     expect(response.status()).toBe(200);
-    await expect(page).toHaveTitle('lomi remote — A host for your workspace');
-    await expect(page.locator('h1')).toHaveText('Get lomi remote.');
-    await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', /macOS, Linux or Windows/);
-  }
-  await expect(page.locator('.remote-model, .remote-foundation, .remote-flow, .remote-questions')).toHaveCount(0);
-  await expect(page.locator('.remote-release-note')).toHaveCount(0);
-  await expect(page.locator('.command-toolbar').getByRole('heading', { name: 'Install Lomi Remote CLI', exact: true })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Get project updates', exact: true })).toHaveCount(0);
-  await expect(page.locator('body')).not.toContainText(/in development|coming soon/i);
-  const choices = page.locator('input[type="radio"][name="remote-system"]');
-  await expect(page.getByRole('radio')).toHaveCount(2);
-  await expect(choices).toHaveCount(2);
-  expect(await choices.evaluateAll((elements) => elements.map((element) => element.value))).toEqual(['unix', 'windows']);
-  await expect(page.locator('.command-box .command-toolbar .remote-system-picker')).toHaveCount(1);
-  await expect(page.locator('.command-box .command-panels')).toHaveCount(1);
-  expect(await page.locator('.remote-system-picker').evaluate((element) => Boolean(element.compareDocumentPosition(document.querySelector('.command-panels')) & Node.DOCUMENT_POSITION_FOLLOWING)), 'The picker precedes the command panels in DOM order').toBe(true);
-  await expect(page.locator('[data-remote-installer]')).toHaveAttribute('data-remote-ready', '');
-  for (const system of systems) {
-    await selectSystem(page, ...system);
-    await panel(page).getByRole('button').click();
-    await expect(feedback(page)).toHaveText(`${system[0]} command copied.`);
-    expect(await page.evaluate(() => window.__copies.at(-1))).toBe(system[2]);
-  }
-  console.log('Remote routes and exact Unix/PowerShell clipboard text passed.');
-
-  await selectSystem(page, ...systems[0]);
-  await page.getByRole('radio', { name: 'macOS / Linux', exact: true }).focus();
-  await page.keyboard.press('ArrowRight');
-  await expect(page.getByRole('radio', { name: 'Windows', exact: true })).toBeChecked();
-  expect(await page.getByRole('radio', { name: 'Windows', exact: true }).evaluate((element) => getComputedStyle(element.parentElement).outlineStyle)).toBe('solid');
-  await page.keyboard.press('Tab');
-  await expect(panel(page).locator('.command-scroll')).toBeFocused();
-  await page.keyboard.press('Tab');
-  await expect(panel(page).getByRole('button')).toBeFocused();
-  await page.keyboard.press('Enter');
-  await expect(feedback(page)).toHaveText('Windows command copied.');
-  await page.evaluate(() => { window.__copyMode = 'reject'; });
-  await panel(page).getByRole('button').click();
-  await expect(feedback(page)).toContainText('copy it manually');
-  expect(await page.evaluate(() => getSelection()?.toString())).toBe(windows);
-  await expect(panel(page).getByRole('button')).not.toHaveAttribute('data-copied', '');
-  await expect(panel(page).locator('[data-copied-icon]')).not.toBeVisible();
-
-  await selectSystem(page, ...systems[0]);
-  const unixCopy = page.locator('[data-remote-platform="unix"] [data-copy-remote]');
-  await unixCopy.focus();
-  await page.evaluate(() => { window.__copyMode = 'pending'; });
-  await page.keyboard.press('Enter');
-  await expect(unixCopy).toBeDisabled();
-  await expect(unixCopy).toBeFocused();
-  await page.evaluate(() => window.__resolveCopy());
-  await expect(feedback(page)).toHaveText('macOS / Linux command copied.');
-  await expect(unixCopy).toBeFocused();
-  await page.evaluate(() => { window.__copyMode = 'pending'; });
-  await page.keyboard.press('Enter');
-  await expect(unixCopy).toBeFocused();
-  await page.evaluate(() => window.__rejectCopy());
-  await expect(feedback(page)).toContainText('copy it manually');
-  await expect(unixCopy).toBeFocused();
-  await page.evaluate(() => { window.__copyMode = 'success'; });
-  await page.keyboard.press('Enter');
-  await expect(feedback(page)).toHaveText('macOS / Linux command copied.');
-  await expect(unixCopy).toBeFocused();
-
-  await page.evaluate(() => { window.__copyMode = 'pending'; });
-  await panel(page).getByRole('button').click();
-  await expect(panel(page).getByRole('button')).toBeDisabled();
-  await selectSystem(page, ...systems[1]);
-  await expect(panel(page).getByRole('button')).toBeDisabled();
-  await page.evaluate(() => { window.__copyMode = 'success'; window.__resolveCopy(); });
-  await expect(panel(page).getByRole('button')).toBeEnabled();
-  await expect(page.getByRole('radio', { name: 'Windows', exact: true })).toBeFocused();
-  await expect(feedback(page)).toBeEmpty();
-  await panel(page).getByRole('button').click();
-  await expect(feedback(page)).toHaveText('Windows command copied.');
-  expect(await page.evaluate(() => window.__copies.at(-1))).toBe(windows);
-  console.log('Native keyboard, clipboard denial and pending-copy system changes passed.');
-
-  for (const width of [320, 390, 768, 1000, 1440, 1920]) {
-    await page.setViewportSize({ width, height: 900 });
-    for (const system of systems) {
-      await selectSystem(page, ...system);
-      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
-      const copy = await panel(page).getByRole('button').boundingBox();
-      expect(copy.width).toBeGreaterThanOrEqual(44);
-      expect(copy.height).toBeGreaterThanOrEqual(44);
-      expect(copy.x).toBeGreaterThanOrEqual(0);
-      expect(copy.x + copy.width).toBeLessThanOrEqual(width);
-      await verifyCardLayout(page);
+    await verifyLaunchPage(page);
+    if (path === '/remote/') {
+      const externalRequests = requests.slice(requestStart).filter((url) => new URL(url).origin !== new URL(origin).origin);
+      expect(externalRequests, 'Remote and its CLI preview make no external resource requests').toEqual([]);
     }
-    await verifyShowcase(page);
   }
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await selectSystem(page, ...systems[0]);
+  await verifyResponsive(page);
+  await verifyProductNavigation(page, 1440);
   await capture(page, 'desktop');
-  await axe(page, 'desktop Unix');
-  await selectSystem(page, ...systems[1]);
-  await axe(page, 'desktop PowerShell');
-  await page.setViewportSize({ width: 390, height: 844 });
+  await axe(page, 'desktop');
+  await verifyProductNavigation(page, 390);
   await capture(page, 'mobile');
-  await axe(page, 'mobile PowerShell');
-  const scroll = panel(page).locator('.command-scroll');
-  await scroll.focus();
-  await page.keyboard.press('ArrowRight');
-  await expect.poll(() => scroll.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
-  console.log('Six widths, a persistent copy target, command scrolling and accessibility passed.');
+  await axe(page, 'mobile');
 
+  // The Product link remains usable from both enhanced navigation variants.
   for (const width of [1440, 390]) {
-    await page.setViewportSize({ width, height: 900 });
+    await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
     await page.goto(`${origin}/`);
     if (width < 768) await page.locator('#mobile-navigation > summary').click();
     const product = page.locator(width < 768 ? '#mobile-product' : '#product-menu');
     await product.locator(':scope > summary').click();
     await product.getByRole('link', { name: 'Remote', exact: true }).click();
     await expect(page).toHaveURL(`${origin}/remote/`);
-    await expect(page.locator('.site-footer a[href="/#features"]')).toHaveCount(1);
+    await expect(page.getByRole('heading', { level: 1, name: 'Lomi Remote.' })).toBeVisible();
   }
-  await page.goto(`${origin}/remote/`);
-  await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
-  await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement).backgroundColor)).toBe('rgb(255, 255, 255)');
-  await page.locator('.site-footer').evaluate((element) => element.scrollIntoView({ block: 'start', behavior: 'instant' }));
-  await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement).backgroundColor)).toBe('rgb(200, 255, 61)');
   await context.close();
 
-  for (const [os, expected] of [['macOS', 'unix'], ['Linux', 'unix'], ['Windows', 'windows'], ['Android', 'unix']]) {
-    const detected = await makePage({ os });
-    await detected.page.goto(`${origin}/remote/`);
-    await expect(panel(detected.page)).toHaveAttribute('data-remote-platform', expected);
-    await detected.context.close();
-  }
-  const unsupported = await makePage({ clipboard: 'missing' });
-  await unsupported.page.goto(`${origin}/remote/`);
-  await panel(unsupported.page).getByRole('button').click();
-  await expect(feedback(unsupported.page)).toContainText('copy it manually');
-  expect(await unsupported.page.evaluate(() => getSelection()?.toString())).toBe(unix);
-  await unsupported.context.close();
-
-  const fallback = await makePage({ javaScriptEnabled: false, viewport: { width: 320, height: 568 } });
+  const fallback = await makePage({ width: 390, height: 844, javaScriptEnabled: false });
   await fallback.page.goto(`${origin}/remote/`);
-  expect(await fallback.page.evaluate(() => document.querySelector('h1').getBoundingClientRect().top - document.querySelector('.site-header').getBoundingClientRect().bottom), 'The no-JS heading clears the taller navigation').toBeGreaterThanOrEqual(16);
-  for (const system of systems) {
-    await selectSystem(fallback.page, ...system);
-    await expect(panel(fallback.page).getByRole('button')).toBeDisabled();
-    expect(await fallback.page.evaluate(() => document.documentElement.scrollWidth)).toBe(320);
-  }
-  await expect(fallback.page.locator('.manual-copy-note')).toBeVisible();
-  await panel(fallback.page).locator('.command-scroll').focus();
-  await fallback.page.keyboard.press('ArrowRight');
-  await expect.poll(() => panel(fallback.page).locator('.command-scroll').evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+  await verifyLaunchPage(fallback.page, { noJs: true });
   await fallback.context.close();
-  const reduced = await makePage({ reducedMotion: 'reduce' });
-  await reduced.page.goto(`${origin}/remote/`);
-  await selectSystem(reduced.page, ...systems[1]);
-  expect(await reduced.page.locator('.remote-page').evaluate((element) => element.getAnimations({ subtree: true }).length)).toBe(0);
-  await reduced.context.close();
 
+  const installRequests = requests.filter((url) => /lomi\.dev\/download\/remote(?:\.ps1)?/i.test(url));
+  expect(installRequests, 'No installer scripts are requested by the page').toEqual([]);
+  const controllerRequests = scriptRequests.filter((url) => /RemoteCliPreview|remote-cli-preview|enhanceRemoteCliPreview/i.test(url));
+  expect(controllerRequests, 'No Remote preview controller script is requested').toEqual([]);
   expect(errors, 'Runtime errors').toEqual([]);
-  expect(installerRequests, 'Displaying and copying never downloads an installer').toEqual([]);
-  await writeFile(`artifacts/remote-${browserType.name()}-verification.json`, JSON.stringify({ browser: browserType.name(), errors, installerRequests, reports }, null, 2));
-  console.log(`Remote installation page verified in ${browserType.name()}: exact copy, system detection, keyboard, no-JS, reduced motion, navigation and no installer execution.`);
+  await writeFile(`artifacts/remote-${browserType.name()}-verification.json`, JSON.stringify({ browser: browserType.name(), errors, requests, reports }, null, 2));
+  console.log(`Remote launch page verified in ${browserType.name()}: launch status, disabled platform badges, static accessible artwork, newsletter fallback, centered responsive layout, no installer UI, animation, or external requests, and accessibility.`);
 } finally {
   await browser.close();
 }

@@ -6,7 +6,7 @@ export function isSafeHref(value: unknown): boolean {
   if (href.startsWith('/') && !href.startsWith('//')) {
     try {
       const url = new URL(href, 'https://lomi.invalid');
-      return ['/', '/devlog', '/devlog/', '/download', '/download/', '/remote', '/remote/', '/cookies', '/cookies/', '/claude-code', '/claude-code/', '/codex', '/codex/'].includes(url.pathname)
+      return ['/', '/devlog', '/devlog/', '/download', '/download/', '/remote', '/remote/', '/mobile-app', '/mobile-app/', '/cookies', '/cookies/', '/claude-code', '/claude-code/', '/codex', '/codex/'].includes(url.pathname)
         && !url.search && (!url.hash || /^#[a-z][a-z0-9-]*$/.test(url.hash))
         && url.origin === 'https://lomi.invalid' && !/%|\.\./.test(href);
     } catch { return false; }

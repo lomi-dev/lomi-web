@@ -3,7 +3,7 @@ import Icon from './Icon';
 import logo from '../assets/lomi-wordmark.svg?raw';
 import { editorDefaults } from '../../content/editor-defaults';
 import { resolveMedia } from '../../content/editor-schema';
-import { activeLandingLinks } from '../data/navigation';
+import { activeLandingLinks, activeProductGroups } from '../data/navigation';
 import type { Landing } from '../../content/landing-schema';
 interface Props { content: Landing['navigation']; site?: Landing['site']; layout?: Landing['layout']; theme?: 'light' | 'dark' }
 const { content, theme, site = editorDefaults.site, layout = editorDefaults.layout } = Astro.props;
@@ -15,7 +15,7 @@ const isPageLink = (href: string) => {
   const target = new URL(homeHref(href), Astro.url);
   return !target.hash || target.origin !== Astro.url.origin || target.pathname !== Astro.url.pathname;
 };
-const productGroups = content.productGroups.map((group) => ({ ...group, links: activeLandingLinks(group.links, layout) })).filter((group) => group.links.length);
+const productGroups = activeProductGroups(content.productGroups, layout);
 const productHref = productGroups[0]?.links[0]?.href ?? '/';
 const action = activeLandingLinks([{ label: content.actionLabel, href: content.actionHref }], layout)[0];
 ---

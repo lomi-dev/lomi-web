@@ -105,8 +105,8 @@ for (const path of pagePaths) {
   assert.equal(sitemapUrls.includes(url), !/\bnoindex\b/i.test(robotsContent(html)), `${path}: sitemap follows indexing intent`);
 }
 
-// New acquisition pages must be readable without JavaScript, internally linked,
-// and have working article navigation. A sitemap alone does not make them useful.
+// Product destinations must remain discoverable through the shared navigation.
+// Resource articles remain available after their homepage block was removed.
 const resourcePaths = ['/compare/', '/warp-alternative/', '/claude-code-and-codex/'];
 const discovered = new Set([homepageCanonical.href]);
 const queue = [homepageCanonical.href];
@@ -122,11 +122,15 @@ while (queue.length) {
     }
   }
 }
+for (const path of ['/download/', '/remote/', '/mobile-app/']) {
+  const url = new URL(path, expectedSite).href;
+  assert.ok(pages.has(url), `${path}: product page is statically rendered`);
+  assert.ok(discovered.has(url), `${path}: reachable through crawlable links from the homepage`);
+}
 for (const path of resourcePaths) {
   const url = new URL(path, expectedSite).href;
   const html = pages.get(url);
   assert.ok(html, `${path}: resource is statically rendered`);
-  assert.ok(discovered.has(url), `${path}: reachable through crawlable links from the homepage`);
   assert.equal(tags(html, 'h1').length, 1, `${path}: one primary heading`);
   assert.ok(tags(html, 'a').some(({ attributes }) => attributes.href === '/download/'), `${path}: download is reachable`);
   const resourceGraph = [...html.matchAll(/<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)]

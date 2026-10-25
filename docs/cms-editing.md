@@ -106,14 +106,17 @@ by the interface; keep a token when its changing value should remain visible:
   information links.
 
 Links support HTTPS, email addresses using `mailto:`, homepage anchors and the
-existing website routes `/`, `/download/`, `/remote/`, `/devlog/`, `/cookies/`.
+existing website routes `/`, `/download/`, `/remote/`, `/mobile-app/`, `/devlog/`
+and `/cookies/`.
 Use a full route such as `/cookies/#preferences` for a subpage section. Theme
 colors use six-digit hex values, for example `#c8ff3d`.
 
 Download package names and descriptions can be changed, but platform IDs,
-release verification and the GitHub release source remain in code. Editable
-Remote and AUR commands are displayed and copied as text; the website never
-executes them. Newsletter endpoint credentials, deployment settings and consent
+release verification and the GitHub release source remain in code. The editable
+AUR command is displayed and copied as text; the website never executes it.
+Legacy Remote installer fields remain for database compatibility but are unused
+by the Remote launch page. That page displays a CLI dashboard and newsletter.
+Newsletter endpoint credentials, deployment settings and consent
 storage behavior remain in environment/configuration code.
 
 ## Making published changes visible

@@ -29,8 +29,8 @@ The page includes:
   [consent behavior and verification](docs/cookies.md).
 - An inline video player aligned with the feature gallery, with custom
   controls and the app screenshot as its poster before external media loads.
-- An asymmetric feature gallery with six animated GIFs captured from the
-  genuine Lomi UI, static WebP posters, and a
+- An asymmetric feature gallery with six short native Lomi MP4 demos,
+  first-frame WebP posters, and a
   native media dialog, including feature navigation, keyboard support, and
   readable fallbacks.
 - A dark horizontal roadmap with a lime axis, alternating milestones, and
@@ -44,12 +44,16 @@ The page includes:
   envelope and a direct Newsletter link in desktop and mobile navigation.
 - A lime footer that fills exactly one viewport in both dimensions.
 - A dedicated `/download/` page linked from the hero, navigation, and footer.
-- A dedicated `/remote/` page, linked in Product, with a centered installation
-  command, copy control and a combined macOS/Linux choice alongside Windows.
-  The selector shares the command box; a product preview follows it.
-  It follows the Download
-  page's visual system; native system choices also work without JavaScript. See
-  [Remote content boundaries and verification](docs/remote.md).
+- A dedicated `/remote/` launch page, linked in Product, with a wide terminal
+  render in light mode on Tahoe, gray unavailable macOS/Windows/Linux badges
+  and a compact newsletter for release news. It retains a centered layout on
+  a white canvas.
+  See [Remote content boundaries and verification](docs/remote.md).
+- A dedicated `/mobile-app/` page in the same light visual style, with real
+  light/dark UI in phone mockups, gray unavailable store badges and a direct
+  newsletter signup for launch news.
+  Product starts with Features, followed by Remote and Mobile App; this also
+  updates older published workspace menus. See [Mobile App page](docs/mobile-app.md).
 
 The footer follows the current viewport height with `100dvh` (`100vh` fallback).
 Its content scrolls inside the footer when a narrow or short window cannot fit
@@ -274,6 +278,32 @@ the obsolete `PUBLIC_PLUNK_API_KEY` from build/host settings.
 ```sh
 PUBLIC_NEWSLETTER_ENDPOINT=https://auth.example.com/v1/newsletter/subscribe bun run build
 ```
+
+## Feature demonstration videos
+
+Feature cards play recordings of the native Lomi window over the
+original Tahoe wallpaper. The recording contains the application's actual
+macOS titlebar. There is no additional window chrome drawn by the website.
+Each clip has its own duration (8.4–11.4 seconds). Terminals, workspaces, and
+browser previews keep a stationary camera; code, Git, and Chat use one gentle
+zoom around the action and return to the full window before looping. Timing
+and camera cues live in `media/feature-demos/cues.json`. The app window has no
+added border, and preparation trims the thin captured macOS frame outline.
+
+Keep capture inputs in the ignored `artifacts/feature-demos/raw/` folder. After
+recording, prepare the native-window MP4s and first-frame WebP posters used by
+Astro, then optionally render the full wallpaper compositions and GIF exports:
+
+```sh
+node scripts/prepare-feature-videos.mjs
+node scripts/render-feature-demos.mjs --quality delivery
+```
+
+See [the composition documentation](media/feature-demos/README.md) for capture
+input names and cue coordinates. Playback loads only visible previews and pauses
+outside the viewport or behind the modal. There are no play/pause buttons in
+the gallery. Reduced-motion preferences disable automatic playback and camera
+movement. Without JavaScript, the native first-frame poster remains visible.
 
 ## Validation
 

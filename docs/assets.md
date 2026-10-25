@@ -127,18 +127,18 @@ fallback generated during the Astro build. It is inspired by React Bits
 Shape Waves; no upstream shader or generated image is used. Its implementation
 and reference are recorded in [docs/shape-waves.md](shape-waves.md).
 
-## Remote installation page
+## Remote launch page
 
 `src/components/RemotePage.astro` reuses the download page's locally served
 Iconify Simple Icons for macOS, Linux and Windows, with unchanged geometry.
-The command bar, separators and copy symbol are HTML/CSS/inline SVG. The shared
-`Icon` component supplies the copied-state check and diagonal link arrow.
-The two choices combine macOS/Linux and keep Windows separate. Beneath the
-installer, the page shows an uploaded screenshot or the shared branded
-placeholder. Images retain intrinsic dimensions and lazy loading; the local
-placeholder does not require an external service. No icon package is added. Native radio
-inputs and CSS `:has()` select the command even without JavaScript. See
-[Remote command behavior and provenance](remote.md).
+The three platform badges are gray and disabled. `RemoteCliPreview.astro` draws
+a static light terminal render from `media/remote/cli-light.html`, with real
+interface labels, sample local workspaces and the original Tahoe wallpaper.
+`bun run render:remote-preview` captures the 1920×1200 composition locally;
+Astro serves responsive AVIF/WebP images. No external image service or icon
+package is needed. An explicitly uploaded CMS image overrides that preview and
+retains intrinsic dimensions and lazy loading. See
+[Remote launch behavior and provenance](remote.md).
 
 ## Footer social icons
 

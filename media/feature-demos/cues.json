@@ -1,0 +1,105 @@
+{
+  "version": 2,
+  "fps": 30,
+  "canvas": {
+    "width": 1600,
+    "height": 1000
+  },
+  "window": {
+    "initialWidthFraction": 0.8
+  },
+  "defaults": {
+    "zoom": 1,
+    "zoomRange": [
+      1,
+      1.24
+    ],
+    "focusCoordinateSpace": "normalized"
+  },
+  "features": {
+    "terminal": {
+      "duration": 8.4,
+      "sourceDuration": 10,
+      "focus": null,
+      "zoom": 1
+    },
+    "panels": {
+      "duration": 9.2,
+      "sourceDuration": 10,
+      "focus": null,
+      "zoom": 1
+    },
+    "code": {
+      "duration": 8.8,
+      "sourceDuration": 10,
+      "focus": {
+        "x": 0.52,
+        "y": 0.27
+      },
+      "zoom": 1.18,
+      "zoomIn": [
+        3.0,
+        3.3
+      ],
+      "focusHold": [
+        3.3,
+        5.104
+      ],
+      "pullback": [
+        5.104,
+        8.1
+      ],
+      "restAt": 8.1
+    },
+    "expand": {
+      "duration": 9.6,
+      "sourceDuration": 10,
+      "focus": null,
+      "zoom": 1
+    },
+    "git": {
+      "duration": 10.8,
+      "sourceDuration": 10,
+      "focus": {
+        "x": 0.19,
+        "y": 0.58
+      },
+      "zoom": 1.14,
+      "zoomIn": [
+        3.0,
+        3.5
+      ],
+      "focusHold": [
+        3.5,
+        8.748
+      ],
+      "pullback": [
+        8.748,
+        10.1
+      ],
+      "restAt": 10.1
+    },
+    "spark": {
+      "duration": 11.4,
+      "sourceDuration": 10,
+      "focus": {
+        "x": 0.59,
+        "y": 0.277
+      },
+      "zoom": 1.16,
+      "zoomIn": [
+        3.6,
+        4.2
+      ],
+      "focusHold": [
+        4.2,
+        10.0
+      ],
+      "pullback": [
+        10.0,
+        10.7
+      ],
+      "restAt": 10.7
+    }
+  }
+}

@@ -7,7 +7,8 @@ import { editorDefaults } from '../content/editor-defaults';
 import { pageDefaults } from '../content/page-defaults';
 import { loadLanding } from '../content/load-landing';
 import { summarizeRoadmapStage } from '../content/roadmap-progress';
-import { activeLandingLinks } from '../src/data/navigation';
+import { activeLandingLinks, activeProductGroups } from '../src/data/navigation';
+import { remoteLaunchContent } from '../src/data/remote';
 
 afterEach(() => { globalThis.fetch = originalFetch; });
 const originalFetch = globalThis.fetch;
@@ -78,8 +79,8 @@ describe('published landing content', () => {
     await assert.rejects(loadLanding('https://cms.example.test'));
   });
 
-  it('accepts the Devlog, Download, Remote, and agent guide routes, HTTPS links, and section anchors', () => {
-    for (const href of ['/devlog', '/devlog/', '/download', '/download/', '/remote', '/remote/', '/claude-code', '/claude-code/', '/claude-code/#windows', '/codex', '/codex/', '/codex/#windows', '/', '/cookies/', '/cookies/#preferences', '/remote#section', '/#features', 'mailto:hello@example.test', 'https://docs.lomi.dev', '#roadmap']) {
+  it('accepts product routes, HTTPS links, and section anchors', () => {
+    for (const href of ['/devlog', '/devlog/', '/download', '/download/', '/remote', '/remote/', '/mobile-app', '/mobile-app/', '/mobile-app/#preview', '/claude-code', '/claude-code/', '/claude-code/#windows', '/codex', '/codex/', '/codex/#windows', '/', '/cookies/', '/cookies/#preferences', '/remote#section', '/#features', 'mailto:hello@example.test', 'https://docs.lomi.dev', '#roadmap']) {
       assert.equal(landingSchema.safeParse({ ...seed, navigation: { ...seed.navigation, links: [{ label: 'Link', href }] } }).success, true, href);
     }
   });
@@ -94,6 +95,8 @@ describe('published landing content', () => {
       '/download/../admin', '/download?draft=true', '/download//', '/%64ownload',
       '/remote/../admin', '/remote?draft=true', '/remote/?draft=true',
       '/remote//', '/%72emote', '/remote/%2e%2e/admin',
+      '/mobile-app/../admin', '/mobile-app?draft=true', '/mobile-app/?draft=true',
+      '/mobile-app//', '/%6dobile-app', '/mobile-app/%2e%2e/admin',
       '/claude-code/../admin', '/claude-code?draft=true', '/claude-code//', '/%63laude-code',
       '/codex/../admin', '/codex?draft=true', '/codex//', '/%63odex',
     ]) {
@@ -162,6 +165,97 @@ describe('published landing content', () => {
     for (const url of ['http://cms.example.test', 'https://user:password@cms.example.test', 'https://cms.example.test/other', 'https://cms.example.test/?draft=true']) {
       await assert.rejects(loadLanding(url), /CMS_URL/);
     }
+  });
+});
+
+describe('Remote launch content', () => {
+  it('replaces legacy installer marketing while retaining the published CMS document', () => {
+    const legacy = {
+      ...structuredClone(landingSchema.parse(seed).pages.remote),
+      title: 'Get lomi remote.',
+      description: [{ text: 'Run a workspace host on your computer or server.' }, { text: 'Lomi Remote is still in development.' }],
+      seo: {
+        title: 'lomi remote — A host for your workspace',
+        description: 'Get the lomi remote installation command for macOS, Linux or Windows. A native host in development for your computer or server.',
+      },
+    };
+    const original = structuredClone(legacy);
+    const current = remoteLaunchContent(legacy);
+    assert.equal(current.title, pageDefaults.remote.title);
+    assert.deepEqual(current.description, pageDefaults.remote.description);
+    assert.deepEqual(current.seo, pageDefaults.remote.seo);
+    assert.deepEqual(current.platforms, legacy.platforms);
+    assert.deepEqual(legacy, original);
+    assert.equal(remoteLaunchContent({ ...legacy, seo: { ...legacy.seo, title: 'lomi remote | A host for your workspace' } }).seo.title, pageDefaults.remote.seo.title);
+  });
+
+  it('preserves authored metadata, media, empty copy and visibility choices', () => {
+    const authored = structuredClone(landingSchema.parse(seed).pages.remote);
+    authored.title = 'A custom Remote title';
+    authored.description = [];
+    authored.seo = { title: 'Custom Remote | Lomi', description: 'Authored Remote description.' };
+    authored.showScreenshot = false;
+    authored.screenshot = { image: { id: 12, url: '/api/media/file/remote.png', alt: 'Custom Remote image', mimeType: 'image/png', width: 640, height: 400 }, alt: 'Custom Remote alt' };
+    assert.deepEqual(remoteLaunchContent(authored), authored);
+  });
+
+  it('leaves current launch defaults unchanged', () => {
+    const current = landingSchema.parse(seed).pages.remote;
+    assert.deepEqual(remoteLaunchContent(current), current);
+  });
+});
+
+describe('Product navigation', () => {
+  it('updates legacy published menus without mutating CMS content', () => {
+    const groups = [
+      { label: 'Project', links: [{ label: 'Documentation', href: 'https://docs.lomi.dev' }] },
+      { label: 'Workspace', links: [
+        { label: 'Overview', href: '/#workspace' },
+        { label: 'Remote', href: '/remote/' },
+        { label: 'Features', href: '/#features' },
+      ] },
+    ];
+    const original = structuredClone(groups);
+    assert.deepEqual(activeProductGroups(groups), [
+      { label: 'Workspace', links: [
+        { label: 'Features', href: '/#features' },
+        { label: 'Remote', href: '/remote/' },
+        { label: 'Mobile App', href: '/mobile-app/' },
+      ] },
+      groups[0],
+    ]);
+    assert.deepEqual(groups, original);
+  });
+
+  it('keeps the current defaults and existing mobile links without duplicates', () => {
+    assert.deepEqual(activeProductGroups(editorDefaults.navigation.productGroups), editorDefaults.navigation.productGroups);
+    const groups = [{ label: 'Workspace', links: [
+      { label: 'Mobile App', href: '/mobile-app' },
+      { label: 'Features', href: '#features' },
+    ] }];
+    assert.deepEqual(activeProductGroups(groups)[0].links, [groups[0].links[1], groups[0].links[0]]);
+  });
+
+  it('respects hidden sections and deliberately empty or custom menus', () => {
+    const groups = [{ label: 'Workspace', links: [
+      { label: 'Overview', href: '#workspace' },
+      { label: 'Features', href: '#features' },
+      { label: 'Remote', href: '/remote/' },
+    ] }];
+    assert.deepEqual(activeProductGroups(groups, [{ section: 'features', enabled: false }]), [
+      { label: 'Workspace', links: [
+        { label: 'Remote', href: '/remote/' },
+        { label: 'Mobile App', href: '/mobile-app/' },
+      ] },
+    ]);
+    assert.deepEqual(activeProductGroups([]), []);
+    const custom = [{ label: 'Custom', links: [
+      { label: 'Newsletter', href: '#newsletter' },
+      { label: 'Privacy', href: '/cookies/#preferences' },
+      { label: 'Overview', href: 'https://docs.lomi.dev/overview' },
+    ] }];
+    assert.deepEqual(activeProductGroups(custom), custom);
+    assert.deepEqual(activeProductGroups([{ label: 'Workspace', links: [groups[0].links[0]] }]), []);
   });
 });
 

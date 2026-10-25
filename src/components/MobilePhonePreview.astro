@@ -1,0 +1,186 @@
+---
+import { Picture } from 'astro:assets';
+import lightHome from '../assets/product/mobile-app/workspace-home-light.png';
+import darkHome from '../assets/product/mobile-app/workspace-home-dark.png';
+
+interface Props {
+  alt: string;
+  caption: string;
+}
+
+const { alt, caption } = Astro.props;
+---
+
+<figure class="mobile-preview" data-mobile-phone-preview>
+  <div class="phone-gallery">
+    <div class="phone phone-side phone-left" aria-hidden="true">
+      <div class="phone-screen">
+        <Picture src={darkHome} alt="" widths={[160, 192, 224, 256]} sizes="(min-width: 1200px) 224px, 40vw" formats={['avif', 'webp']} loading="lazy" decoding="async" />
+        <span class="phone-island"></span>
+      </div>
+    </div>
+    <div class="phone phone-main">
+      <div class="phone-screen">
+        <Picture
+          src={lightHome}
+          alt={alt}
+          class="mobile-preview-image"
+          data-mobile-primary-preview
+          widths={[240, 280, 320, 360, 400]}
+          sizes="(min-width: 1200px) 274px, (min-width: 768px) 34vw, (min-width: 360px) 70vw, 228px"
+          formats={['avif', 'webp']}
+          loading="lazy"
+          decoding="async"
+        />
+        <span class="phone-island"></span>
+      </div>
+    </div>
+    <div class="phone phone-side phone-right" aria-hidden="true">
+      <div class="phone-screen">
+        <Picture src={darkHome} alt="" widths={[160, 192, 224, 256]} sizes="(min-width: 1200px) 224px, 40vw" formats={['avif', 'webp']} loading="lazy" decoding="async" />
+        <span class="phone-island"></span>
+      </div>
+    </div>
+  </div>
+  <figcaption>{caption}</figcaption>
+</figure>
+
+<style>
+  .mobile-preview {
+    --phone-outer: #8e928f;
+    --phone-edge: #646966;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: min(100%, 540px);
+    min-width: 0;
+    margin: 0 auto;
+  }
+  .phone-gallery {
+    position: relative;
+    isolation: isolate;
+    width: 100%;
+    aspect-ratio: .9;
+  }
+  .phone {
+    position: absolute;
+    box-sizing: border-box;
+    border: 1px solid rgb(55 61 57 / 88%);
+    border-radius: 16% / 7.8%;
+    padding: 1.25%;
+    background: linear-gradient(115deg, #d7dad7 0%, #777e79 16%, #aeb3af 29%, #666d68 58%, #d3d6d3 77%, #747b76 100%);
+    box-shadow: 0 22px 38px -19px rgb(22 31 19 / 38%), inset 0 0 0 1px rgb(255 255 255 / 55%);
+  }
+  .phone::before {
+    content: '';
+    position: absolute;
+    top: 25%;
+    left: -3px;
+    width: 3px;
+    height: 72px;
+    border-radius: 3px 0 0 3px;
+    background: linear-gradient(#7d827f, #555c57 48%, #8c918e);
+    box-shadow: 0 77px 0 -0.2px #727874;
+  }
+  .phone::after {
+    content: '';
+    position: absolute;
+    top: 30%;
+    right: -3px;
+    width: 3px;
+    height: 50px;
+    border-radius: 0 3px 3px 0;
+    background: #69706b;
+  }
+  .phone-screen {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    padding-top: 16%;
+    overflow: hidden;
+    border-radius: 14% / 6.8%;
+    background: #f7f8f4;
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 32%);
+  }
+  .phone-screen :global(picture) {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+  .phone-screen :global(img) {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top center;
+  }
+  .phone-island {
+    position: absolute;
+    z-index: 1;
+    top: 2%;
+    left: 50%;
+    width: 32%;
+    height: 4.2%;
+    border-radius: 999px;
+    background: #090a09;
+    box-shadow: 0 1px 0 rgb(255 255 255 / 10%);
+    transform: translateX(-50%);
+  }
+  .phone-main {
+    z-index: 3;
+    top: 2%;
+    left: 50%;
+    width: min(52%, 282px);
+    aspect-ratio: .49;
+    transform: translateX(-50%);
+    box-shadow: 0 30px 56px -28px rgb(17 26 14 / 55%), inset 0 0 0 1px rgb(255 255 255 / 66%);
+  }
+  .phone-side {
+    z-index: 1;
+    top: 14%;
+    width: min(43%, 232px);
+    aspect-ratio: .49;
+  }
+  .phone-side .phone-screen {
+    background: #101114;
+  }
+  .phone-left {
+    left: 5%;
+    transform: rotate(-8deg);
+  }
+  .phone-right {
+    right: 5%;
+    transform: rotate(8deg);
+  }
+  .mobile-preview figcaption {
+    margin: 4px 0 0;
+    color: #65705e;
+    font-size: 11px;
+    line-height: 1.5;
+    text-align: center;
+  }
+  @media (max-width: 999px) {
+    .phone-main { width: min(52%, 260px); }
+  }
+  @media (max-width: 767px) {
+    .mobile-preview { width: min(100%, 500px); }
+    .phone-main { width: min(52%, 238px); }
+    .phone-side { width: min(43%, 194px); }
+    .phone::before, .phone::after { display: none; }
+  }
+  @media (max-width: 359px) {
+    .phone-main { width: min(52%, 210px); }
+    .phone-side { width: min(43%, 170px); }
+  }
+  @media (prefers-reduced-motion: no-preference) and (hover: hover) and (pointer: fine) {
+    .phone { transition: transform 240ms ease-out, box-shadow 240ms ease-out; }
+    .mobile-preview:hover .phone-left { transform: translateX(-7px) rotate(-8deg); }
+    .mobile-preview:hover .phone-right { transform: translateX(7px) rotate(8deg); }
+    .mobile-preview:hover .phone-main { transform: translateX(-50%) translateY(-5px); }
+  }
+  @media (forced-colors: active) {
+    .phone { border-color: CanvasText; }
+    .phone-island { background: CanvasText; }
+  }
+</style>

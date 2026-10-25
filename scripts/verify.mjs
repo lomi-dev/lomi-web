@@ -736,7 +736,7 @@ async function verifyDevlog(javaScriptEnabled) {
       const product = devlogPage.locator(mobile ? '#mobile-product' : '#product-menu');
       await activate(product.locator(':scope > summary'));
       expect(await product.locator('.product-link').evaluateAll((links) => links.map((link) => link.getAttribute('href'))))
-        .toEqual(['/#workspace', '/#features', '/remote/', 'https://docs.lomi.dev', 'https://github.com/lomi-dev/lomi', downloadPath, releaseUrl]);
+        .toEqual(['/#features', '/remote/', '/mobile-app/', 'https://docs.lomi.dev', 'https://github.com/lomi-dev/lomi', downloadPath, releaseUrl]);
       await activate(product.locator('a[href="/#features"]'));
     } else {
       await expect(devlogPage.locator('.product-fallback')).toHaveAttribute('href', '/#workspace');
@@ -847,7 +847,7 @@ try {
   await expect(productMenu.locator('.product-link')).toHaveCount(7);
   await expect(productMenu.locator('.product-group')).toHaveCount(3);
   const productDestinations = await productMenu.locator('.product-link').evaluateAll((links) => links.map((link) => link.getAttribute('href')));
-  expect(productDestinations).toEqual(['#workspace', '#features', '/remote/', 'https://docs.lomi.dev', 'https://github.com/lomi-dev/lomi', downloadPath, releaseUrl]);
+  expect(productDestinations).toEqual(['#features', '/remote/', '/mobile-app/', 'https://docs.lomi.dev', 'https://github.com/lomi-dev/lomi', downloadPath, releaseUrl]);
   await expect(productMenu.locator(`.product-link[href="${downloadPath}"]`)).toHaveCount(1);
   await expect(productMenu.locator(`.product-link[href="${downloadPath}"]`)).not.toHaveAttribute('data-download-open');
   await expect(productMenu.locator(`.product-link[href="${releaseUrl}"]`)).not.toHaveAttribute('data-download-open');

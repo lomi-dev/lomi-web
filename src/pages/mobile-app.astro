@@ -1,0 +1,37 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import MobileAppPage from '../components/MobileAppPage.astro';
+import { activeLandingLinks } from '../data/navigation';
+import { mobileAppPage } from '../data/mobile-app';
+import { loadLanding } from '../../content/load-landing';
+
+const content = await loadLanding(import.meta.env.CMS_URL);
+const newsletter = activeLandingLinks([{ label: 'Newsletter', href: '/#newsletter' }], content.layout)[0];
+const newsletterForm = newsletter ? {
+  ...content.newsletter.form,
+  ariaLabel: 'Lomi Mobile launch newsletter',
+  submitLabel: mobileAppPage.newsletter.submitLabel,
+  successLabel: mobileAppPage.newsletter.successLabel,
+  successMessage: mobileAppPage.newsletter.successMessage,
+} : undefined;
+const footerContent = {
+  ...content.footer,
+  groups: content.footer.groups.map((group) => ({
+    ...group,
+    links: activeLandingLinks(group.links, content.layout).map((link) => ({
+      ...link,
+      href: link.href.startsWith('#') ? `/${link.href}` : link.href,
+    })),
+  })).filter((group) => group.links.length > 0),
+};
+---
+
+<Layout title={mobileAppPage.seo.title} description={mobileAppPage.seo.description} website={content} themeColor={content.site.theme.paper} edgeColor="var(--color-lime)">
+  <Header content={content.navigation} site={content.site} layout={content.layout} theme="light" />
+  <main id="main" tabindex="-1">
+    <MobileAppPage content={mobileAppPage} newsletterForm={newsletterForm} />
+  </main>
+  <Footer content={footerContent} site={content.site} layout={content.layout} />
+</Layout>

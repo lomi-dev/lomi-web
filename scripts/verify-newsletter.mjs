@@ -64,32 +64,234 @@ async function open(target, options = {}) {
   return { context, page };
 }
 
-async function layout(page) {
-  const root = page.locator('#newsletter');
+async function layout(page, rootSelector = '#newsletter') {
+  const root = page.locator(rootSelector);
   for (const viewport of [{ width: 320, height: 700 }, { width: 390, height: 844 }, { width: 768, height: 1024 }, { width: 1440, height: 1000 }]) {
     await page.setViewportSize(viewport);
     expect(await page.evaluate(() => document.documentElement.scrollWidth), `${viewport.width}px: no horizontal overflow`).toBe(viewport.width);
     for (const [selector, minimum] of [['input', 56], ['button', 52]]) {
       const control = root.locator(selector);
+      const requiredHeight = ['#mobile-newsletter', '#remote-newsletter'].includes(rootSelector) && selector === 'input' ? 52 : minimum;
       await control.scrollIntoViewIfNeeded();
       await expect(control).toBeInViewport();
       expect(await control.evaluate((element) => {
         const box = element.getBoundingClientRect();
         return { height: box.height, fits: box.left >= 0 && box.right <= innerWidth && element.scrollWidth <= element.clientWidth + 2 };
       }), `${viewport.width}px: ${selector} fits`).toMatchObject({ fits: true });
-      expect((await control.boundingBox()).height).toBeGreaterThanOrEqual(minimum);
+      expect((await control.boundingBox()).height).toBeGreaterThanOrEqual(requiredHeight);
+    }
+    const stackedLaunchForm = rootSelector === '#mobile-newsletter'
+      ? viewport.width <= 999
+      : rootSelector === '#remote-newsletter' && viewport.width <= 767;
+    if (stackedLaunchForm) {
+      const input = root.locator('input');
+      const button = root.locator('button');
+      await expect(input).toHaveCSS('border-radius', '10px');
+      await expect(button).toHaveCSS('border-radius', '10px');
+      const inputBox = await input.boundingBox();
+      const buttonBox = await button.boundingBox();
+      const gap = buttonBox.y - inputBox.y - inputBox.height;
+      expect(gap, `${viewport.width}px: input and submit button have a clear vertical gap`).toBeGreaterThanOrEqual(7);
+      expect(gap, `${viewport.width}px: the controls do not drift apart`).toBeLessThanOrEqual(9);
     }
   }
 }
 
-async function axe(page) {
-  const result = await new AxeBuilder({ page }).include('#newsletter').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
+async function axe(page, rootSelector = '#newsletter') {
+  const result = await new AxeBuilder({ page }).include(rootSelector).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
   expect(result.violations, 'Newsletter accessibility').toEqual([]);
+}
+
+async function noteContract(page, rootSelector, shouldShow) {
+  const root = page.locator(rootSelector);
+  const note = root.locator('#newsletter-note');
+  const email = root.locator('#newsletter-email');
+  const describedBy = (await email.getAttribute('aria-describedby') || '').trim().split(/\s+/).filter(Boolean);
+  if (shouldShow) {
+    await expect(note).toBeVisible();
+    expect(describedBy).toContain('newsletter-note');
+  } else {
+    await expect(note).toHaveCount(0);
+    expect(describedBy).toEqual(['newsletter-status']);
+  }
+  expect(describedBy).toContain('newsletter-status');
+  for (const id of describedBy) await expect(page.locator(`#${id}`)).toHaveCount(1);
 }
 
 async function mock(page, status, body) {
   await page.unroute(endpoint);
   await page.route(endpoint, (route) => route.fulfill({ status, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body }));
+}
+
+async function mobileSignup() {
+  const target = new URL('/mobile-app/', configuredURL).href;
+  const { context, page } = await open(target);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.locator('#mobile-newsletter').scrollIntoViewIfNeeded();
+  await expect(page.locator('#mobile-newsletter')).toBeInViewport();
+
+  const root = page.locator('#mobile-newsletter .newsletter');
+  const email = page.locator('#mobile-newsletter #newsletter-email');
+  const button = page.locator('#mobile-newsletter button[type="submit"]');
+  const form = page.locator('#mobile-newsletter #newsletter-form');
+  const status = page.locator('#mobile-newsletter #newsletter-status');
+  await expect(root).toHaveAttribute('aria-label', 'Lomi Mobile launch newsletter');
+  await noteContract(page, '#mobile-newsletter', true);
+  await expect(form).toHaveAttribute('data-endpoint', endpoint);
+  expect(JSON.parse(await form.getAttribute('data-copy')).successMessage).toContain('Lomi Mobile launch news');
+  await expect(button).toHaveText(/Notify me at launch/);
+  await expect(email).toBeEnabled();
+
+  await email.fill('not-an-email');
+  await email.press('Enter');
+  expect(await page.evaluate(() => window.__newsletterRequests)).toEqual([]);
+  await expect(root).toHaveAttribute('data-state', 'idle');
+
+  let release;
+  let requestCount = 0;
+  await page.unroute(endpoint);
+  await page.route(endpoint, async (route) => {
+    requestCount++;
+    expect(route.request().method()).toBe('POST');
+    expect(route.request().postDataJSON()).toEqual({ email: 'mobile@example.test' });
+    expect(route.request().headers()['content-type']).toBe('application/json');
+    await new Promise((resolve) => { release = resolve; });
+    await route.fulfill({ status: 202, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: '{"accepted":true}' });
+  });
+  await email.fill('mobile@example.test');
+  await email.press('Enter');
+  await expect(root).toHaveAttribute('data-state', 'pending');
+  await expect(button).toBeDisabled();
+  await expect(button).toHaveText(/Subscribing/);
+  await expect(form).toHaveAttribute('aria-busy', 'true');
+  await expect.poll(() => requestCount).toBe(1);
+  const firstRequest = await page.evaluate(() => window.__newsletterRequests[0]);
+  expect(firstRequest).toMatchObject({
+    method: 'POST', credentials: 'omit', redirect: 'error',
+    body: '{"email":"mobile@example.test"}', signal: true,
+  });
+  expect(Object.keys(JSON.parse(firstRequest.body))).toEqual(['email']);
+  release();
+  await expect(root).toHaveAttribute('data-state', 'success');
+  await expect(email).toHaveValue('');
+  await expect(button).toHaveText(/You’re on the list/);
+  await expect(status).toContainText('Lomi Mobile launch news');
+  await expect(form).toHaveAttribute('aria-busy', 'false');
+  await email.evaluate((element) => element.blur());
+  await page.locator('#mobile-newsletter').screenshot({ path: `artifacts/mobile-newsletter-${browserType.name()}-success.png` });
+
+  await email.fill('mobile-retry@example.test');
+  await mock(page, 429, '{}');
+  await email.press('Enter');
+  await expect(root).toHaveAttribute('data-state', 'error');
+  await expect(status).toContainText('Too many');
+  await expect(email).toHaveValue('mobile-retry@example.test');
+  await expect(button).toBeEnabled();
+  await mock(page, 202, '{"accepted":true}');
+  await button.click();
+  await expect(root).toHaveAttribute('data-state', 'success');
+  await expect(email).toHaveValue('');
+
+  await email.fill('mobile-error@example.test');
+  await mock(page, 503, '{}');
+  await email.press('Enter');
+  await expect(root).toHaveAttribute('data-state', 'error');
+  await expect(status).toContainText('couldn’t');
+  await expect(email).toHaveValue('mobile-error@example.test');
+  await mock(page, 202, '{"accepted":true}');
+  await email.press('Enter');
+  await expect(root).toHaveAttribute('data-state', 'success');
+  await expect(email).toHaveValue('');
+  expect(await page.evaluate(() => window.__newsletterRequests)).toHaveLength(5);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await axe(page, '#mobile-newsletter');
+  await context.close();
+}
+
+async function remoteSignup() {
+  const target = new URL('/remote/', configuredURL).href;
+  const { context, page } = await open(target);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.locator('#remote-newsletter').scrollIntoViewIfNeeded();
+  await expect(page.locator('#remote-newsletter')).toBeInViewport();
+
+  const root = page.locator('#remote-newsletter .newsletter');
+  const email = page.locator('#remote-newsletter #newsletter-email');
+  const button = page.locator('#remote-newsletter button[type="submit"]');
+  const form = page.locator('#remote-newsletter #newsletter-form');
+  const status = page.locator('#remote-newsletter #newsletter-status');
+  await expect(root).toHaveAttribute('aria-label', 'Lomi Remote launch newsletter');
+  await noteContract(page, '#remote-newsletter', false);
+  await expect(form).toHaveAttribute('data-endpoint', endpoint);
+  expect(JSON.parse(await form.getAttribute('data-copy')).successMessage).toContain('Lomi Remote launch news');
+  await expect(button).toHaveText(/Notify me at launch/);
+  await expect(email).toBeEnabled();
+  await layout(page, '#remote-newsletter');
+
+  await email.fill('not-an-email');
+  await email.press('Enter');
+  expect(await page.evaluate(() => window.__newsletterRequests)).toEqual([]);
+  await expect(root).toHaveAttribute('data-state', 'idle');
+
+  let release;
+  let requestCount = 0;
+  await page.unroute(endpoint);
+  await page.route(endpoint, async (route) => {
+    requestCount++;
+    expect(route.request().method()).toBe('POST');
+    expect(route.request().postDataJSON()).toEqual({ email: 'remote@example.test' });
+    expect(route.request().headers()['content-type']).toBe('application/json');
+    await new Promise((resolve) => { release = resolve; });
+    await route.fulfill({ status: 202, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: '{"accepted":true}' });
+  });
+  await email.fill('remote@example.test');
+  await email.press('Enter');
+  await expect(root).toHaveAttribute('data-state', 'pending');
+  await expect(button).toBeDisabled();
+  await expect(button).toHaveText(/Subscribing/);
+  await expect(form).toHaveAttribute('aria-busy', 'true');
+  await expect.poll(() => requestCount).toBe(1);
+  const firstRequest = await page.evaluate(() => window.__newsletterRequests[0]);
+  expect(firstRequest).toMatchObject({
+    method: 'POST', credentials: 'omit', redirect: 'error',
+    body: '{"email":"remote@example.test"}', signal: true,
+  });
+  expect(Object.keys(JSON.parse(firstRequest.body))).toEqual(['email']);
+  release();
+  await expect(root).toHaveAttribute('data-state', 'success');
+  await expect(email).toHaveValue('');
+  await expect(button).toHaveText(/You’re on the list/);
+  await expect(status).toContainText('Lomi Remote launch news');
+  await expect(form).toHaveAttribute('aria-busy', 'false');
+  await email.evaluate((element) => element.blur());
+  await page.locator('#remote-newsletter').screenshot({ path: `artifacts/remote-newsletter-${browserType.name()}-success.png` });
+
+  await email.fill('remote-retry@example.test');
+  await mock(page, 429, '{}');
+  await email.press('Enter');
+  await expect(root).toHaveAttribute('data-state', 'error');
+  await expect(status).toContainText('Too many');
+  await expect(email).toHaveValue('remote-retry@example.test');
+  await expect(button).toBeEnabled();
+  await mock(page, 202, '{"accepted":true}');
+  await button.click();
+  await expect(root).toHaveAttribute('data-state', 'success');
+  await expect(email).toHaveValue('');
+
+  await email.fill('remote-error@example.test');
+  await mock(page, 503, '{}');
+  await email.press('Enter');
+  await expect(root).toHaveAttribute('data-state', 'error');
+  await expect(status).toContainText('couldn’t');
+  await expect(email).toHaveValue('remote-error@example.test');
+  await mock(page, 202, '{"accepted":true}');
+  await email.press('Enter');
+  await expect(root).toHaveAttribute('data-state', 'success');
+  await expect(email).toHaveValue('');
+  expect(await page.evaluate(() => window.__newsletterRequests)).toHaveLength(5);
+  await axe(page, '#remote-newsletter');
+  await context.close();
 }
 
 async function navigation(page) {
@@ -136,8 +338,29 @@ try {
   await expect(unavailable.page.locator('#newsletter input')).toBeDisabled();
   await expect(unavailable.page.locator('#newsletter button')).toBeDisabled();
   await expect(unavailable.page.locator('#newsletter-status')).toContainText('temporarily unavailable');
+  await noteContract(unavailable.page, '#newsletter', true);
   await layout(unavailable.page);
   await axe(unavailable.page);
+  await unavailable.page.goto(new URL('/mobile-app/', url).href, { waitUntil: 'networkidle' });
+  const unavailableMobile = unavailable.page.locator('#mobile-newsletter .newsletter');
+  await expect(unavailableMobile).toHaveAttribute('data-state', 'unavailable');
+  await expect(unavailableMobile.locator('input')).toBeDisabled();
+  await expect(unavailableMobile.locator('button')).toBeDisabled();
+  await expect(unavailableMobile.locator('#newsletter-status')).toContainText('temporarily unavailable');
+  await noteContract(unavailable.page, '#mobile-newsletter', true);
+  await layout(unavailable.page, '#mobile-newsletter');
+  await axe(unavailable.page, '#mobile-newsletter');
+  await unavailable.page.locator('#mobile-newsletter').screenshot({ path: `artifacts/mobile-newsletter-${browserType.name()}-unavailable.png` });
+  await unavailable.page.goto(new URL('/remote/', url).href, { waitUntil: 'networkidle' });
+  const unavailableRemote = unavailable.page.locator('#remote-newsletter .newsletter');
+  await expect(unavailableRemote).toHaveAttribute('data-state', 'unavailable');
+  await expect(unavailableRemote.locator('input')).toBeDisabled();
+  await expect(unavailableRemote.locator('button')).toBeDisabled();
+  await expect(unavailableRemote.locator('#newsletter-status')).toContainText('temporarily unavailable');
+  await noteContract(unavailable.page, '#remote-newsletter', false);
+  await layout(unavailable.page, '#remote-newsletter');
+  await axe(unavailable.page, '#remote-newsletter');
+  await unavailable.page.locator('#remote-newsletter').screenshot({ path: `artifacts/remote-newsletter-${browserType.name()}-unavailable.png` });
   await unavailable.context.close();
 
   const { context, page } = await open(configuredURL);
@@ -147,10 +370,9 @@ try {
   const form = page.locator('#newsletter-form');
   await expect(form).toHaveAttribute('data-endpoint', endpoint);
   await expect(email).toBeEnabled();
+  await noteContract(page, '#newsletter', true);
   await email.fill('invalid-email');
-  await page.keyboard.press('Tab');
-  await expect(button).toBeFocused();
-  await page.keyboard.press('Enter');
+  await email.press('Enter');
   expect(await page.evaluate(() => window.__newsletterRequests)).toEqual([]);
   await expect(root).toHaveAttribute('data-state', 'idle');
 
@@ -237,14 +459,30 @@ try {
   await navigation(page);
   await context.close();
 
+  await mobileSignup();
+  await remoteSignup();
+
   const noJS = await open(configuredURL, { javaScriptEnabled: false });
   await expect(noJS.page.locator('#newsletter input')).toBeDisabled();
   await expect(noJS.page.locator('#newsletter button')).toBeDisabled();
   await expect(noJS.page.locator('#newsletter .newsletter-noscript')).toBeVisible();
+  await noteContract(noJS.page, '#newsletter', true);
   await layout(noJS.page);
+  await noJS.page.goto(new URL('/mobile-app/', configuredURL).href, { waitUntil: 'networkidle' });
+  await expect(noJS.page.locator('#mobile-newsletter input')).toBeDisabled();
+  await expect(noJS.page.locator('#mobile-newsletter button')).toBeDisabled();
+  await expect(noJS.page.locator('#mobile-newsletter .newsletter-noscript')).toBeVisible();
+  await noteContract(noJS.page, '#mobile-newsletter', true);
+  await expect(noJS.page.locator('#mobile-newsletter .newsletter')).toHaveAttribute('data-state', 'idle');
+  await noJS.page.goto(new URL('/remote/', configuredURL).href, { waitUntil: 'networkidle' });
+  await expect(noJS.page.locator('#remote-newsletter input')).toBeDisabled();
+  await expect(noJS.page.locator('#remote-newsletter button')).toBeDisabled();
+  await expect(noJS.page.locator('#remote-newsletter .newsletter-noscript')).toBeVisible();
+  await noteContract(noJS.page, '#remote-newsletter', false);
+  await expect(noJS.page.locator('#remote-newsletter .newsletter')).toHaveAttribute('data-state', 'idle');
   await noJS.context.close();
   expect(errors, 'No page runtime errors').toEqual([]);
-  console.log(`Passed (${browserType.name()}): unavailable and no-JS states; canonical credential-free POST; invalid email; pending lock and reentry; strict 202 acceptance; retry after malformed/200/503/429/network/timeout; success reset and stamp; reduced motion; four widths, long CMS heading, desktop/mobile axe and screenshots; desktop/mobile header anchors from home and devlog. All requests mocked.`);
+  console.log(`Passed (${browserType.name()}): unavailable and no-JS homepage/mobile/Remote states; canonical credential-free POST for all three forms; invalid email; pending lock; strict 202 acceptance; mobile and Remote launch copy with retries after 429/503; homepage retries after malformed/200/503/429/network/timeout; reset, reduced motion, responsive layout, accessibility, screenshots and header anchors. All signup requests mocked.`);
 } finally {
   await browser?.close();
   if (server?.pid) {

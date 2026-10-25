@@ -11,7 +11,7 @@ export const editorDefaults = {
   navigation: {
     productLabel: 'Product', menuLabel: 'Menu', backLabel: 'Back', sourceLabel: 'GitHub', sourceAriaLabel: 'lomi source on GitHub', primaryAriaLabel: 'Primary navigation', mobileAriaLabel: 'Mobile navigation', actionHref: '/download/',
     productGroups: [
-      { label: 'Workspace', links: [{ label: 'Overview', href: '#workspace' }, { label: 'Features', href: '#features' }, { label: 'Remote', href: '/remote/' }] },
+      { label: 'Workspace', links: [{ label: 'Features', href: '#features' }, { label: 'Remote', href: '/remote/' }, { label: 'Mobile App', href: '/mobile-app/' }] },
       { label: 'Project', links: [{ label: 'Documentation', href: 'https://docs.lomi.dev' }, { label: 'Source code', href: 'https://github.com/lomi-dev/lomi' }] },
       { label: 'Get started', links: [{ label: 'Download lomi', href: '/download/' }, { label: 'Release notes', href: 'https://github.com/lomi-dev/lomi/releases' }] },
     ],

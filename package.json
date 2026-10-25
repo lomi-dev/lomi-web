@@ -18,6 +18,8 @@
     "verify:newsletter": "node scripts/verify-newsletter.mjs",
     "verify:download": "node scripts/verify-download.mjs",
     "verify:remote": "node scripts/verify-remote.mjs",
+    "render:remote-preview": "node scripts/render-remote-preview.mjs",
+    "verify:mobile-app": "node scripts/verify-mobile-app.mjs",
     "verify:backdrop": "node scripts/verify-backdrop.mjs",
     "verify:cookies": "node scripts/verify-cookies.mjs",
     "verify:cms-content": "node scripts/verify-cms-content.mjs",

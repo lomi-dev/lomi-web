@@ -1,8 +1,8 @@
 ---
 import { editorDefaults } from '../../content/editor-defaults';
 import type { Landing } from '../../content/landing-schema';
-interface Props { content?: Landing['newsletter']['form'] }
-const { content = editorDefaults.newsletter.form } = Astro.props;
+interface Props { content?: Landing['newsletter']['form']; showNote?: boolean }
+const { content = editorDefaults.newsletter.form, showNote = true } = Astro.props;
 const endpoint = import.meta.env.PUBLIC_NEWSLETTER_ENDPOINT || '';
 if (endpoint) {
   const url = new URL(endpoint);
@@ -28,7 +28,7 @@ const isConfigured = Boolean(endpoint);
         maxlength="254"
         required
         disabled
-        aria-describedby="newsletter-status newsletter-note"
+        aria-describedby={showNote ? 'newsletter-status newsletter-note' : 'newsletter-status'}
       />
       <button type="submit" disabled>
         <span data-submit-label>{content.submitLabel}</span>
@@ -42,7 +42,7 @@ const isConfigured = Boolean(endpoint);
       {!isConfigured && content.unavailableMessage}
     </p>
   </form>
-  <p class="newsletter-note" id="newsletter-note">{content.note}</p>
+  {showNote && <p class="newsletter-note" id="newsletter-note">{content.note}</p>}
   <noscript><p class="newsletter-noscript">{content.noscript}</p></noscript>
 </section>
 

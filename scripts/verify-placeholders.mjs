@@ -1,6 +1,7 @@
 import { chromium, expect } from '@playwright/test';
 import assert from 'node:assert/strict';
-import { mkdir, readFile } from 'node:fs/promises';
+import { mkdir, readFile, stat } from 'node:fs/promises';
+import { createReadStream } from 'node:fs';
 import { createServer } from 'node:http';
 import { dirname, extname, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -16,9 +17,9 @@ export async function assertPlaceholder(placeholder, { logo = '/placeholders/lom
     await expect(image).toHaveAttribute('alt', /.+/);
     await expect(placeholder.locator(':scope > img.feature-desktop[aria-hidden="true"]')).toHaveCount(1);
     await expect(placeholder.locator(':scope > [data-render-window] img[data-feature-poster]')).toHaveCount(1);
-    await expect(placeholder.locator(':scope > [data-render-detail][aria-hidden="true"] img[alt=""]')).toHaveCount(1);
-    await expect(placeholder.locator('img')).toHaveCount(3);
-    await expect(placeholder.locator('video, svg, [data-feature-gif]')).toHaveCount(0);
+    await expect(placeholder.locator(':scope > [data-render-window] video[data-feature-video]')).toHaveCount(1);
+    await expect(placeholder.locator('img')).toHaveCount(2);
+    await expect(placeholder.locator('.feature-window-chrome, [data-render-detail], svg, [data-feature-gif]')).toHaveCount(0);
   } else {
     await expect(image).toHaveAttribute('alt', '');
     const illustration = { hero: '/placeholders/hero-workspace.svg', download: '/placeholders/download-workspace.svg' }[variant];
@@ -44,51 +45,45 @@ export async function assertPlaceholder(placeholder, { logo = '/placeholders/lom
     };
     if (variant !== 'feature') return result;
     const app = element.querySelector('[data-render-window]');
-    const detail = element.querySelector('[data-render-detail]');
-    const crop = detail?.querySelector('img');
     const appBox = app?.getBoundingClientRect();
-    const detailBox = detail?.getBoundingClientRect();
-    const cropBox = crop?.getBoundingClientRect();
+    const appBorder = app ? parseFloat(getComputedStyle(app).borderTopWidth) : 0;
     const appWidthRatio = appBox?.width / element.clientWidth;
     const appCenterRatio = appBox && (appBox.left + appBox.width / 2 - frame.left) / element.clientWidth;
+    const cameraScale = app ? new DOMMatrixReadOnly(getComputedStyle(app).transform).a : 1;
     const contained = (box) => box && box.left >= frame.left - 2 && box.top >= frame.top - 2
       && box.right <= frame.right + 2 && box.bottom <= frame.bottom + 2;
     return {
       ...result,
       overflow: style.overflow,
       aspect: frame.width / frame.height,
-      detailWidth: detailBox?.width,
-      detailHeight: detailBox?.height,
-      detailVisible: !!detailBox && detailBox.width > 0 && detailBox.height > 0,
       appWidthRatio,
+      appBorder,
+      cameraScale,
       appCenterRatio,
-      appFits: contained(appBox),
-      detailFits: contained(detailBox),
-      detailOverflow: detail && getComputedStyle(detail).overflow,
-      magnifiedWidthRatio: cropBox?.width / detailBox?.width,
-      magnifiedHeightRatio: cropBox?.height / detailBox?.height,
-      detailImageClipped: cropBox && detailBox && (cropBox.left < detailBox.left - 2 || cropBox.top < detailBox.top - 2
-        || cropBox.right > detailBox.right + 2 || cropBox.bottom > detailBox.bottom + 2),
+      appFits: cameraScale <= 1.03 ? contained(appBox) : null,
     };
   }, variant);
   assert.ok(geometry.width > 0 && geometry.height > 0, 'Placeholder reserves a visible frame');
-  assert.ok(geometry.border > 0, 'Placeholder keeps its border');
   if (variant === 'feature') {
+    assert.equal(geometry.border, 0, 'Tahoe render has no outer frame');
+    assert.equal(geometry.appBorder, 0, 'Native app window has no added border');
     assert.notEqual(geometry.background, 'rgba(0, 0, 0, 0)', 'Feature capture has a visible background');
     assert.ok(geometry.fills && geometry.fits, `Feature wallpaper fills its frame: ${JSON.stringify(geometry)}`);
     assert.match(geometry.overflow, /^(hidden|clip)$/);
-    assert.ok(geometry.appWidthRatio > 0 && geometry.appWidthRatio <= .825,
-      `App window fits within 80% of the wallpaper: ${JSON.stringify(geometry)}`);
-    assert.ok(Math.abs(geometry.appCenterRatio - .5) < .025, `App window is centered over the wallpaper: ${JSON.stringify(geometry)}`);
+    assert.ok(geometry.cameraScale >= 1 && geometry.cameraScale <= 1.3,
+      `Feature camera stays within its deliberate zoom range: ${JSON.stringify(geometry)}`);
+    assert.ok(geometry.appWidthRatio > 0 && geometry.appWidthRatio <= 1.35,
+      `App window fits within the Tahoe stage while zooming: ${JSON.stringify(geometry)}`);
     if (geometry.aspect <= 1.65) {
-      assert.ok(Math.abs(geometry.appWidthRatio - .8) < .025, `App window spans 80% of a standard capture: ${JSON.stringify(geometry)}`);
+      assert.ok(Math.abs(geometry.appWidthRatio / geometry.cameraScale - .8) < .025,
+        `Native app window spans 80% before the camera zoom: ${JSON.stringify(geometry)}`);
     }
-    assert.ok(geometry.appFits && geometry.detailFits, `App window and detail stay within the capture: ${JSON.stringify(geometry)}`);
-    assert.ok(geometry.detailVisible, `Magnified detail remains visible at this viewport: ${JSON.stringify(geometry)}`);
-    assert.match(geometry.detailOverflow, /^(hidden|clip)$/);
-    assert.ok(geometry.magnifiedWidthRatio > 1.5 && geometry.magnifiedHeightRatio > 1.5 && geometry.detailImageClipped,
-      `Detail shows a magnified crop of the app capture: ${JSON.stringify(geometry)}`);
+    if (geometry.cameraScale <= 1.03) {
+      assert.ok(Math.abs(geometry.appCenterRatio - .5) < .025, `App window is centered over the wallpaper: ${JSON.stringify(geometry)}`);
+      assert.ok(geometry.appFits, `Native app window stays within the Tahoe render at rest: ${JSON.stringify(geometry)}`);
+    }
   } else {
+    assert.ok(geometry.border > 0, 'Placeholder keeps its border');
     assert.notEqual(geometry.background, 'rgba(0, 0, 0, 0)', 'Placeholder has a visible pale background');
     assert.ok(geometry.centered && geometry.fits && (variant !== 'brand' ? geometry.fills : geometry.restrained), `Decorative ${variant !== 'brand' ? 'contextual illustration fills its frame' : 'logo stays restrained'}, centered and unclipped: ${JSON.stringify(geometry)}`);
   }
@@ -105,8 +100,36 @@ export async function startStaticPreview() {
         const pathname = decodeURIComponent(new URL(request.url, 'http://fixture.test').pathname);
         const path = resolve(output, `.${pathname}`, pathname.endsWith('/') ? 'index.html' : '');
         if (!path.startsWith(output + sep)) throw new Error('Invalid path');
+        if (extname(path) === '.mp4') {
+          const { size } = await stat(path);
+          const range = request.headers.range;
+          if (range) {
+            const match = /^bytes=(\d*)-(\d*)$/.exec(range);
+            if (!match || (!match[1] && !match[2])) {
+              response.writeHead(416, { 'Content-Range': `bytes */${size}`, 'Accept-Ranges': 'bytes' });
+              response.end();
+              return;
+            }
+            const start = match[1] ? Number(match[1]) : Math.max(size - Number(match[2]), 0);
+            const end = match[2] ? Math.min(Number(match[2]), size - 1) : size - 1;
+            if (start >= size || end < start) {
+              response.writeHead(416, { 'Content-Range': `bytes */${size}`, 'Accept-Ranges': 'bytes' });
+              response.end();
+              return;
+            }
+            response.writeHead(206, {
+              'Content-Type': 'video/mp4', 'Content-Length': end - start + 1,
+              'Content-Range': `bytes ${start}-${end}/${size}`, 'Accept-Ranges': 'bytes',
+            });
+            createReadStream(path, { start, end }).pipe(response);
+            return;
+          }
+          response.writeHead(200, { 'Content-Type': 'video/mp4', 'Content-Length': size, 'Accept-Ranges': 'bytes' });
+          createReadStream(path).pipe(response);
+          return;
+        }
         const content = await readFile(path);
-        response.writeHead(200, { 'Content-Type': ({ '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.avif': 'image/avif', '.webp': 'image/webp', '.woff2': 'font/woff2' })[extname(path)] || 'application/octet-stream' });
+        response.writeHead(200, { 'Content-Type': ({ '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.avif': 'image/avif', '.webp': 'image/webp', '.mp4': 'video/mp4', '.woff2': 'font/woff2' })[extname(path)] || 'application/octet-stream' });
         response.end(content);
       } catch { response.writeHead(404); response.end(); }
     });
@@ -140,6 +163,25 @@ async function verify() {
             await expect(capture, 'Download shows the real app capture').toBeVisible();
             await expect(capture).toHaveAttribute('alt', /desktop app/i);
             await expect.poll(() => capture.evaluate((image) => image.complete && image.naturalWidth > 0)).toBe(true);
+          } else if (route === '/remote/') {
+            const preview = page.locator('[data-remote-cli-preview]');
+            await expect(preview, 'Remote defaults to a static product render').toBeVisible();
+            await expect(preview).toHaveAttribute('aria-label', /sample local workspaces/i);
+            const image = preview.locator('img');
+            await expect(image).toHaveCount(1);
+            await expect(image).toHaveAttribute('alt', /sample local workspaces/i);
+            await image.scrollIntoViewIfNeeded();
+            await expect.poll(() => image.evaluate((element) => element.complete && element.naturalWidth > 0)).toBe(true);
+            expect(Math.abs(await image.evaluate((element) => element.naturalWidth / element.naturalHeight) - 8 / 5)).toBeLessThan(0.012);
+            expect(await image.getAttribute('src')).not.toMatch(/\.gif(?:[?#]|$)/i);
+            await expect(preview.locator('video, audio, canvas, figcaption, button, input, select, textarea, a[href], script')).toHaveCount(0);
+            await expect(preview.locator('.cli-titlebar, .cli-window-title, [data-cli-workspace-list], [data-cli-static-list], [data-cli-workspace-controls], [data-cli-detail-content], [data-cli-help-button], [data-cli-help-content], [data-cli-help-static], [data-cli-panel-title]')).toHaveCount(0);
+            expect((await preview.innerText()).trim()).toBe('');
+            await expect(placeholders, 'Remote has no brand-mark placeholder in the CLI panel').toHaveCount(0);
+            await expect(page.locator('.remote-platform')).toHaveCount(3);
+            for (const platform of ['macOS', 'Windows', 'Linux']) {
+              await expect(page.getByRole('button', { name: new RegExp(`${platform}.*coming soon`, 'i') })).toBeDisabled();
+            }
           } else {
             await expect(placeholders.first(), `${route} exposes a branded fallback`).toBeVisible();
           }

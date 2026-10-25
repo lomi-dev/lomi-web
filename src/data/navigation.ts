@@ -36,3 +36,26 @@ export function activeLandingLinks(links: Landing['navigation']['links'], layout
     return removedAnchors.has(anchor) || hidden ? [] : [link];
   });
 }
+
+// Keep older published Product menus in step with the current workspace routes.
+// Empty menus and unrelated authored groups remain under the editor's control.
+export function activeProductGroups(groups: Landing['navigation']['productGroups'], layout?: readonly { section: string; enabled: boolean }[]): Landing['navigation']['productGroups'] {
+  const target = (href: string) => href.startsWith('/#') ? href.slice(1) : href.replace(/\/$/, '');
+  const active = groups.map((group) => ({
+    ...group,
+    links: activeLandingLinks(group.links, layout).filter((link) => target(link.href) !== '#workspace'),
+  })).filter((group) => group.links.length);
+  const workspace = active.find((group) => group.links.some((link) =>
+    ['#features', '/remote', '/mobile-app'].includes(target(link.href))));
+  const hasMobile = active.some((group) => group.links.some((link) => target(link.href) === '/mobile-app'));
+  if (workspace && !hasMobile) workspace.links.push({ label: 'Mobile App', href: '/mobile-app/' });
+
+  const featureGroup = active.findIndex((group) => group.links.some((link) => target(link.href) === '#features'));
+  if (featureGroup !== -1) {
+    const [group] = active.splice(featureGroup, 1);
+    const feature = group.links.findIndex((link) => target(link.href) === '#features');
+    group.links.unshift(...group.links.splice(feature, 1));
+    active.unshift(group);
+  }
+  return active;
+}

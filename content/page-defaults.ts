@@ -26,8 +26,9 @@ export const pageDefaults = {
     showHelp: true, help: { text: 'Need a hand getting started?', label: 'Read the documentation', href: 'https://docs.lomi.dev' },
   },
   remote: {
-    seo: { title: 'lomi remote | A host for your workspace', description: 'Get the lomi remote installation command for macOS, Linux or Windows. A native host in development for your computer or server.' },
-    title: 'Get lomi remote.', description: [{ text: 'Run a workspace host on your computer or server.' }, { text: 'Lomi Remote is still in development.' }],
+    seo: { title: 'Lomi Remote | Lomi', description: 'Lomi Remote is an upcoming CLI host for your workspaces and terminals. Join the newsletter for launch news about macOS, Windows and Linux.' },
+    title: 'Lomi Remote.', description: [{ text: 'Your workspaces and terminals, ready for another screen.' }, { text: 'Coming soon for your computer or server.' }],
+    // Retained for existing CMS documents; launch pages never render installer controls.
     installerTitle: 'Install Lomi Remote CLI', systemLabel: 'Operating system',
     platforms: { unix: { label: 'macOS / Linux', command: 'curl -fsSL https://lomi.dev/download/remote | bash' }, windows: { label: 'Windows', command: 'Invoke-RestMethod "https://lomi.dev/download/remote.ps1" | Invoke-Expression' } },
     commandAriaLabel: '{platform} installation command. Scroll to read the full command.', copyAriaLabel: 'Copy {platform} install command', manualCopy: 'Select the command and copy it manually.',

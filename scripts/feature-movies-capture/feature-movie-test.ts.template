@@ -1,0 +1,84 @@
+import { api } from "./api";
+import { loadedEditor } from "./editor-service";
+import { runningTerminal } from "./terminal-runtime";
+import { retainedChatIds } from "./chat/chat-service";
+import { getChat } from "./chat/chat-runtime";
+
+type CaptureControl = {
+  root: string;
+  dialogPath?: string;
+  browserUrl?: string;
+  chatFixture?: boolean;
+};
+
+declare global {
+  interface Window {
+    __lomiFeatureMovie?: {
+      api: typeof api;
+      terminalInput: (paneId: string, value: string) => void;
+      terminalStatus: (paneId: string) => string | undefined;
+      dialogPath: (intent: string) => string | undefined;
+      setEditorText: (root: string, relative: string, value: string) => void;
+      chatConversationIds: () => string[];
+      prepareChatFixture: () => Promise<void>;
+      browserEval: (id: string, script: string) => Promise<unknown>;
+    };
+  }
+}
+
+export function installFeatureMovie(control: CaptureControl) {
+  window.__lomiFeatureMovie = {
+    api,
+    terminalInput(paneId, value) {
+      const runtime = runningTerminal(paneId);
+      if (!runtime) throw new Error(`Terminal ${paneId} is not mounted.`);
+      runtime.terminal.input(value);
+    },
+    terminalStatus(paneId) {
+      return runningTerminal(paneId)?.getSnapshot().status;
+    },
+    dialogPath(intent) {
+      return intent === "workspace" ? control.dialogPath : undefined;
+    },
+    setEditorText(root, relative, value) {
+      const document = loadedEditor({
+        type: "file",
+        id: "feature-movie-file",
+        title: relative.split("/").at(-1) ?? relative,
+        root,
+        relative,
+      });
+      const view = (document as any)?.view;
+      if (!document || !view)
+        throw new Error(`Editor ${relative} is not mounted.`);
+      view.dispatch({
+        changes: { from: 0, to: view.state.doc.length, insert: value },
+      });
+      view.focus();
+    },
+    chatConversationIds: () => [...retainedChatIds()],
+    async prepareChatFixture() {
+      if (!control.chatFixture) return;
+      const id = [...retainedChatIds()][0];
+      if (!id) throw new Error("The Chat AI conversation is not open.");
+      const runtime = getChat(id);
+      await (runtime as any).ready;
+      await runtime.refreshPreferences();
+      const loaded = runtime.snapshot.loaded;
+      if (!loaded) throw new Error("The Chat AI conversation is unavailable.");
+      if (loaded.conversation.config.model !== "feature-demo")
+        await runtime.configure({
+          ...loaded.conversation.config,
+          connectionId: "native-fixture",
+          model: "feature-demo",
+          configured: true,
+        });
+    },
+    browserEval(id, script) {
+      return api("plugin_smoke_result", {
+        stage: "feature-movie-browser-eval",
+        data: { id, script },
+      });
+    },
+  };
+}
