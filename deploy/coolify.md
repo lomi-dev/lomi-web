@@ -2,8 +2,9 @@
 
 Deploy this repository as two Dockerfile applications in the Lomi production
 environment. Both builds use the repository root as their build context and
-Node.js 22 with Bun 1.3.14. The website is static; Payload runs continuously and
-keeps its SQLite database and uploaded media on one persistent disk.
+Node.js 22. The website installer uses Bun 1.4.4; Payload uses Bun 1.3.14.
+The website is static; Payload runs continuously and keeps its SQLite
+database and uploaded media on one persistent disk.
 
 | Setting | Website | Payload CMS |
 | --- | --- | --- |
@@ -26,6 +27,13 @@ updates)** so Coolify stops the old process before starting its replacement.
 The SQLite migration and CMS scheduler must never overlap another CMS instance.
 CMS restarts briefly interrupt admin and media requests; the static website
 continues serving from its separate container.
+
+The website keeps a frozen lockfile with libc metadata for Linux native
+packages. Its Bookworm builder explicitly selects glibc and uses Bun's
+`copyfile` backend to avoid cache hardlinks during container installation.
+Keep optional dependencies enabled: Astro needs Sharp's native packages for
+image optimization. Use the website's pinned Bun version when editing its
+lockfile so this platform metadata is preserved.
 
 Keep Coolify's **www redirect** set to **No redirect** (`redirect: both`):
 Nginx owns the permanent www-to-apex fallback. The Cloudflare website redirect
