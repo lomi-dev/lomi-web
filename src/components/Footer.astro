@@ -27,7 +27,17 @@ const groups = [
     ],
   },
 ];
-const socials = content.socials.filter(({ href }) => {
+// Upgrade the original CMS platform-homepage placeholders to Lomi's profiles.
+const socials = (content.socials.length ? content.socials : editorDefaults.footer.socials).map((social) => {
+  const profile = editorDefaults.footer.socials.find(({ icon }) => icon === social.icon);
+  if (!profile) return social;
+  try {
+    const url = new URL(social.href);
+    if (url.protocol === 'https:' && url.hostname === new URL(profile.href).hostname
+      && url.pathname.replace(/\/+$/, '') === '') return { ...social, href: profile.href };
+  } catch { /* Invalid links are excluded below. */ }
+  return social;
+}).filter(({ href }) => {
   try {
     const url = new URL(href);
     return url.protocol === 'https:' && url.pathname.replace(/\/+$/, '').length > 0;

@@ -17,7 +17,7 @@ export const editorDefaults = {
     ],
   },
   footer: {
-    socials: [{ label: 'YouTube', icon: 'youtube', href: 'https://www.youtube.com/' }, { label: 'X', icon: 'x', href: 'https://x.com/' }, { label: 'LinkedIn', icon: 'linkedin', href: 'https://www.linkedin.com/' }, { label: 'TikTok', icon: 'tiktok', href: 'https://www.tiktok.com/' }],
+    socials: [{ label: 'LinkedIn', icon: 'linkedin', href: 'https://www.linkedin.com/company/lomidev/' }, { label: 'YouTube', icon: 'youtube', href: 'https://www.youtube.com/@lomidev' }],
     licenseHref: 'https://github.com/lomi-dev/lomi/blob/main/LICENSE', copyrightLabel: '© {year} lomi', cookieSettingsLabel: 'Cookie settings', ariaLabel: 'lomi footer', contentAriaLabel: 'Footer content', navigationAriaLabel: 'Footer navigation', socialsAriaLabel: 'Social media',
   },
   newsletter: {
