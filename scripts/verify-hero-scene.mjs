@@ -8,7 +8,31 @@ const browserType = { chromium, firefox, webkit }[process.env.VERIFY_BROWSER || 
 if (!browserType) throw new Error(`Unknown VERIFY_BROWSER: ${process.env.VERIFY_BROWSER}`);
 const browser = await browserType.launch();
 const errors = [];
-const widths = [320, 390, 640, 768, 1024, 1080, 1200, 1440, 1920];
+const viewports = [
+  { width: 320, height: 568 },
+  { width: 320, height: 480 },
+  { width: 360, height: 568 },
+  { width: 360, height: 640 },
+  { width: 375, height: 667 },
+  { width: 390, height: 844 },
+  { width: 430, height: 932 },
+  { width: 768, height: 1024 },
+  { width: 1024, height: 1366 },
+  { width: 560, height: 315 },
+  { width: 568, height: 320 },
+  { width: 640, height: 360 },
+  { width: 844, height: 390 },
+  { width: 1024, height: 576 },
+  { width: 560, height: 600 },
+  { width: 1280, height: 720 },
+  { width: 1366, height: 768 },
+  { width: 1440, height: 810 },
+  { width: 1536, height: 864 },
+  { width: 1600, height: 900 },
+  { width: 1920, height: 1080 },
+  { width: 2560, height: 1440 },
+  { width: 3840, height: 2160 },
+];
 const wallpaperAsset = /clouds/i;
 const productAsset = /laptop-concrete/i;
 await mkdir('artifacts/hero-scene', { recursive: true });
@@ -203,20 +227,38 @@ async function rects(page) {
       const { x, y, width, height, right, bottom } = element.getBoundingClientRect();
       return { x, y, width, height, right, bottom };
     };
+    const header = bounds('.site-header');
+    const features = bounds('#features');
+    const workspaceContainer = document.querySelector('.hero-desktop');
+    const overflowing = ['section.hero', '.hero-copy', '#hero-title', '.hero-primary', '.hero-secondary', '#workspace'].map((selector) => {
+      const element = document.querySelector(selector);
+      const style = getComputedStyle(element);
+      return {
+        selector,
+        extraX: element.scrollWidth - element.clientWidth,
+        extraY: element.scrollHeight - element.clientHeight,
+        overflowX: style.overflowX,
+        overflowY: style.overflowY,
+      };
+    });
     return {
-      viewport: innerWidth,
+      viewport: { width: innerWidth, height: innerHeight },
       document: document.documentElement.scrollWidth,
       hero: bounds('section.hero'),
+      features,
+      header,
       copy: bounds('.hero-copy'),
       heading: bounds('#hero-title'),
+      headingLines: Array.from(document.querySelectorAll('#hero-title > span'), (line) => {
+        const { x, y, width, height, right, bottom } = line.getBoundingClientRect();
+        return { x, y, width, height, right, bottom };
+      }),
       primary: bounds('.hero-primary'),
       secondary: bounds('.hero-secondary'),
       product: bounds('#workspace'),
       image: bounds('#workspace img'),
-      overflow: ['section.hero', '.hero-copy'].map((selector) => {
-        const element = document.querySelector(selector);
-        return { selector, extra: element.scrollWidth - element.clientWidth };
-      }),
+      showcasePosition: getComputedStyle(workspaceContainer).position,
+      overflowing,
     };
   });
 }
@@ -277,28 +319,49 @@ function polygonIntersectsRect(polygon, rect) {
   });
 }
 
-async function assertResponsiveLayout(page, width) {
-  await page.setViewportSize({ width, height: width < 768 ? 1000 : 1100 });
+function expectedSideBySide({ width, height }) {
+  return (width >= 900 && width / height >= 4 / 3) || (width >= 560 && width > height && height <= 600);
+}
+
+async function assertResponsiveLayout(page, viewport, { capture = true } = {}) {
+  const { width, height } = viewport;
+  const label = `${width}x${height}`;
+  await page.setViewportSize(viewport);
   const layout = await rects(page);
   const screen = await projectedScreenGeometry(page);
-  expect(layout.document, `${width}px: no horizontal page overflow`).toBe(layout.viewport);
+  expect(layout.viewport, `${label}: viewport dimensions applied`).toEqual(viewport);
+  expect(layout.document, `${label}: no horizontal page overflow`).toBe(width);
+  expect(layout.hero.y, `${label}: hero starts at viewport top`).toBeCloseTo(0, 0);
+  expect(layout.hero.height, `${label}: default hero fills the viewport`).toBeGreaterThanOrEqual(height - 1);
+  expect(layout.hero.height, `${label}: default hero does not grow past the viewport`).toBeLessThanOrEqual(height + 1);
+  expect(layout.features.y, `${label}: next section starts at viewport bottom`).toBeGreaterThanOrEqual(height - 1);
+  expect(layout.features.y, `${label}: next section starts at viewport bottom`).toBeLessThanOrEqual(height + 1);
+  expect(Math.abs(layout.product.bottom - layout.hero.bottom), `${label}: laptop is grounded at the hero bottom`).toBeLessThanOrEqual(1);
+  expect(layout.copy.y, `${label}: hero copy clears the fixed header`).toBeGreaterThanOrEqual(layout.header.bottom - 1);
+  const sideBySide = expectedSideBySide(viewport);
+  expect(layout.showcasePosition, `${label}: expected ${sideBySide ? 'side-by-side' : 'stacked'} layout`).toBe(sideBySide ? 'absolute' : 'relative');
   for (const [name, box] of Object.entries({
     copy: layout.copy,
     heading: layout.heading,
     primary: layout.primary,
     secondary: layout.secondary,
-  })) assertWithin(box, layout.hero, `${width}px ${name}`);
-  assertWithin(screen, layout.hero, `${width}px projected laptop screen`);
-  for (const [name, copyArea] of [['copy', layout.copy], ['primary CTA', layout.primary], ['secondary CTA', layout.secondary]]) {
-    expect(polygonIntersectsRect(screen.points, copyArea), `${width}px: projected laptop screen does not cover ${name}`).toBe(false);
+    workspace: layout.product,
+    'laptop image': layout.image,
+  })) assertWithin(box, layout.hero, `${label} ${name}`);
+  layout.headingLines.forEach((line, index) => assertWithin(line, layout.heading, `${label} heading line ${index + 1}`));
+  assertWithin(screen, layout.hero, `${label} projected laptop screen`);
+  for (const [name, copyArea] of [['copy', layout.copy], ['heading', layout.heading], ['primary CTA', layout.primary], ['secondary CTA', layout.secondary]]) {
+    expect(polygonIntersectsRect(screen.points, copyArea), `${label}: projected laptop screen does not cover ${name}`).toBe(false);
   }
-  layout.overflow.forEach(({ selector, extra }) => expect(extra, `${width}px: ${selector} contents fit their box`).toBeLessThanOrEqual(1));
-  expect(layout.product.width, `${width}px: laptop showcase remains legible`).toBeGreaterThan(220);
-  if (width < 1200) {
-    expect(layout.product.width, `${width}px: compact laptop stays at or below 900px`).toBeLessThanOrEqual(901);
-    expect(layout.product.x, `${width}px: compact laptop stays inside the hero`).toBeGreaterThanOrEqual(layout.hero.x - 1);
-    expect(layout.product.right, `${width}px: compact laptop stays inside the hero`).toBeLessThanOrEqual(layout.hero.right + 1);
-    expect(layout.product.y, `${width}px: compact laptop follows the copy`).toBeGreaterThanOrEqual(layout.copy.bottom - 1);
+  layout.overflowing.forEach(({ selector, extraX, extraY, overflowY }) => {
+    expect(extraX, `${label}: ${selector} contents do not clip horizontally`).toBeLessThanOrEqual(1);
+    if (overflowY !== 'visible') expect(extraY, `${label}: ${selector} contents do not clip vertically`).toBeLessThanOrEqual(1);
+  });
+  expect(layout.product.width, `${label}: laptop showcase remains legible`).toBeGreaterThan(220);
+  if (!sideBySide) {
+    expect(layout.product.x, `${label}: stacked laptop stays inside the hero`).toBeGreaterThanOrEqual(layout.hero.x - 1);
+    expect(layout.product.right, `${label}: stacked laptop stays inside the hero`).toBeLessThanOrEqual(layout.hero.right + 1);
+    expect(layout.product.y, `${label}: stacked laptop follows the copy`).toBeGreaterThanOrEqual(layout.copy.bottom - 1);
     const transforms = await page.locator('#workspace').evaluate((element) => {
       const hero = document.querySelector('section.hero');
       const active = [];
@@ -308,11 +371,57 @@ async function assertResponsiveLayout(page, width) {
       }
       return active;
     });
-    expect(transforms, `${width}px: compact laptop has no offset rotation`).toEqual([]);
+    expect(transforms, `${label}: stacked laptop has no offset rotation`).toEqual([]);
   }
-  if ([320, 390, 1080, 1440, 1920].includes(width)) {
-    await page.locator('section.hero').screenshot({ path: `artifacts/hero-scene/${browserType.name()}-${width}.png`, animations: 'disabled' });
+  if (capture && ['320x568', '390x844', '640x360', '1024x576', '1440x810', '1920x1080'].includes(label)) {
+    await page.locator('section.hero').screenshot({ path: `artifacts/hero-scene/${browserType.name()}-${label}.png`, animations: 'disabled' });
   }
+}
+
+async function assertAccessibleGrowth(page) {
+  const viewport = { width: 320, height: 240 };
+  const label = '320x240 long-copy fallback';
+  await page.setViewportSize(viewport);
+  await page.evaluate(() => {
+    const heading = document.querySelector('#hero-title');
+    const description = document.querySelector('.hero-copy > p');
+    if (heading) heading.textContent = 'Your agents. One home base. A workspace built for every project and every team.';
+    if (description) description.textContent = `${description.textContent} ${'Keep your project files, editor, terminals, source control and local preview together while your agents work. '.repeat(7)}`;
+  });
+
+  const layout = await rects(page);
+  const screen = await projectedScreenGeometry(page);
+  expect(layout.viewport, `${label}: short viewport dimensions applied`).toEqual(viewport);
+  expect(layout.document, `${label}: no horizontal page overflow`).toBe(viewport.width);
+  expect(layout.hero.height, `${label}: hero grows for readable content`).toBeGreaterThan(viewport.height + 1);
+  expect(layout.features.y, `${label}: following content moves below the grown hero`).toBeGreaterThan(layout.viewport.height);
+  expect(Math.abs(layout.product.bottom - layout.hero.bottom), `${label}: laptop is grounded at the grown hero bottom`).toBeLessThanOrEqual(1);
+  expect(layout.copy.y, `${label}: hero copy clears the fixed header`).toBeGreaterThanOrEqual(layout.header.bottom - 1);
+  for (const [name, box] of Object.entries({
+    copy: layout.copy,
+    heading: layout.heading,
+    primary: layout.primary,
+    secondary: layout.secondary,
+    workspace: layout.product,
+    'laptop image': layout.image,
+  })) assertWithin(box, layout.hero, `${label} ${name}`);
+  layout.headingLines.forEach((line, index) => assertWithin(line, layout.heading, `${label} heading line ${index + 1}`));
+  assertWithin(screen, layout.hero, `${label} projected laptop screen`);
+  for (const [name, copyArea] of [['copy', layout.copy], ['heading', layout.heading], ['primary CTA', layout.primary], ['secondary CTA', layout.secondary]]) {
+    expect(polygonIntersectsRect(screen.points, copyArea), `${label}: projected laptop screen does not cover ${name}`).toBe(false);
+  }
+  layout.overflowing.forEach(({ selector, extraX, extraY, overflowY }) => {
+    expect(extraX, `${label}: ${selector} contents do not clip horizontally`).toBeLessThanOrEqual(1);
+    if (overflowY !== 'visible') expect(extraY, `${label}: ${selector} contents do not clip vertically`).toBeLessThanOrEqual(1);
+  });
+
+  const scrollHeight = await page.evaluate(() => document.documentElement.scrollHeight);
+  expect(scrollHeight, `${label}: page has scrollable content`).toBeGreaterThan(viewport.height);
+  const primary = page.locator('.hero-primary');
+  await primary.scrollIntoViewIfNeeded();
+  await expect(primary, `${label}: primary action remains reachable while scrolling`).toBeInViewport({ ratio: 1 });
+  const scrolled = await page.evaluate(() => window.scrollY);
+  expect(scrolled, `${label}: reaching the primary action scrolls the page`).toBeGreaterThan(0);
 }
 
 try {
@@ -331,15 +440,16 @@ try {
     }
   }
 
-  for (const width of widths) await assertResponsiveLayout(page, width);
+  for (const viewport of viewports) await assertResponsiveLayout(page, viewport);
+  await assertAccessibleGrowth(page);
 
-  await page.setViewportSize({ width: 390, height: 1000 });
+  await page.setViewportSize({ width: 390, height: 844 });
   const mobileAxe = await new AxeBuilder({ page }).include('.hero').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
-  expect(mobileAxe.violations, 'Hero accessibility at 390px').toEqual([]);
+  expect(mobileAxe.violations, 'Hero accessibility at 390x844').toEqual([]);
 
-  await page.setViewportSize({ width: 1440, height: 1100 });
+  await page.setViewportSize({ width: 1440, height: 810 });
   const desktopAxe = await new AxeBuilder({ page }).include('.hero').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
-  expect(desktopAxe.violations, 'Hero accessibility at 1440px').toEqual([]);
+  expect(desktopAxe.violations, 'Hero accessibility at 1440x810').toEqual([]);
   const secondary = page.locator('.hero-secondary');
   await secondary.focus();
   await expect(secondary, 'Newsletter anchor is keyboard focusable').toBeFocused();
@@ -352,10 +462,13 @@ try {
   await expect(direct.page.locator('#newsletter')).toBeInViewport();
   await direct.context.close();
 
-  const noJs = await open({ javaScriptEnabled: false, viewport: { width: 390, height: 1000 } });
+  const noJs = await open({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
   const noJsSignature = await assertHeroPage(noJs, 'no-JS');
   expect(noJsSignature, 'Server-rendered hero matches the interactive hero').toEqual(signature);
   expect(noJs.pageErrors, 'No-JS hero has no runtime errors').toEqual([]);
+  await assertResponsiveLayout(noJs.page, { width: 320, height: 568 }, { capture: false });
+  await assertResponsiveLayout(noJs.page, { width: 390, height: 844 }, { capture: false });
+  await noJs.page.setViewportSize({ width: 390, height: 844 });
   const noJsSecondary = noJs.page.locator('.hero-secondary');
   await noJsSecondary.click();
   await expect(noJs.page).toHaveURL(new URL('#newsletter', url).href);
@@ -363,7 +476,7 @@ try {
   await noJs.context.close();
 
   expect(errors, 'Hero/query/no-JS scenarios have no page errors').toEqual([]);
-  console.log(`Passed (${browserType.name()}): approved SSR cloud hero and concrete laptop/screen assets, unchanged CMS copy/actions for base and ?id=15/1/all, decoded projected screen with visible screenshot pixels, no hero scripts/canvas/media/agent requests or lab UI, nine widths with unclipped copy/CTAs and projected screen, desktop screen/copy separation, compact unrotated laptop flow, keyboard/native newsletter anchors, no-JS parity, and axe at 390/1440.`);
+  console.log(`Passed (${browserType.name()}): approved SSR cloud hero and concrete laptop/screen assets, unchanged CMS copy/actions for base and ?id=15/1/all, decoded projected screen with visible screenshot pixels, no hero scripts/canvas/media/agent requests or lab UI, ${viewports.length} width/height viewports with full-height hero and unclipped content, expected stacked/side-by-side layouts, short-screen long-copy growth and scrolling, keyboard/native newsletter anchors, no-JS parity, and axe at 390x844/1440x810.`);
 } finally {
   await browser.close();
 }

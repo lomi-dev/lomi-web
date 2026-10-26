@@ -11,8 +11,8 @@ const secondary = activeLandingLinks([{ label: content.secondaryLabel, href: con
   {secondary && <a class="hero-secondary" href={secondary.href}>{secondary.label}</a>}
 </div>
 <style>
-  .hero-actions { display:flex; align-items:center; flex-wrap:wrap; gap:12px; }
-  .hero-primary, .hero-secondary { display:inline-flex; align-items:center; justify-content:center; gap:18px; min-height:48px; padding:0 20px; font-size:14px; line-height:1.2; font-weight:500; border-radius:var(--hero-button-radius, 4px); }
+  .hero-actions { display:flex; align-items:center; flex-wrap:wrap; gap:var(--hero-actions-gap,12px); }
+  .hero-primary, .hero-secondary { display:inline-flex; align-items:center; justify-content:center; gap:var(--hero-action-gap,18px); min-height:var(--hero-action-height,48px); padding:0 var(--hero-action-padding,20px); font-size:var(--hero-action-font-size,14px); line-height:1.2; font-weight:500; border-radius:var(--hero-button-radius, 4px); }
   .hero-primary { color:var(--hero-button-ink, #101410); background:var(--hero-button-fill, var(--color-lime)); border:1px solid var(--hero-button-fill, var(--color-lime)); }
   .hero-secondary { color:inherit; border:1px solid var(--hero-button-line, #cdd3c9); background:var(--hero-secondary-fill, rgb(255 255 255 / .7)); }
   @media (hover:hover) { .hero-primary:hover { filter:brightness(.96); } .hero-secondary:hover { background:#f0f3ea; } }

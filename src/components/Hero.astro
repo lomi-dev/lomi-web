@@ -20,96 +20,85 @@ const { content, layout } = Astro.props;
       <p>{content.description}</p>
       <HeroActions content={content} layout={layout} class="desktop-actions" />
     </div>
+    <div class="hero-desktop"><WorkspaceDeck content={content} /></div>
   </div>
-  <div class="hero-desktop"><WorkspaceDeck content={content} /></div>
 </section>
 
 <style>
   .desktop-hero {
-    --scroll-surface-color: #f6f8f4;
-    --hero-button-radius: 4px;
-    --hero-button-fill: #c8ff3d;
-    --hero-button-ink: #101410;
-    --hero-button-line: #cbd2c6;
-    position: relative;
-    min-height: 960px;
-    overflow: clip;
-    isolation: isolate;
-    background: #f6f8f4;
-    color: #101410;
+    --scroll-surface-color:#f6f8f4;
+    --hero-viewport:100vh;
+    --hero-button-radius:4px;
+    --hero-button-fill:#c8ff3d;
+    --hero-button-ink:#101410;
+    --hero-button-line:#cbd2c6;
+    --hero-gutter:clamp(20px,2.8vw,28px);
+    position:relative;
+    min-height:var(--hero-viewport);
+    overflow:clip;
+    isolation:isolate;
+    background:#f6f8f4;
+    color:#101410;
   }
-  .hero-wallpaper { position: absolute; z-index: -1; inset: 0; overflow: hidden; background: #f6f8f4; }
-  .hero-wallpaper::after {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(105deg, rgb(248 250 246 / .88) 0%, rgb(248 250 246 / .72) 40%, rgb(248 250 246 / .52) 100%);
-    content: '';
-  }
-  :global(.hero-wallpaper picture),
-  :global(.hero-wallpaper img) { display: block; width: 100%; height: 100%; }
-  :global(.hero-wallpaper img) { object-fit: cover; object-position: center 46%; filter: saturate(.55); }
+  @supports(height:100dvh) { .desktop-hero { --hero-viewport:100dvh; } }
+  .hero-wallpaper { position:absolute; z-index:-1; inset:0; overflow:hidden; background:#f6f8f4; }
+  .hero-wallpaper::after { position:absolute; inset:0; background:linear-gradient(105deg,rgb(248 250 246 / .88) 0%,rgb(248 250 246 / .72) 40%,rgb(248 250 246 / .52) 100%); content:''; }
+  :global(.hero-wallpaper picture), :global(.hero-wallpaper img) { display:block; width:100%; height:100%; }
+  :global(.hero-wallpaper img) { object-fit:cover; object-position:center 46%; filter:saturate(.55); }
   .hero-layout {
-    box-sizing: border-box;
-    position: relative;
-    display: grid;
-    grid-template-columns: minmax(280px, .72fr) minmax(620px, 1.28fr);
-    align-items: start;
-    column-gap: clamp(42px, 6vw, 88px);
-    width: min(1312px, calc(100% - 96px));
-    min-height: 960px;
-    margin-inline: auto;
-    padding: 166px 0 82px;
+    position:relative;
+    display:grid;
+    grid-template-columns:minmax(0,1fr);
+    grid-template-rows:minmax(min-content,1.5fr) minmax(100px,1fr);
+    row-gap:clamp(8px,calc(var(--hero-viewport) * .02),20px);
+    width:100%;
+    min-height:var(--hero-viewport);
+    padding-top:calc(var(--site-header-height) + clamp(16px,calc(var(--hero-viewport) * .03),32px));
   }
-  .hero-copy {
-    grid-column: 1;
-    position: relative;
-    z-index: 2;
-    max-width: 420px;
-    padding-top: 22px;
-  }
-  .desktop-hero h1 {
-    margin: 0;
-    font-size: clamp(52px, 5.8vw, 78px);
-    font-weight: 520;
-    letter-spacing: -.076em;
-    line-height: .98;
-    text-wrap: balance;
-  }
-  .desktop-hero h1 span { display: block; }
-  .desktop-hero h1 span + span { margin-top: .11em; }
-  .hero-copy > p {
-    max-width: 385px;
-    margin: 23px 0 0;
-    color: #505a51;
-    font-size: 15px;
-    line-height: 1.7;
-    text-wrap: pretty;
-  }
-  .desktop-actions { margin-top: 26px; }
-  .hero-desktop {
-    position: absolute;
-    z-index: 1;
-    right: 0;
-    bottom: 0;
-    width: min(1320px, 82vw);
-  }
-  .desktop-hero :focus-visible { outline: 2px solid #345600; outline-offset: 4px; }
-  @media (max-width: 1199px) {
-    .desktop-hero { min-height: 0; }
-    .hero-layout {
-      grid-template-columns: minmax(0, 1fr);
-      width: min(100% - 56px, 780px);
-      min-height: 0;
-      padding: 150px 0 0;
+  .hero-copy { position:relative; z-index:2; align-self:center; justify-self:center; width:min(780px,calc(100% - 2 * var(--hero-gutter))); min-width:0; overflow-wrap:anywhere; }
+  .desktop-hero h1 { max-width:580px; margin:0; font-size:clamp(36px,min(11vw,calc(var(--hero-viewport) * .075)),72px); font-weight:520; letter-spacing:-.076em; line-height:.98; text-wrap:balance; }
+  .desktop-hero h1 span { display:block; }
+  .desktop-hero h1 span + span { margin-top:.11em; }
+  .hero-copy > p { max-width:385px; margin:17px 0 0; color:#505a51; font-size:15px; line-height:1.7; text-wrap:pretty; }
+  .desktop-actions { margin-top:20px; }
+  .hero-desktop { position:relative; z-index:1; align-self:stretch; justify-self:center; width:min(100%,1100px); height:100%; min-height:100px; contain:size; }
+  .hero-desktop :global(.workspace-showcase) { height:100%; aspect-ratio:auto; }
+  .desktop-hero :focus-visible { outline:2px solid #345600; outline-offset:4px; }
+
+  @media(min-width:900px) and (min-aspect-ratio:4/3), (min-width:560px) and (max-height:600px) and (orientation:landscape) {
+    .desktop-hero {
+      --hero-gutter:max(48px,calc((100vw - 1312px)/2));
+      --hero-copy-width:clamp(280px,32vw,420px);
+      /* The visible screen starts 31.6% into the transparent device artwork. */
+      --hero-device-space:calc((100vw - var(--hero-gutter) - var(--hero-copy-width) - 24px)/.6842);
     }
-    .hero-copy { grid-column: 1; max-width: 580px; padding-top: 0; }
-    .desktop-hero h1 { font-size: clamp(52px, 8vw, 72px); }
-    .hero-desktop { position: relative; right: auto; bottom: auto; width: min(100%, 900px); margin: 12px auto 0; }
+    .hero-layout { position:static; grid-template-columns:var(--hero-copy-width) minmax(0,1fr); grid-template-rows:auto; align-items:start; gap:0; width:min(1312px,calc(100% - 96px)); margin-inline:auto; padding:calc(var(--site-header-height) + clamp(24px,calc(var(--hero-viewport) * .1),116px)) 0 clamp(24px,calc(var(--hero-viewport) * .04),64px); }
+    .hero-copy { grid-column:1; align-self:start; justify-self:start; width:100%; max-width:420px; }
+    .desktop-hero h1 { font-size:clamp(36px,min(5.8vw,calc(var(--hero-viewport) * .09)),78px); }
+    .hero-copy > p { margin-top:clamp(16px,calc(var(--hero-viewport) * .024),23px); }
+    .desktop-actions { margin-top:clamp(18px,calc(var(--hero-viewport) * .027),26px); }
+    .hero-desktop { position:absolute; right:0; bottom:0; width:min(82vw,calc((var(--hero-viewport) - var(--site-header-height) - 16px) * 1.5),var(--hero-device-space),1920px); height:auto; min-height:0; contain:none; }
+    .hero-desktop :global(.workspace-showcase) { height:auto; aspect-ratio:3/2; }
   }
-  @media (max-width: 620px) {
-    .hero-layout { width: calc(100% - 40px); padding: 142px 0 0; }
-    .desktop-hero h1 { font-size: clamp(48px, 13vw, 62px); }
-    .hero-copy > p { margin-top: 17px; font-size: 15px; }
-    .desktop-actions { margin-top: 20px; }
+  @media(min-width:560px) and (max-height:600px) and (orientation:landscape) {
+    .desktop-hero { --hero-action-height:44px; --hero-action-font-size:12px; --hero-action-padding:14px; --hero-action-gap:10px; --hero-actions-gap:10px; }
+    .hero-layout { padding-top:calc(var(--site-header-height) + clamp(16px,calc(var(--hero-viewport) * .04),24px)); padding-bottom:16px; }
+    .desktop-hero h1 { font-size:clamp(32px,min(5.8vw,calc(var(--hero-viewport) * .09)),54px); }
+    .hero-copy > p { margin-top:12px; font-size:13.5px; line-height:1.55; }
+    .desktop-actions { margin-top:16px; }
+  }
+  @media(min-width:560px) and (max-width:899px) and (max-height:600px) and (orientation:landscape) {
+    .desktop-hero { --hero-gutter:20px; }
+    .hero-layout { width:calc(100% - 40px); }
+  }
+  @media(max-width:374px) {
+    .desktop-hero { --hero-action-height:44px; --hero-action-font-size:13px; --hero-action-padding:12px; --hero-action-gap:10px; --hero-actions-gap:10px; }
+  }
+  @media(max-width:559px) and (max-height:500px) {
+    .hero-copy > p { margin-top:12px; font-size:14px; line-height:1.6; }
+    .desktop-actions { margin-top:16px; }
+  }
+  @media(min-width:900px) and (min-aspect-ratio:4/3) and (min-height:1600px) {
+    .hero-copy { align-self:center; }
   }
 </style>

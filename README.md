@@ -113,6 +113,9 @@ wallpaper and the previous black laptop, with the Lomi workspace projected
 into its display at build time. It uses static HTML, CSS, and SVG and works
 without JavaScript. The agent dock has been removed.
 There is no variant picker or query-driven gallery.
+The hero fills the viewport with `100dvh` (`100vh` fallback), including the
+fixed header. It adapts its layout, typography and laptop size to both window
+dimensions. Long text and very short screens retain natural page scrolling.
 
 See [hero composition and verification](docs/hero-scene.md) for its layout,
 assets, CMS boundaries, and focused browser checks.

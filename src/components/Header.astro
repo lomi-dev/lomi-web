@@ -328,7 +328,7 @@ const action = activeLandingLinks([{ label: content.actionLabel, href: content.a
   }
   @media (max-width: 480px) {
     :global(html:has(.site-header:not([data-navigation-ready]))) { --site-header-height: 88px; }
-    :global(html:has(.site-header:not([data-navigation-ready])) main) { margin-block-start: max(0px, calc(var(--site-header-height) - 64px)); }
+    :global(html:has(.site-header:not([data-navigation-ready])) main:not(:has(> .hero:first-child))) { margin-block-start: max(0px, calc(var(--site-header-height) - 64px)); }
   }
   @media (max-width: 360px) {
     :global(html:has(.site-header:not([data-navigation-ready]))) { --site-header-height: 132px; }

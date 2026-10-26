@@ -16,12 +16,29 @@ plinth. There is one hero at `/`; old `?id=` links show the same composition.
 - Background: `src/assets/clouds.png`, muted and covered by a pale overlay.
 - Actions: `src/components/hero/Actions.astro`, using the CMS destinations.
 
-On desktop, the device is grounded at the bottom-right of the hero so the
-concrete base ends at the section edge. The transparent artwork can extend
-behind empty layout space, while its visible screen stays clear of the copy
-and actions. Below 1200px it follows the text in normal flow, at up to 900px
-wide. The phone layout preserves the headline and action spacing and shows
-the complete laptop above the next section.
+The hero has a viewport-height minimum (`100dvh`, with `100vh` fallback),
+including the fixed header. With the default copy it fills one complete
+screen: Features begins immediately below the viewport. Width and height
+both determine the type scale, spacing and available device area.
+
+A wide layout is used from 900px when the viewport is at least 4:3. Short
+landscape windows from 560px wide and up to 600px high also use that layout.
+The copy stays left, and the laptop is grounded at the bottom-right. Device
+width is limited by available height below the header and the screen's
+horizontal clearance from the copy, with a 1920px maximum. The transparent
+artwork can extend into empty space while its visible screen stays clear.
+
+Portrait and square windows use two grid rows. The text keeps its natural
+minimum height; the device receives the remaining space and stays grounded
+at the hero's lower edge. Size containment prevents the source image's
+intrinsic dimensions from forcing a taller section. The photo uses bottom
+alignment with `object-fit: contain`; the projected SVG uses the corresponding
+`xMidYMax meet` alignment so its screen remains attached at every ratio.
+
+Height remains a minimum rather than a fixed clipping boundary. Very short
+windows, enlarged text or long CMS copy can grow the scene naturally, keeping
+all text and actions readable through normal page scrolling. No inner hero
+scroll region or JavaScript resize handler is needed.
 
 The complete scene is server-rendered with a single shared screen image.
 It requires no hero JavaScript, Canvas, WebGL, or animation loop. The device
@@ -42,5 +59,7 @@ layouts; this hero renders a static scene.
 Run `bun run build` and `bun run verify:hero-scene` with
 `VERIFY_URL=http://127.0.0.1:48740`. Use `VERIFY_BROWSER=webkit` for WebKit.
 Checks cover the actual device and screen assets, projection visibility,
-responsive copy and screen bounds, absence of the dock and gallery,
+two-dimensional viewport coverage including 16:9, portrait and short landscape,
+viewport-height section boundaries, responsive copy/screen bounds and device
+grounding, readable overflow with long text, absence of the dock and gallery,
 keyboard/native anchors, no-JS and reduced-motion rendering, and accessibility.

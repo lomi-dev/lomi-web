@@ -15,11 +15,11 @@ const mesh = buildScreenMesh();
 
 <figure class="workspace-showcase" id="workspace" role="img" aria-label={content.previewAlt}>
   <Picture src={laptop} alt="" aria-hidden="true" class="laptop-render" widths={[768, 1200, 1536]}
-    sizes="(min-width: 1610px) 1320px, (min-width: 1200px) 82vw, (min-width: 900px) 900px, 100vw"
+    sizes="(min-width: 900px) and (min-aspect-ratio: 4/3) min(82vw, calc((100vh - 88px) * 1.5), 1920px), (min-width: 560px) and (max-height: 600px) and (orientation: landscape) min(82vw, calc((100vh - 80px) * 1.5)), 100vw"
     formats={['webp']} quality={88} loading="eager" fetchpriority="high" />
   {/* Build-time affine tiles keep perspective identical across browsers. The
       single source image is shared by every tile and downloaded only once. */}
-  <svg class="laptop-display" viewBox="0 0 1536 1024" aria-hidden="true">
+  <svg class="laptop-display" viewBox="0 0 1536 1024" preserveAspectRatio="xMidYMax meet" aria-hidden="true">
     <defs>
       <image id="lomi-screen-capture" data-screen-source href={screen} width="900" height="562" preserveAspectRatio="xMidYMid slice" />
       <clipPath id="lomi-screen-bezel"><polygon points={screenOutline} /></clipPath>
@@ -41,6 +41,6 @@ const mesh = buildScreenMesh();
 <style>
   .workspace-showcase { position: relative; width: 100%; aspect-ratio: 3 / 2; margin: 0; isolation: isolate; }
   .workspace-showcase > :global(picture) { display: block; width: 100%; height: 100%; }
-  .workspace-showcase :global(.laptop-render) { display: block; width: 100%; height: 100%; object-fit: contain; }
+  .workspace-showcase :global(.laptop-render) { display: block; width: 100%; height: 100%; object-fit: contain; object-position: center bottom; }
   .laptop-display { position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden; pointer-events: none; }
 </style>
