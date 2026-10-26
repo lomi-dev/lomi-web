@@ -120,6 +120,14 @@ The [asset manifest](../public/cli/README.md) records every Iconify identifier,
 source URL and license. The SVG Logos and Simple Icons collections are CC0;
 theSVG and Tabler MIT notices are included beside the files.
 
+## Homepage update artwork
+
+The four temporary update cards reuse local assets: the original Lomi
+wordmark, `src/assets/product/workbench.png`, the native Git preview at
+`src/assets/product/demos/git-poster.webp`, and the versioned Lomi favicon.
+They are explicitly marked “Coming soon.” Published Devlogs replace them
+with uploaded thumbnails or the shared neutral media placeholder.
+
 ## Archived agent marks
 
 The selected desktop hero has no agent dock. Local SVG marks remain archived

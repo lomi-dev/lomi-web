@@ -33,6 +33,9 @@ The page includes:
 - A CLI compatibility list immediately after Features, with 15 desktop
   integrations, locally bundled Iconify marks and a final “And more” item.
   See [the CLI catalog and scope](docs/cli-compatibility.md).
+- A horizontal news and updates section before Newsletter. Four “Coming soon”
+  cards appear until the first Devlogs are published; then the latest six
+  recordings populate the section from the same CMS feed as `/devlog/`.
 - A current screenshot of the Lomi app in the hero, with project files, an
   editor and terminal panes. Feature cards/dialogs show matching animated
   captures from the app; Download has its own workspace overview, while
@@ -176,6 +179,8 @@ administrator initialization, persistent storage, domains, and automatic rebuild
 - `src/components/feature-gallery.ts`: dialog navigation, motion, and focus.
 - `src/components/CliCompatibility.astro` and `src/data/compatible-clis.ts`:
   the verified desktop CLI list, rendered directly after Features.
+- `src/components/HomeUpdates.astro` and `src/components/updates-carousel.ts`:
+  homepage Devlog cards, empty-state artwork and native carousel controls.
 - `src/components/NewsletterSection.astro`: the final homepage newsletter composition.
 - `src/components/NewsletterSignup.astro`: shared accessible signup markup and states.
 - `src/components/newsletter-signup.ts`: per-instance form state and request lifecycle.

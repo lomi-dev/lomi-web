@@ -4,15 +4,20 @@ import Header from '../components/Header.astro';
 import Hero from '../components/Hero.astro';
 import FeatureGallery from '../components/FeatureGallery.astro';
 import CliCompatibility from '../components/CliCompatibility.astro';
+import HomeUpdates from '../components/HomeUpdates.astro';
 import NewsletterSection from '../components/NewsletterSection.astro';
 import Footer from '../components/Footer.astro';
 import { activeLandingLinks } from '../data/navigation';
 import { loadLanding } from '../../content/load-landing';
+import { loadDevlogs } from '../../content/load-devlogs';
 
-const content = await loadLanding(import.meta.env.CMS_URL);
+const [content, episodes] = await Promise.all([loadLanding(import.meta.env.CMS_URL), loadDevlogs(import.meta.env.CMS_URL)]);
 const { hero, features, newsletter } = content;
 const publicLayout = content.layout.filter((row) => row.section !== 'roadmap');
 const startsWithHero = publicLayout.find((row) => row.enabled)?.section === 'hero';
+const sections: (typeof publicLayout[number]['section'] | 'updates')[] = publicLayout.filter((row) => row.enabled).map((row) => row.section);
+const newsletterPosition = sections.indexOf('newsletter');
+sections.splice(newsletterPosition < 0 ? sections.length : newsletterPosition, 0, 'updates');
 const heroSurface = '#f6f8f4';
 const footerContent = {
   ...content.footer,
@@ -26,8 +31,9 @@ const footerContent = {
   <Header content={content.navigation} site={content.site} layout={publicLayout} theme={startsWithHero ? 'light' : undefined} />
   <main id="main" class="home-main" tabindex="-1" data-scroll-surface style="--scroll-surface-color: var(--color-chalk)">
     {!publicLayout.some((row) => row.section === 'hero' && row.enabled) && <h1 class="sr-only">{content.seo.title}</h1>}
-    {publicLayout.filter((row) => row.enabled).map(({ section }) => section === 'hero' ? <Hero content={hero} layout={publicLayout} />
+    {sections.map((section) => section === 'hero' ? <Hero content={hero} layout={publicLayout} />
       : section === 'features' ? <><FeatureGallery content={features} placeholderLogo={content.site.brand.logo} /><CliCompatibility /></>
+      : section === 'updates' ? <HomeUpdates episodes={episodes} language={content.site.language} watchLabel={content.pages.devlog.watchLabel} placeholderLogo={content.site.brand.logo} />
       : section === 'newsletter' ? <NewsletterSection content={newsletter} /> : null)}
   </main>
   <Footer content={footerContent} site={content.site} layout={publicLayout} />

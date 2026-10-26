@@ -1,0 +1,126 @@
+---
+import { Picture } from 'astro:assets';
+import Icon from './Icon';
+import MediaPlaceholder from './MediaPlaceholder.astro';
+import { devlogWatchUrl, type Devlog } from '../../content/devlog-schema';
+import { resolveMedia, type MediaAsset } from '../../content/editor-schema';
+import wordmark from '../assets/lomi-wordmark.svg?raw';
+import workspace from '../assets/product/workbench.png';
+import git from '../assets/product/demos/git-poster.webp';
+
+interface Props { episodes: Devlog[]; language: string; watchLabel: string; placeholderLogo?: MediaAsset | null }
+const { episodes, language, watchLabel, placeholderLogo } = Astro.props;
+const latest = episodes.slice(0, 6);
+const brand = resolveMedia(placeholderLogo, import.meta.env.CMS_URL);
+let dateFormat: Intl.DateTimeFormat;
+try { dateFormat = new Intl.DateTimeFormat(language, { year:'numeric', month:'short', day:'numeric', timeZone:'UTC' }); }
+catch { dateFormat = new Intl.DateTimeFormat('en', { year:'numeric', month:'short', day:'numeric', timeZone:'UTC' }); }
+const placeholders = [
+  { art: 'brand', title: 'From the Lomi devlog', description: 'Notes and recordings from the development of Lomi.' },
+  { art: 'workspace', title: 'Inside the workspace', description: 'A closer look at the editor, terminals and browser working together.' },
+  { art: 'git', title: 'From terminal to commit', description: 'Everyday development, from the first command to the final diff.' },
+  { art: 'app', title: 'Building Lomi', description: 'New features, small improvements and the decisions behind them.' },
+];
+---
+
+<section id="updates" class="home-updates" data-home-updates data-scroll-surface aria-labelledby="updates-title">
+  <div class="updates-heading">
+    <h2 id="updates-title">Lomi news &amp; updates</h2>
+    <div class="updates-actions">
+      <div class="updates-buttons" data-updates-controls hidden>
+        <button type="button" data-updates-previous aria-label="Previous updates" aria-controls="updates-list" disabled><Icon name="arrow" width={20} height={20} /></button>
+        <button type="button" data-updates-next aria-label="Next updates" aria-controls="updates-list"><Icon name="arrow" width={20} height={20} /></button>
+      </div>
+      <a class="updates-all" href="/devlog/" data-updates-all>All devlogs<Icon name="arrow" width={16} height={16} /></a>
+    </div>
+  </div>
+
+  <ul id="updates-list" class="updates-rail" data-updates-rail tabindex="0" aria-label="Latest updates" role="list">
+    {latest.length ? latest.map((episode) => {
+      const thumbnail = resolveMedia(episode.thumbnail, import.meta.env.CMS_URL);
+      const titleId = `update-${episode.id}`;
+      return <li data-update-card>
+        <article class="update-card" data-update-episode={episode.id}>
+          <a class="update-link" href={devlogWatchUrl(episode.videoUrl)} aria-labelledby={titleId} aria-describedby={`${titleId}-watch`}>
+            <div class="update-cover">
+              {thumbnail ? <img src={thumbnail.url} alt={episode.thumbnailAlt || thumbnail.alt || ''} width={thumbnail.width ?? 1600} height={thumbnail.height ?? 900} loading="lazy" decoding="async" /> : <MediaPlaceholder logo={placeholderLogo} aspect="16 / 9" />}
+            </div>
+            <div class="update-copy">
+              <time datetime={episode.publishedAt}>{dateFormat.format(new Date(episode.publishedAt))}</time>
+              <h3 id={titleId}>{episode.title}</h3>
+              {episode.description && <p>{episode.description}</p>}
+              <span class="update-read" id={`${titleId}-watch`}>{watchLabel}<Icon name="diagonal" width={16} height={16} /></span>
+            </div>
+          </a>
+        </article>
+      </li>;
+    }) : placeholders.map((item) => <li data-update-card>
+      <article class="update-card" data-update-placeholder>
+        <div class:list={['update-cover', `update-art-${item.art}`]} aria-hidden="true">
+          {item.art === 'brand' ? <div class="update-wordmark">{brand ? <img src={brand.url} alt="" width={brand.width ?? 491} height={brand.height ?? 202} loading="lazy" /> : <Fragment set:html={wordmark} />}</div>
+            : item.art === 'workspace' ? <Picture src={workspace} alt="" widths={[480, 800]} formats={['webp']} sizes="(max-width: 600px) 82vw, 420px" loading="lazy" />
+            : item.art === 'git' ? <Picture src={git} alt="" widths={[480, 800]} formats={['webp']} sizes="(max-width: 600px) 82vw, 420px" loading="lazy" />
+            : <img class="update-app-icon" src="/icons/lomi-v1.3.svg" alt="" width="112" height="112" loading="lazy" />}
+        </div>
+        <div class="update-copy">
+          <span class="update-category">Devlog</span>
+          <h3>{item.title}</h3>
+          <p>{item.description}</p>
+          <span class="update-soon">Coming soon</span>
+        </div>
+      </article>
+    </li>)}
+  </ul>
+</section>
+
+<script>
+  import { initUpdatesCarousel } from './updates-carousel';
+  document.querySelectorAll<HTMLElement>('[data-home-updates]').forEach(section => initUpdatesCarousel(section));
+</script>
+
+<style>
+  .home-updates { --scroll-surface-color:var(--color-chalk); --updates-gutter:max(clamp(20px,5.2vw,96px),calc((100vw - 1440px)/2)); padding:32px 0 80px; background:var(--color-chalk); color:var(--color-ink); }
+  .updates-heading { display:flex; align-items:center; justify-content:space-between; gap:32px; margin-inline:var(--updates-gutter); }
+  .updates-heading h2 { font-size:clamp(32px,3.6vw,48px); font-weight:500; line-height:1.08; letter-spacing:-.05em; }
+  .updates-actions { display:flex; align-items:center; flex-shrink:0; gap:18px; }
+  .updates-buttons { display:flex; gap:8px; }
+  .updates-buttons[hidden] { display:none; }
+  .updates-buttons button { display:grid; place-items:center; width:44px; height:44px; padding:0; border:1px solid #aeb5a8; border-radius:50%; background:transparent; color:var(--color-ink); cursor:pointer; }
+  .updates-buttons button:disabled { border-color:#d5dacf; color:#aab2a1; cursor:default; }
+  [data-updates-previous] :global(svg) { transform:rotate(180deg); }
+  .updates-all { display:inline-flex; align-items:center; justify-content:center; gap:14px; min-height:44px; padding:0 16px; border:1px solid #aeb5a8; border-radius:5px; font-size:13px; line-height:1.4; font-weight:500; }
+  .updates-rail { display:grid; grid-auto-flow:column; grid-auto-columns:clamp(280px,27vw,420px); align-items:stretch; gap:24px; overflow-x:auto; overscroll-behavior-x:contain; margin:36px 0 0; padding:0 var(--updates-gutter) 12px; scroll-padding-inline:var(--updates-gutter); scroll-snap-type:x proximity; scrollbar-width:none; list-style:none; }
+  .updates-rail::-webkit-scrollbar { display:none; }
+  .updates-rail > li { display:flex; min-width:0; scroll-snap-align:start; }
+  .update-card { display:flex; flex-direction:column; width:100%; min-width:0; overflow:hidden; border-radius:12px; background:var(--color-paper,#fff); }
+  .update-link { display:flex; flex-direction:column; min-width:0; height:100%; border-radius:inherit; }
+  .update-cover { position:relative; flex-shrink:0; width:100%; aspect-ratio:16/9; overflow:hidden; background:#e8ece3; }
+  .update-cover > img, .update-cover :global(picture), .update-cover :global(picture > img) { display:block; width:100%; height:100%; object-fit:cover; }
+  .update-cover :global(.media-placeholder[data-media-placeholder]) { border:0; border-radius:0; }
+  .update-art-brand { display:grid; place-items:center; background:#e7eae4; }
+  .update-wordmark { width:43%; max-width:200px; color:var(--color-ink); }
+  .update-wordmark :global(svg), .update-wordmark > img { display:block; width:100%; height:auto; max-height:90px; object-fit:contain; }
+  .update-art-workspace :global(img) { object-position:center 20%; }
+  .update-art-git :global(img) { object-position:center; }
+  .update-art-app { display:grid; place-items:center; background:#ecebe6; }
+  .update-cover > .update-app-icon { width:96px; height:96px; border-radius:22px; box-shadow:0 8px 18px rgb(25 32 20 / 13%); }
+  .update-copy { display:flex; flex:1; flex-direction:column; align-items:flex-start; padding:22px 24px 24px; }
+  .update-copy time, .update-category { color:var(--color-text-secondary); font-size:12px; line-height:1.5; }
+  .update-copy h3 { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; margin-top:10px; font-size:22px; font-weight:500; line-height:1.25; letter-spacing:-.035em; overflow-wrap:anywhere; }
+  .update-copy p { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; margin:12px 0 0; color:var(--color-text-secondary); font-size:15px; line-height:1.6; overflow-wrap:anywhere; }
+  .update-read, .update-soon { display:inline-flex; align-items:center; gap:10px; min-height:44px; margin-top:auto; padding-top:24px; font-size:12px; line-height:1.5; }
+  .update-soon { color:var(--color-text-secondary); }
+  .update-link:focus-visible { outline-offset:-3px; }
+  .updates-rail:focus-visible { outline-offset:-3px; border-radius:0; }
+  @media(hover:hover) { .updates-all:hover, .updates-buttons button:not(:disabled):hover { border-color:var(--color-ink); background:#e9ede3; } .update-link:hover .update-read { text-decoration:underline; text-underline-offset:4px; } }
+  @media(max-width:767px) {
+    .home-updates { padding:16px 0 48px; }
+    .updates-heading { align-items:flex-start; gap:24px; flex-wrap:wrap; }
+    .updates-heading h2 { max-width:18ch; }
+    .updates-actions { justify-content:space-between; width:100%; }
+    .updates-rail { grid-auto-columns:min(82vw,380px); margin-top:28px; gap:16px; }
+    .update-copy { padding:18px 20px 20px; }
+    .update-copy h3 { font-size:21px; }
+    .update-copy p { font-size:14px; }
+  }
+</style>

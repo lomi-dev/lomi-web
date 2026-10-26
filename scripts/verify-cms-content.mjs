@@ -200,7 +200,7 @@ try {
   await build('youtube-enabled');
   assert.ok(cmsRequests.filter((url) => url.startsWith('/api/globals/')).length >= 5, 'Each rendered page fetches the published global');
   assert.ok(cmsRequests.filter((url) => url.startsWith('/api/globals/')).every((url) => url === '/api/globals/landing?depth=1&draft=false'), 'Published populated CMS global fetch contract');
-  assert.deepEqual(cmsRequests.filter((url) => url.startsWith('/api/devlogs')), ['/api/devlogs?depth=1&draft=false&limit=100&page=1&sort=-publishedAt%2C-id&where%5B_status%5D%5Bequals%5D=published'], 'Published Devlog feed contract');
+  assert.deepEqual(cmsRequests.filter((url) => url.startsWith('/api/devlogs')), Array(2).fill('/api/devlogs?depth=1&draft=false&limit=100&page=1&sort=-publishedAt%2C-id&where%5B_status%5D%5Bequals%5D=published'), 'Homepage and archive use the published Devlog feed contract');
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
   await context.addInitScript(() => localStorage.setItem('lomi.cookie-consent', JSON.stringify({ version: 1, externalMedia: false, savedAt: Date.now() })));
   await context.route('https://api.github.com/**', (route) => route.fulfill({ status: 503, body: '{}' }));
@@ -225,7 +225,7 @@ try {
     await expect(page.locator('.mobile-download')).toHaveAttribute('href', route === '/' ? '#newsletter' : '/#newsletter');
     await assertMedia(page, '.site-header img[alt="CMS logo alt sentinel"]', fixture.site.brand.logoAlt);
     if (route === '/') {
-      assert.deepEqual(await page.locator('main > section').evaluateAll((items) => items.map((el) => el.id || 'hero')), ['hero', 'features', 'cli-compatibility', 'newsletter']);
+      assert.deepEqual(await page.locator('main > section').evaluateAll((items) => items.map((el) => el.id || 'hero')), ['hero', 'features', 'cli-compatibility', 'updates', 'newsletter']);
       await expect(page.locator('.hero h1')).toContainText(fixture.hero.title);
       await expect(page.locator('[data-hero-video]')).toHaveAttribute('data-video-id', youtubeId);
       await expect(page.locator('[data-video-player]')).toHaveAttribute('aria-label', fixture.hero.player.videoTitle);

@@ -11,6 +11,29 @@ The initial archive is empty. It displays the shared neutral media placeholder
 with a decorative Lomi wordmark and a short message. The introduction links back to
 Lomi. No example videos are seeded or presented as real episodes.
 
+## Homepage updates
+
+The homepage includes a horizontal “Lomi news & updates” section before the
+newsletter. It uses the same published Devlogs feed as this archive, ordered
+newest first and limited to six cards. Dates are formatted in the website's
+language with a UTC timezone. Cards use uploaded thumbnails or the shared
+local media fallback and open the canonical YouTube destination. “All devlogs”
+links to the full archive. No YouTube player or thumbnail requests are added.
+
+When the feed is empty, four passive “Coming soon” cards show sample topics
+and local artwork. They are not dated, clickable articles or seeded CMS
+records. Publishing the first episode replaces this whole empty-state set
+with real cards at the next build. There is no separate homepage content list
+to maintain. The existing Devlog publication and rebuild flow applies.
+
+The rail supports touch, trackpad and keyboard scrolling without JavaScript.
+JavaScript adds previous/next buttons only when the cards overflow, with
+disabled states at each end. Reduced motion uses immediate scrolling. There
+is no automatic movement. Section headings and empty-state topics live in
+`HomeUpdates.astro`; the watch label reuses the Devlog page's CMS setting.
+The section stays available when Newsletter is disabled, after the remaining
+homepage sections.
+
 ## Add an episode
 
 1. Open the Payload admin and choose **Devlogs → Create new**.

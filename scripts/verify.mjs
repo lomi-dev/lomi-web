@@ -806,7 +806,7 @@ try {
   await expect(page.getByRole('contentinfo')).toBeVisible();
   await expect(page.locator('#roadmap')).toHaveCount(0);
   await expect(page.locator('#newsletter').getByRole('heading', { level: 2 })).toBeVisible();
-  expect(await page.locator('main > section').evaluateAll((sections) => sections.map((section) => section.classList.contains('hero') ? 'hero' : section.id))).toEqual(['hero', 'features', 'cli-compatibility', 'newsletter']);
+  expect(await page.locator('main > section').evaluateAll((sections) => sections.map((section) => section.classList.contains('hero') ? 'hero' : section.id))).toEqual(['hero', 'features', 'cli-compatibility', 'updates', 'newsletter']);
   await expect(page.locator('#workflow, #principles, #faq, #download, .download-cta')).toHaveCount(0);
   await expect(page.getByRole('textbox', { name: 'Email address' })).toHaveCount(1);
   await expect(page.getByRole('button', { name: 'Keep me posted' })).toHaveCount(1);
@@ -1089,7 +1089,7 @@ try {
   await verifyFixedHeader(staticPage, false);
   await expect(staticPage.locator('#roadmap')).toHaveCount(0);
   await expect(staticPage.locator('#newsletter').getByRole('heading', { level: 2 })).toBeVisible();
-  expect(await staticPage.locator('main > section').evaluateAll((sections) => sections.map((section) => section.classList.contains('hero') ? 'hero' : section.id))).toEqual(['hero', 'features', 'cli-compatibility', 'newsletter']);
+  expect(await staticPage.locator('main > section').evaluateAll((sections) => sections.map((section) => section.classList.contains('hero') ? 'hero' : section.id))).toEqual(['hero', 'features', 'cli-compatibility', 'updates', 'newsletter']);
   await expect(staticPage.locator('#workflow, #principles, #faq, #download, .download-cta')).toHaveCount(0);
   await expect(staticPage.getByRole('textbox', { name: 'Email address' })).toBeDisabled();
   await expect(staticPage.getByRole('button', { name: 'Keep me posted' })).toBeDisabled();
