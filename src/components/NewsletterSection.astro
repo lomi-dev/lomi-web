@@ -1,91 +1,62 @@
 ---
 import NewsletterSignup from './NewsletterSignup.astro';
-import logo from '../assets/lomi-wordmark.svg?raw';
 import type { Landing } from '../../content/landing-schema';
-import { editorDefaults } from '../../content/editor-defaults';
-import { resolveMedia } from '../../content/editor-schema';
-
-interface Props { content: Landing['newsletter']; site?: Landing['site'] }
-const { content, site = editorDefaults.site } = Astro.props;
-const brandLogo = resolveMedia(site.brand.logo, import.meta.env.CMS_URL);
+interface Props { content: Landing['newsletter'] }
+const { content } = Astro.props;
 ---
 
-<section class="newsletter-invitation" id="newsletter" aria-labelledby="newsletter-title" data-scroll-surface>
-  <div class="invitation-shell">
-    <div class="invitation-layout">
-      <div class="invitation-copy">
-        <h2 id="newsletter-title">{content.title}</h2>
-        <p class="invitation-description">{content.description}</p>
-      </div>
-
-      <div class="letter-scene">
-        <div class="envelope-back" aria-hidden="true"></div>
-        <div class="letter-paper">
-          <div class="letter-heading" aria-hidden="true">
-            <span class="letter-wordmark">{brandLogo ? <img src={brandLogo.url} alt="" /> : <Fragment set:html={logo} />}</span>
-          </div>
-          <NewsletterSignup content={content.form} />
-          <span class="letter-accepted" aria-hidden="true">{content.stampLabel} <span>✓</span></span>
-        </div>
-        <div class="envelope-front" aria-hidden="true"></div>
-      </div>
+<section id="newsletter" class="release-newsletter" data-scroll-surface aria-labelledby="newsletter-title">
+  <div class="release-shell">
+    <div class="release-intro">
+      <h2 id="newsletter-title">{content.title}</h2>
+      <p class="release-description">{content.description}</p>
     </div>
+    <div class="release-signup"><NewsletterSignup content={content.form} /></div>
   </div>
 </section>
 
 <style>
-  .newsletter-invitation {
-    --scroll-surface-color: var(--color-chalk);
-    position: relative;
-    background: var(--color-chalk);
-    color: var(--color-ink);
-    padding: 24px 0;
-    overflow-wrap: anywhere;
+  .release-newsletter {
+    --scroll-surface-color:var(--color-chalk);
+    --nl-controls-columns:minmax(0,1fr) auto;
+    --nl-control-gap:10px;
+    --nl-field-bg:var(--color-paper,#fff);
+    --nl-field-border:#bdc6b5;
+    --nl-field-radius:999px;
+    --nl-field-size:16px;
+    --nl-button-bg:var(--color-lime);
+    --nl-button-ink:#0b0e0b;
+    --nl-button-hover:#dcff83;
+    --nl-button-active:var(--color-lime-pressed);
+    --nl-button-radius:999px;
+    --nl-disabled-bg:var(--color-lime);
+    --nl-disabled-ink:#0b0e0b;
+    --nl-note-align:center;
+    --nl-note-size:12px;
+    padding:56px 0;
+    color:var(--color-ink);
+    background:var(--color-chalk);
+    overflow-wrap:anywhere;
   }
-  .invitation-shell { width: min(1440px, calc(100% - clamp(48px, 10.4vw, 192px))); margin-inline: auto; }
-  .invitation-layout { display: grid; grid-template-columns: 1.1fr 1fr; align-items: center; gap: clamp(36px, 6vw, 100px); }
-  .invitation-copy { min-width: 0; }
-  h2 { max-width: 11ch; font-size: clamp(44px, 4.4vw, 64px); line-height: 1.02; font-weight: 500; letter-spacing: -.06em; text-wrap: balance; }
-  .invitation-description { max-width: 37ch; margin-top: 18px; color: var(--color-text-secondary); font-size: 14px; line-height: 1.7; }
-  .letter-scene { position: relative; isolation: isolate; min-width: 0; width: 100%; max-width: 500px; padding: 12px 16px 24px; margin-inline: auto; }
-  .envelope-back { position: absolute; z-index: -2; inset: 68px 0 0; border: 1px solid #91b82d; border-radius: 7px; background: #b8ec38; box-shadow: 0 20px 28px -24px #36422080; }
-  .envelope-back::before { content: ''; position: absolute; inset: -62px -1px calc(100% - 2px); background: #b8ec38; clip-path: polygon(0 100%, 47% 5%, 50% 3%, 53% 5%, 100% 100%); }
-  .letter-paper { position: relative; padding: 16px 24px 32px; background: var(--color-paper); border: 1px solid #d8ddcf; border-radius: 4px; box-shadow: 0 2px 3px #242d1810, 0 12px 26px -12px #242d182e; }
-  .letter-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
-  .letter-wordmark { display: block; }
-  .letter-wordmark img, .letter-wordmark :global(svg) { display: block; width: 52px; height: auto; }
-  .envelope-front { position: absolute; z-index: 1; pointer-events: none; inset: auto 0 0; height: 52px; background: var(--color-lime); border: 1px solid #9ac32c; border-top: 0; border-radius: 0 0 7px 7px; clip-path: polygon(0 0, 50% 40%, 100% 0, 100% 100%, 0 100%); }
-  .envelope-front::before, .envelope-front::after { content: ''; position: absolute; top: 0; width: 65%; height: 1px; background: #9ac32c; }
-  .envelope-front::before { left: 0; transform: rotate(30deg); transform-origin: left; }
-  .envelope-front::after { right: 0; transform: rotate(-30deg); transform-origin: right; }
-  .letter-accepted { position: absolute; top: 18px; right: 24px; display: flex; align-items: center; gap: 8px; padding: 5px 7px; border: 1.5px solid #347148; border-radius: 3px; color: #347148; font: 7px/1.4 var(--font-mono); text-transform: uppercase; letter-spacing: .04em; opacity: 0; transform: rotate(-7deg); }
-  .letter-scene:has(.newsletter[data-state='success']) .letter-accepted { opacity: 1; }
-  .letter-scene:has(:focus-visible) .letter-paper { border-color: #899f69; }
-  @media (max-width: 1050px) and (min-width: 768px) {
-    .invitation-layout { grid-template-columns: 1fr 1.1fr; gap: 38px; }
-    h2 { font-size: clamp(40px, 4.6vw, 48px); }
-    .letter-paper { padding-inline: 20px; }
+  .release-shell { display:grid; grid-template-columns:minmax(0,1fr); justify-items:center; gap:24px; width:min(1320px,calc(100% - clamp(40px,8.4vw,144px))); margin-inline:auto; }
+  .release-intro { text-align:center; }
+  .release-intro h2 { margin-inline:auto; font-size:clamp(36px,3.8vw,52px); font-weight:500; line-height:1.02; letter-spacing:-.06em; text-wrap:balance; }
+  .release-description { margin-top:16px; color:var(--color-text-secondary); font-size:16px; line-height:1.6; }
+  .release-signup { width:100%; min-width:0; max-width:660px; justify-self:center; }
+  .release-signup :global(.newsletter input) { min-height:56px; padding-inline:20px; }
+  .release-signup :global(.newsletter button) { justify-content:space-between; min-height:56px; padding:8px 10px 8px 20px; gap:20px; }
+  .release-signup :global(.newsletter-submit-icon) { display:grid; place-items:center; flex:0 0 32px; width:32px; height:32px; border:1px solid currentColor; border-radius:50%; }
+  .release-signup :global(.newsletter-status) { min-height:1.5em; margin-top:10px; }
+  .release-signup :global(.newsletter-note) { margin-top:6px; }
+  @media(max-width:900px) {
+    .release-newsletter { padding:48px 0; }
+    .release-shell { grid-template-columns:minmax(0,1fr); gap:28px; }
+    .release-intro h2 { max-width:18ch; font-size:clamp(36px,5.7vw,48px); }
+    .release-description { margin-top:12px; }
   }
-  @media (max-width: 767px) {
-    .newsletter-invitation { padding-block: 16px; }
-    .invitation-layout { grid-template-columns: minmax(0, 1fr); gap: 8px; }
-    h2 { max-width: 15ch; font-size: clamp(32px, 7vw, 42px); }
-    .invitation-description { max-width: 48ch; margin-top: 10px; font-size: 12px; line-height: 1.6; }
-    .letter-scene { max-width: 460px; padding: 8px 12px 20px; }
-    .letter-paper { padding: 14px 18px 26px; }
-    .letter-heading { margin-bottom: 8px; }
-    .letter-wordmark img, .letter-wordmark :global(svg) { width: 44px; }
-    .letter-accepted { top: 14px; right: 18px; }
-    .envelope-front { height: 46px; }
-  }
-  @media (max-width: 359px) {
-    .invitation-shell { width: calc(100% - 40px); }
-    .letter-scene { padding-inline: 10px; }
-    .letter-paper { padding-inline: 15px; }
-  }
-  @media (prefers-reduced-motion: no-preference) {
-    .letter-paper { transition: border-color 180ms ease; }
-    .letter-scene:has(.newsletter[data-state='success']) .letter-accepted { animation: letter-stamp 280ms var(--ease-out) both; }
-    @keyframes letter-stamp { from { opacity: 0; transform: translateY(-6px) rotate(-12deg) scale(1.12); } to { opacity: 1; transform: rotate(-7deg) scale(1); } }
+  @media(max-width:600px) {
+    .release-newsletter { padding:40px 0 48px; }
+    .release-shell { width:calc(100% - 40px); gap:24px; }
+    .release-signup { --nl-controls-columns:minmax(0,1fr); }
   }
 </style>

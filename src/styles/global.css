@@ -52,35 +52,6 @@ h3 { font-size: 23px; font-weight: 500; letter-spacing: -.035em; line-height: 1.
 .button-primary:active { background: var(--color-lime-pressed); }
 .status-dot { display: inline-block; flex-shrink: 0; width: 6px; height: 6px; background: var(--color-lime); border-radius: 50%; }
 
-.roadmap-section { padding-top: 0; }
-.roadmap-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; margin-top: 58px; }
-.roadmap-item { padding-right: 30px; }
-.roadmap-item:last-child { padding-right: 0; }
-.roadmap-track { position: relative; height: 1px; background: #cdd4c5; margin: 8px 0 29px; }
-.roadmap-track span { position: absolute; top: -4px; width: 9px; height: 9px; border: 1px solid #94a187; border-radius: 50%; background: var(--color-chalk); }
-.roadmap-item[data-status="available"] .roadmap-track span { background: var(--color-ink); border-color: var(--color-ink); }
-.roadmap-item[data-status="next"] .roadmap-track span { background: var(--color-lime); border-color: #6c862c; }
-.roadmap-phase { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; margin-bottom: 23px; font-size: 10px; }
-.roadmap-phase p { color: var(--color-text-secondary); }
-.roadmap-status { padding: 4px 7px; border: 1px solid #cbd3c2; border-radius: 4px; color: #4c5942; background: #eef0e8; font-size: 9px; }
-[data-status="available"] .roadmap-status { background: #e6f1cd; border-color: #c4d3a7; color: #385019; }
-.roadmap-description { margin-top: 12px; max-width: 280px; color: var(--color-text-secondary); font-size: 13px; line-height: 1.85; }
-.roadmap-item ul { list-style: none; padding: 0; margin: 22px 0 0; }
-.roadmap-item li { display: flex; align-items: flex-start; gap: 9px; margin-top: 11px; font-size: 11px; line-height: 1.65; color: #424d3d; }
-.roadmap-item li svg { margin-top: 1px; }
-.roadmap-link { margin-top: 38px; }
-
-@media (max-width: 1050px) { .roadmap-phase { min-height: 50px; align-content: start; } }
-@media (max-width: 767px) {
-  .roadmap-grid { grid-template-columns: 1fr; margin-top: 36px; gap: 30px; }
-  .roadmap-item { padding-right: 0; padding-left: 25px; border-left: 1px solid #cdd4c5; position: relative; }
-  .roadmap-track { position: absolute; left: -5px; top: 7px; width: 9px; height: 0; margin: 0; }
-  .roadmap-phase { min-height: 0; margin-bottom: 15px; }
-  .roadmap-description { max-width: 100%; margin-top: 9px; }
-  .roadmap-item ul { margin-top: 16px; }
-  .roadmap-link { margin-top: 28px; }
-}
-
 .workflow-layout { display: grid; grid-template-columns: 1fr 1.2fr; gap: 118px; }
 .workflow-layout .section-heading .text-link { margin-top: 22px; }
 .workflow-list { list-style: none; padding: 0; margin: 0; }
@@ -150,14 +121,9 @@ summary::-webkit-details-marker { display: none; }
 .download-controls .download-trigger { width: 100%; }
 .download-controls .download-cta p { font-size: 10px; }
 .download-controls > .text-link { margin-top: 11px; font-size: 11px; }
-.newsletter-section { border-top: 1px solid var(--line); padding-block: 46px; }
-.newsletter-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 100px; align-items: center; }
-.newsletter-layout h2 { margin-top: 12px; font-size: 31px; letter-spacing: -.04em; }
-.newsletter-layout .section-description { margin-top: 12px; font-size: 12px; }
-.newsletter-layout .newsletter { margin: 0; text-align: left; width: 100%; }
 @media (max-width: 1190px) {
   .shell { width: calc(100% - 64px); }
-  .workflow-layout, .section-heading-split, .principles-layout, .faq-layout, .download-layout, .newsletter-layout { gap: 58px; }
+  .workflow-layout, .section-heading-split, .principles-layout, .faq-layout, .download-layout { gap: 58px; }
   .feature { gap: 21px; grid-template-columns: 26px 1fr 1.5fr; }
   .feature-detail { display: none; }
 }
@@ -168,7 +134,7 @@ summary::-webkit-details-marker { display: none; }
   .shell { width: calc(100% - 40px); }
   .section { padding-block: 58px; }
   .section-marker { margin-bottom: 29px; padding-top: 16px; font-size: 9px; gap: 18px; }
-  .section-heading-split, .workflow-layout, .principles-layout, .faq-layout, .download-layout, .newsletter-layout { grid-template-columns: 1fr; gap: 29px; }
+  .section-heading-split, .workflow-layout, .principles-layout, .faq-layout, .download-layout { grid-template-columns: 1fr; gap: 29px; }
   h2 { font-size: 38px; }
   h3 { font-size: 22px; }
   .section-description { font-size: 13px; }
@@ -200,9 +166,6 @@ summary::-webkit-details-marker { display: none; }
   .download-layout .section-description { margin-top: 19px; }
   .download-platforms { font-size: 10px; gap: 23px; }
   .download-controls .download-cta { margin-top: 21px; }
-  .newsletter-section { padding-block: 36px; }
-  .newsletter-layout { gap: 25px; }
-  .newsletter-layout h2 { font-size: 29px; }
 }
 @media (max-width: 374px) {
   .download-platforms { font-size: 9px; gap: 18px; }

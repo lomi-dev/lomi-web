@@ -1,8 +1,8 @@
 ---
 import { editorDefaults } from '../../content/editor-defaults';
 import type { Landing } from '../../content/landing-schema';
-interface Props { content?: Landing['newsletter']['form']; showNote?: boolean }
-const { content = editorDefaults.newsletter.form, showNote = true } = Astro.props;
+interface Props { content?: Landing['newsletter']['form']; showNote?: boolean; class?: string }
+const { content = editorDefaults.newsletter.form, showNote = true, class: className, ...attributes } = Astro.props;
 const endpoint = import.meta.env.PUBLIC_NEWSLETTER_ENDPOINT || '';
 if (endpoint) {
   const url = new URL(endpoint);
@@ -14,6 +14,7 @@ if (endpoint) {
 const isConfigured = Boolean(endpoint);
 ---
 
+<lomi-newsletter-signup {...attributes} class={className}>
 <section class="newsletter" data-state={isConfigured ? 'idle' : 'unavailable'} aria-label={content.ariaLabel}>
   <form id="newsletter-form" data-endpoint={endpoint} data-copy={JSON.stringify(content)} aria-busy="false">
     <label for="newsletter-email">{content.emailLabel}</label>
@@ -45,68 +46,15 @@ const isConfigured = Boolean(endpoint);
   {showNote && <p class="newsletter-note" id="newsletter-note">{content.note}</p>}
   <noscript><p class="newsletter-noscript">{content.noscript}</p></noscript>
 </section>
+</lomi-newsletter-signup>
 
 <script>
-  const form = document.querySelector<HTMLFormElement>('#newsletter-form');
-  const newsletter = form?.closest<HTMLElement>('.newsletter');
-  const emailInput = document.querySelector<HTMLInputElement>('#newsletter-email');
-  const submitButton = form?.querySelector<HTMLButtonElement>('button[type="submit"]');
-  const submitLabel = submitButton?.querySelector<HTMLElement>('[data-submit-label]');
-  const status = document.querySelector<HTMLElement>('#newsletter-status');
-  const endpoint = form?.dataset.endpoint;
-  const copy = JSON.parse(form?.dataset.copy || '{}') as import('../../content/landing-schema').Landing['newsletter']['form'];
-
-  function setState(state: 'idle' | 'pending' | 'success' | 'error', message = '') {
-    if (!form || !newsletter || !emailInput || !submitButton || !submitLabel || !status) return;
-    newsletter.dataset.state = state;
-    status.dataset.state = state;
-    status.textContent = message;
-    form.setAttribute('aria-busy', String(state === 'pending'));
-    emailInput.disabled = false;
-    emailInput.readOnly = state === 'pending';
-    submitButton.disabled = state === 'pending';
-    submitLabel.textContent = state === 'pending' ? copy.pendingLabel : state === 'success' ? copy.successLabel : copy.submitLabel;
-  }
-
-  emailInput?.addEventListener('input', () => {
-    if (endpoint && newsletter?.dataset.state !== 'pending') setState('idle');
-  });
-
-  form?.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    if (!emailInput || !submitButton || !status || submitButton.disabled || !form.reportValidity() || !endpoint) return;
-
-    const email = emailInput.value.trim();
-    setState('pending', copy.pendingMessage);
-
-    try {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        credentials: 'omit',
-        redirect: 'error',
-        signal: AbortSignal.timeout(10000),
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-      if (response.status === 429) {
-        setState('error', copy.rateLimitMessage);
-        return;
-      }
-      if (response.status !== 202 || (await response.json()).accepted !== true) {
-        throw new Error('Signup request unavailable');
-      }
-
-      form.reset();
-      setState('success', copy.successMessage);
-    } catch {
-      setState('error', copy.errorMessage);
-    }
-  });
-
-  if (endpoint) setState('idle');
+  import { NewsletterSignupElement } from './newsletter-signup';
+  if (!customElements.get('lomi-newsletter-signup')) customElements.define('lomi-newsletter-signup', NewsletterSignupElement);
 </script>
 
 <style>
+  lomi-newsletter-signup { display:block; min-width:0; width:100%; }
   .newsletter {
     width: 100%;
     min-width: 0;
@@ -121,20 +69,21 @@ const isConfigured = Boolean(endpoint);
     font-size: 13px;
     line-height: 1.5;
     font-weight: 500;
+    color: var(--nl-label-ink, inherit);
   }
-  .newsletter-controls { display: grid; gap: 8px; }
+  .newsletter-controls { display: grid; grid-template-columns:var(--nl-controls-columns,minmax(0,1fr)); gap:var(--nl-control-gap,8px); }
   .newsletter input {
     box-sizing: border-box;
     width: 100%;
     min-width: 0;
     min-height: 56px;
     padding: 14px 16px;
-    border: 1px solid #adb79f;
-    border-radius: 10px;
-    background: #f5f6ef;
-    color: var(--color-ink);
+    border: 1px solid var(--nl-field-border,#adb79f);
+    border-radius: var(--nl-field-radius,10px);
+    background: var(--nl-field-bg,#f5f6ef);
+    color: var(--nl-field-ink,var(--color-ink));
     font: inherit;
-    font-size: 16px;
+    font-size: var(--nl-field-size,16px);
     line-height: 1.5;
   }
   .newsletter input::placeholder { color: #62695b; opacity: 1; }
@@ -147,10 +96,10 @@ const isConfigured = Boolean(endpoint);
     width: 100%;
     min-height: 52px;
     padding: 13px 20px;
-    border: 1px solid var(--color-ink);
-    border-radius: 999px;
-    background: var(--color-ink);
-    color: var(--color-lime);
+    border: 1px solid var(--nl-button-bg,var(--color-ink));
+    border-radius: var(--nl-button-radius,999px);
+    background: var(--nl-button-bg,var(--color-ink));
+    color: var(--nl-button-ink,var(--color-lime));
     font: inherit;
     font-size: 14px;
     line-height: 1.5;
@@ -161,8 +110,8 @@ const isConfigured = Boolean(endpoint);
   .newsletter-check { display: none; }
   .newsletter[data-state="success"] .newsletter-arrow { display: none; }
   .newsletter[data-state="success"] .newsletter-check { display: block; }
-  .newsletter button:not(:disabled):active { background: #30362c; }
-  .newsletter button:disabled { cursor: not-allowed; background: #30362c; border-color: #30362c; }
+  .newsletter button:not(:disabled):active { background:var(--nl-button-active,var(--nl-button-bg,#30362c)); }
+  .newsletter button:disabled { cursor: not-allowed; background:var(--nl-disabled-bg,#30362c); border-color:var(--nl-disabled-bg,#30362c); color:var(--nl-disabled-ink,var(--nl-button-ink,var(--color-lime))); }
   .newsletter input:disabled { color: #62695b; cursor: not-allowed; opacity: 1; }
   .newsletter input:focus-visible,
   .newsletter button:focus-visible { outline: 2px solid #476c16; outline-offset: 4px; }
@@ -179,15 +128,15 @@ const isConfigured = Boolean(endpoint);
   .newsletter-note {
     margin: 4px 0 0;
     color: #62695b;
-    font-size: 11px;
+    font-size: var(--nl-note-size,11px);
     line-height: 1.6;
-    text-align: center;
+    text-align: var(--nl-note-align,center);
     text-wrap: balance;
   }
   .newsletter-noscript { margin: 12px 0 0; font-size: 12px; line-height: 1.5; }
 
   @media (hover: hover) and (pointer: fine) {
-    .newsletter button:not(:disabled):hover { background: #272e22; }
+    .newsletter button:not(:disabled):hover { background:var(--nl-button-hover,var(--nl-button-bg,#272e22)); }
   }
   @media (prefers-reduced-motion: no-preference) {
     .newsletter button { transition: background-color 160ms ease, transform 160ms ease; }

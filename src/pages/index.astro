@@ -3,33 +3,34 @@ import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
 import Hero from '../components/Hero.astro';
 import FeatureGallery from '../components/FeatureGallery.astro';
-import Roadmap from '../components/Roadmap.astro';
+import CliCompatibility from '../components/CliCompatibility.astro';
 import NewsletterSection from '../components/NewsletterSection.astro';
 import Footer from '../components/Footer.astro';
 import { activeLandingLinks } from '../data/navigation';
 import { loadLanding } from '../../content/load-landing';
 
 const content = await loadLanding(import.meta.env.CMS_URL);
-const { hero, features, roadmap, newsletter } = content;
-const startsWithHero = content.layout.find((row) => row.enabled)?.section === 'hero';
+const { hero, features, newsletter } = content;
+const publicLayout = content.layout.filter((row) => row.section !== 'roadmap');
+const startsWithHero = publicLayout.find((row) => row.enabled)?.section === 'hero';
+const heroSurface = '#f6f8f4';
 const footerContent = {
   ...content.footer,
   groups: content.footer.groups
-    .map((group) => ({ ...group, links: activeLandingLinks(group.links, content.layout) }))
+    .map((group) => ({ ...group, links: activeLandingLinks(group.links, publicLayout) }))
     .filter((group) => group.links.length > 0),
 };
 ---
 
-<Layout website={content} title={content.seo.title} description={content.seo.description} themeColor={startsWithHero ? '#ffffff' : content.site.theme.paper} edgeColor={startsWithHero ? '#ffffff' : 'var(--color-lime)'}>
-  <Header content={content.navigation} site={content.site} layout={content.layout} theme={startsWithHero ? 'light' : undefined} />
+<Layout website={content} title={content.seo.title} description={content.seo.description} themeColor={startsWithHero ? heroSurface : content.site.theme.paper} edgeColor={startsWithHero ? heroSurface : 'var(--color-lime)'}>
+  <Header content={content.navigation} site={content.site} layout={publicLayout} theme={startsWithHero ? 'light' : undefined} />
   <main id="main" class="home-main" tabindex="-1" data-scroll-surface style="--scroll-surface-color: var(--color-chalk)">
-    {!content.layout.some((row) => row.section === 'hero' && row.enabled) && <h1 class="sr-only">{content.seo.title}</h1>}
-    {content.layout.filter((row) => row.enabled).map(({ section }) => section === 'hero' ? <Hero content={hero} layout={content.layout} placeholderLogo={content.site.brand.logo} />
-      : section === 'features' ? <FeatureGallery content={features} placeholderLogo={content.site.brand.logo} />
-      : section === 'roadmap' ? <Roadmap content={roadmap} />
-      : section === 'newsletter' ? <NewsletterSection content={newsletter} site={content.site} /> : null)}
+    {!publicLayout.some((row) => row.section === 'hero' && row.enabled) && <h1 class="sr-only">{content.seo.title}</h1>}
+    {publicLayout.filter((row) => row.enabled).map(({ section }) => section === 'hero' ? <Hero content={hero} layout={publicLayout} />
+      : section === 'features' ? <><FeatureGallery content={features} placeholderLogo={content.site.brand.logo} /><CliCompatibility /></>
+      : section === 'newsletter' ? <NewsletterSection content={newsletter} /> : null)}
   </main>
-  <Footer content={footerContent} site={content.site} layout={content.layout} />
+  <Footer content={footerContent} site={content.site} layout={publicLayout} />
 </Layout>
 
 <script>

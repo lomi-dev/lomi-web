@@ -29,5 +29,5 @@ export const editorDefaults = {
   } },
   features: { controls: { closeLabel: 'Close feature details', previousLabel: 'Previous feature', nextLabel: 'Next feature', chooseLabel: 'Choose a feature', showLabel: 'Show {title}', pausePreviewsLabel: 'Pause previews', resumePreviewsLabel: 'Play previews' } },
   roadmap: { href: 'https://github.com/lomi-dev/lomi/issues', ui: { legendCompleted: 'Completed', legendProgress: 'In progress', legendPlanned: 'Not started', legendLabel: 'Task statuses', progressTemplate: '{completed} of {total} completed', progressLabel: '{phase} progress', scrollHint: 'Scroll to explore', previousLabel: 'Previous stage', nextLabel: 'Next stage', stagesLabel: 'Roadmap stages', exploreLabel: 'Explore {phase}' } },
-  layout: [{ section: 'hero', enabled: true }, { section: 'features', enabled: true }, { section: 'roadmap', enabled: true }, { section: 'newsletter', enabled: true }],
+  layout: [{ section: 'hero', enabled: true }, { section: 'features', enabled: true }, { section: 'newsletter', enabled: true }],
 };

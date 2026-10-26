@@ -1,0 +1,19 @@
+---
+import { activeLandingLinks } from '../../data/navigation';
+import type { HeroProps } from './types';
+interface Props extends HeroProps { class?: string }
+const { content, layout, class: className = '', ...attributes } = Astro.props;
+const primary = activeLandingLinks([{ label: content.primaryLabel, href: content.primaryHref }], layout)[0];
+const secondary = activeLandingLinks([{ label: content.secondaryLabel, href: content.secondaryHref }], layout)[0];
+---
+<div {...attributes} class:list={['hero-actions', className]}>
+  {primary && <a class="hero-primary" href={primary.href}>{primary.label}<svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 3v10m-4-4 4 4 4-4M4 14v3h12v-3" stroke="currentColor" stroke-width="1.4" /></svg></a>}
+  {secondary && <a class="hero-secondary" href={secondary.href}>{secondary.label}</a>}
+</div>
+<style>
+  .hero-actions { display:flex; align-items:center; flex-wrap:wrap; gap:12px; }
+  .hero-primary, .hero-secondary { display:inline-flex; align-items:center; justify-content:center; gap:18px; min-height:48px; padding:0 20px; font-size:14px; line-height:1.2; font-weight:500; border-radius:var(--hero-button-radius, 4px); }
+  .hero-primary { color:var(--hero-button-ink, #101410); background:var(--hero-button-fill, var(--color-lime)); border:1px solid var(--hero-button-fill, var(--color-lime)); }
+  .hero-secondary { color:inherit; border:1px solid var(--hero-button-line, #cdd3c9); background:var(--hero-secondary-fill, rgb(255 255 255 / .7)); }
+  @media (hover:hover) { .hero-primary:hover { filter:brightness(.96); } .hero-secondary:hover { background:#f0f3ea; } }
+</style>

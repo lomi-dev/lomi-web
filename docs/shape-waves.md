@@ -1,5 +1,8 @@
 # Hero shape waves
 
+This is an archived background component. The current homepage uses the
+desktop composition documented in [hero scene](hero-scene.md).
+
 `src/components/ShapeWavesBackground.astro` is an authored Canvas 2D
 interpretation of the visual concept in [React Bits Shape Waves](https://reactbits.dev/backgrounds/shape-waves).
 The reference shows a dense, uniform grid of triangles, circles, and squares

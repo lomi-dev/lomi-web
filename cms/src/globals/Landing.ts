@@ -125,6 +125,7 @@ function websiteFields(legacy: Field[]): Field[] {
   feature.fields = feature.fields.map((field) => 'name' in field && field.name === 'items' && field.type === 'array'
     ? { ...field, admin: { ...field.admin, initCollapsed: true }, fields: [...field.fields, ...fieldsFromDefaults({ image: null, video: null, alt: '' }, 'features.items[]')] } : field)
   const retired = ['workflow', 'principles', 'faq', 'download'].map((name) => ({ ...optional(find(name)), admin: { hidden: true } } as Field))
+  retired.push({ ...optional(merge('roadmap')), admin: { hidden: true } } as Field)
   const collapse = (label: string, field: Field): Field => ({
     type: 'collapsible', label, admin: { initCollapsed: true }, fields: [{ ...field, label: false } as Field],
   })
@@ -135,7 +136,7 @@ function websiteFields(legacy: Field[]): Field[] {
     { label: 'Navigation', fields: [merge('navigation')] },
     { label: 'Footer', fields: [merge('footer')] },
     { label: 'Site settings', fields: [find('seo'), merge('site')] },
-    { label: 'Homepage', fields: [collapse('Hero', merge('hero')), collapse('Features', feature), collapse('Roadmap', merge('roadmap')), collapse('Newsletter', merge('newsletter')), collapse('Section order and visibility', fieldsFromDefaults({ layout: editorDefaults.layout })[0])] },
+    { label: 'Homepage', fields: [collapse('Hero', merge('hero')), collapse('Features', feature), collapse('Newsletter', merge('newsletter')), collapse('Section order and visibility', fieldsFromDefaults({ layout: editorDefaults.layout })[0])] },
     { label: 'Page content', fields: [group('pages', pages)] },
   ] }, ...retired]
 }

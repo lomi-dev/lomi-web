@@ -606,7 +606,7 @@ async function verifyFixedHeader(targetPage, javaScriptEnabled = true) {
   await targetPage.mouse.move(0, 0);
   for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
     await targetPage.setViewportSize(viewport);
-    for (const destination of ['#workspace', '#roadmap', '.site-footer']) {
+    for (const destination of ['#workspace', '#newsletter', '.site-footer']) {
       await targetPage.locator(destination).evaluate((element) => element.scrollIntoView({ block: 'start', behavior: 'instant' }));
       await expect(header).toHaveCSS('position', 'fixed');
       const bounds = await header.boundingBox();
@@ -724,7 +724,7 @@ async function verifyDevlog(javaScriptEnabled) {
     await expect(devlogPage.getByRole('link', { name: 'Back to lomi' })).toHaveAttribute('href', '/');
     expect(await devlogPage.evaluate(() => document.documentElement.scrollWidth), `Devlog at ${width}px`).toBe(width);
     await expect(rootLinks().and(devlogPage.locator('a[href="/devlog/"]'))).toHaveAttribute('aria-current', 'page');
-    await expect(rootLinks().and(devlogPage.locator('a[href="/#roadmap"]'))).toHaveCount(1);
+    await expect(rootLinks().and(devlogPage.locator('a[href="/#newsletter"]'))).toHaveCount(1);
     await expect(rootLinks().and(devlogPage.locator('a[href="https://docs.lomi.dev"]'))).toHaveCount(1);
     await expect(devlogPage.locator('.site-header [data-download-open]')).toHaveCount(0);
     if (javaScriptEnabled) {
@@ -748,10 +748,10 @@ async function verifyDevlog(javaScriptEnabled) {
     await expectAnchorBelowHeader(devlogPage, productAnchor);
     await devlogPage.goto(devlogUrl);
     await openRoot();
-    await activate(rootLinks().and(devlogPage.locator('a[href="/#roadmap"]')));
-    await expect(devlogPage).toHaveURL(new URL('/#roadmap', url).href);
-    await expect(devlogPage.locator('#roadmap')).toBeInViewport();
-    await expectAnchorBelowHeader(devlogPage, '#roadmap');
+    await activate(rootLinks().and(devlogPage.locator('a[href="/#newsletter"]')));
+    await expect(devlogPage).toHaveURL(new URL('/#newsletter', url).href);
+    await expect(devlogPage.locator('#newsletter')).toBeInViewport();
+    await expectAnchorBelowHeader(devlogPage, '#newsletter');
     await devlogPage.goto(devlogUrl);
     if (javaScriptEnabled || !mobile) {
       await openRoot();
@@ -804,9 +804,9 @@ try {
     await expect(desktopNavigation.locator('a.navigation-link:not(.product-fallback):visible').nth(index)).toHaveAccessibleName(link.label);
   }
   await expect(page.getByRole('contentinfo')).toBeVisible();
-  await expect(page.locator('#roadmap').getByRole('heading', { level: 2 })).toBeVisible();
-  await expect(page.locator('#roadmap .roadmap-masthead, #roadmap .section-marker')).toHaveCount(0);
-  expect(await page.locator('main > section').evaluateAll((sections) => sections.map((section) => section.classList.contains('hero') ? 'hero' : section.id))).toEqual(['hero', 'features', 'roadmap', 'newsletter']);
+  await expect(page.locator('#roadmap')).toHaveCount(0);
+  await expect(page.locator('#newsletter').getByRole('heading', { level: 2 })).toBeVisible();
+  expect(await page.locator('main > section').evaluateAll((sections) => sections.map((section) => section.classList.contains('hero') ? 'hero' : section.id))).toEqual(['hero', 'features', 'cli-compatibility', 'newsletter']);
   await expect(page.locator('#workflow, #principles, #faq, #download, .download-cta')).toHaveCount(0);
   await expect(page.getByRole('textbox', { name: 'Email address' })).toHaveCount(1);
   await expect(page.getByRole('button', { name: 'Keep me posted' })).toHaveCount(1);
@@ -991,8 +991,8 @@ try {
   await verifyLongFooterSignoff(page);
   await page.setViewportSize({ width: 844, height: 390 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(844);
-  await page.locator('#roadmap').scrollIntoViewIfNeeded();
-  await expect(page.locator('#roadmap')).toBeInViewport();
+  await page.locator('#newsletter').scrollIntoViewIfNeeded();
+  await expect(page.locator('#newsletter')).toBeInViewport();
 
   await page.setViewportSize({ width: 390, height: 844 });
   const mobileMenu = page.locator('#mobile-navigation');
@@ -1054,9 +1054,9 @@ try {
     await expect(page.locator(destination), 'Closed navigation focuses the chosen section').toBeFocused();
   }
   await mobileSummary.click();
-  await mobileMenu.locator('a.mobile-root-link[href="#roadmap"]').click();
-  await expect(page.locator('#roadmap')).toBeInViewport();
-  await expectAnchorBelowHeader(page, '#roadmap');
+  await mobileMenu.locator('a.mobile-root-link[href="#newsletter"]').click();
+  await expect(page.locator('#newsletter')).toBeInViewport();
+  await expectAnchorBelowHeader(page, '#newsletter');
   await expect(mobileMenu).not.toHaveAttribute('open');
 
   for (const width of [390, 1440]) {
@@ -1087,8 +1087,9 @@ try {
   await expect(staticPage.getByRole('heading', { level: 1 })).toHaveCount(1);
   await expect(staticPage.getByRole('heading', { level: 1 })).toBeVisible();
   await verifyFixedHeader(staticPage, false);
-  await expect(staticPage.locator('#roadmap').getByRole('heading', { level: 2 })).toBeVisible();
-  expect(await staticPage.locator('main > section').evaluateAll((sections) => sections.map((section) => section.classList.contains('hero') ? 'hero' : section.id))).toEqual(['hero', 'features', 'roadmap', 'newsletter']);
+  await expect(staticPage.locator('#roadmap')).toHaveCount(0);
+  await expect(staticPage.locator('#newsletter').getByRole('heading', { level: 2 })).toBeVisible();
+  expect(await staticPage.locator('main > section').evaluateAll((sections) => sections.map((section) => section.classList.contains('hero') ? 'hero' : section.id))).toEqual(['hero', 'features', 'cli-compatibility', 'newsletter']);
   await expect(staticPage.locator('#workflow, #principles, #faq, #download, .download-cta')).toHaveCount(0);
   await expect(staticPage.getByRole('textbox', { name: 'Email address' })).toBeDisabled();
   await expect(staticPage.getByRole('button', { name: 'Keep me posted' })).toBeDisabled();
@@ -1129,9 +1130,9 @@ try {
   await expect(staticProduct).toHaveAttribute('href', '#workspace');
   await staticProduct.click();
   await expectAnchorBelowHeader(staticPage, '#workspace');
-  const staticRoadmap = staticPage.locator('.desktop-navigation a.navigation-link[href="#roadmap"]');
-  await staticRoadmap.click();
-  await expectAnchorBelowHeader(staticPage, '#roadmap');
+  const staticNewsletter = staticPage.locator('.desktop-navigation a.navigation-link[href="#newsletter"]');
+  await staticNewsletter.click();
+  await expectAnchorBelowHeader(staticPage, '#newsletter');
   await verifyStaticBackdropDoesNotBlockPage(staticPage);
   await verifyViewportFooter(staticPage);
   await verifyLongFooterSignoff(staticPage);
@@ -1180,7 +1181,7 @@ try {
   await expect(fallbackPage.locator('.hero a[href="/download/"]')).toHaveAttribute('href', downloadPath);
   expect(fallbackErrors, 'Canvas 2D unavailable fallback has no page errors').toEqual([]);
   await fallbackContext.close();
-  console.log('Passed: Hero/Features/Roadmap/Newsletter/Footer and remaining anchors, 7 viewport widths including 200% equivalent reflow and landscape, terminal-glyph canvas pointer trail/fade/touch gating and pixel motion/reduced/resume/offscreen/resize and no-JS/unavailable-2D fallback, no CLI cards or client islands, single aligned inline player with remembered consent/native controls/touch/no-JS, exact viewport footer/keyboard access across 8 sizes plus long CMS copy at 320x400 with and without JS, desktop Product/mobile drill-in and Devlog routes with/without JS, mobile navigation, retired sections absent and newsletter visible with/without JS, dedicated download route links including Product Download, no-JS reading and download links (installer coverage: verify:download), and mobile/desktop accessibility.');
+  console.log('Passed: Hero/Features/Newsletter/Footer and remaining anchors, 7 viewport widths including 200% equivalent reflow and landscape, terminal-glyph canvas pointer trail/fade/touch gating and pixel motion/reduced/resume/offscreen/resize and no-JS/unavailable-2D fallback, no CLI cards or client islands, single aligned inline player with remembered consent/native controls/touch/no-JS, exact viewport footer/keyboard access across 8 sizes plus long CMS copy at 320x400 with and without JS, desktop Product/mobile drill-in and Devlog routes with/without JS, mobile navigation, retired sections absent and newsletter visible with/without JS, dedicated download route links including Product Download, no-JS reading and download links (installer coverage: verify:download), and mobile/desktop accessibility.');
 } finally {
   await browser.close();
 }

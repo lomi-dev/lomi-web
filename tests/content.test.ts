@@ -118,7 +118,6 @@ describe('published landing content', () => {
       { label: 'features', href: '#features' },
       { label: 'newsletter', href: '#newsletter' },
       { label: 'Overview', href: '#workspace' },
-      { label: 'Roadmap', href: '#roadmap' },
       { label: 'Download', href: '/download/' },
       { label: 'Devlog', href: '/devlog/' },
       { label: 'Docs', href: 'https://docs.lomi.dev' },
@@ -236,6 +235,20 @@ describe('Product navigation', () => {
     assert.deepEqual(activeProductGroups(groups)[0].links, [groups[0].links[1], groups[0].links[0]]);
   });
 
+  it('removes Roadmap-only product groups and keeps other links in mixed groups', () => {
+    const groups = [
+      { label: 'Roadmap', links: [{ label: 'Roadmap', href: '#roadmap' }] },
+      { label: 'Project', links: [
+        { label: 'Documentation', href: 'https://docs.lomi.dev' },
+        { label: 'Roadmap', href: '/#roadmap' },
+      ] },
+    ];
+    const layout = [{ section: 'roadmap', enabled: true }];
+    assert.deepEqual(activeProductGroups(groups, layout), [
+      { label: 'Project', links: [{ label: 'Documentation', href: 'https://docs.lomi.dev' }] },
+    ]);
+  });
+
   it('respects hidden sections and deliberately empty or custom menus', () => {
     const groups = [{ label: 'Workspace', links: [
       { label: 'Overview', href: '#workspace' },
@@ -334,6 +347,16 @@ describe('website editor contract', () => {
     }
   });
 
+  it('keeps legacy documents with Roadmap enabled parseable', () => {
+    const legacy = document();
+    assert.equal(legacy.layout.some(({ section }) => section === 'roadmap'), false);
+    legacy.layout = [...legacy.layout, { section: 'roadmap', enabled: true }];
+
+    const parsed = landingSchema.parse(legacy);
+    assert.deepEqual(parsed.layout.at(-1), { section: 'roadmap', enabled: true });
+    assert.deepEqual(parsed.roadmap, legacy.roadmap);
+  });
+
   it('rejects malformed settings, CSS injection, unsafe links and invalid YouTube IDs', () => {
     for (const update of [
       (value: any) => { value.site.theme.accent = '#fff;display:none'; },
@@ -362,13 +385,14 @@ describe('website editor contract', () => {
     assert.equal(landingSchema.safeParse({ ...document(), hero: { ...document().hero, video: image } }).success, false);
   });
 
-  it('filters disabled home anchors while retaining legal-page anchors and external routes', () => {
+  it('filters retired Roadmap anchors even when enabled while retaining legal-page anchors and external routes', () => {
     const links = [
       { label: 'Workspace', href: '#workspace' }, { label: 'Features', href: '/#features' },
       { label: 'Newsletter', href: '#newsletter' }, { label: 'Roadmap', href: '#roadmap' },
+      { label: 'Legacy Roadmap', href: '/#roadmap' },
       { label: 'Privacy', href: '/cookies/#preferences' }, { label: 'Remote', href: '/remote/#section' },
     ];
     const layout = [{ section: 'hero', enabled: true }, { section: 'features', enabled: false }, { section: 'roadmap', enabled: true }, { section: 'newsletter', enabled: false }];
-    assert.deepEqual(activeLandingLinks(links, layout), [links[0], links[3], links[4], links[5]]);
+    assert.deepEqual(activeLandingLinks(links, layout), [links[0], links[5], links[6]]);
   });
 });

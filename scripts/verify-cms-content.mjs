@@ -225,14 +225,13 @@ try {
     await expect(page.locator('.mobile-download')).toHaveAttribute('href', route === '/' ? '#newsletter' : '/#newsletter');
     await assertMedia(page, '.site-header img[alt="CMS logo alt sentinel"]', fixture.site.brand.logoAlt);
     if (route === '/') {
-      assert.deepEqual(await page.locator('main > section').evaluateAll((items) => items.map((el) => el.id || 'hero')), ['roadmap', 'hero', 'features', 'newsletter']);
+      assert.deepEqual(await page.locator('main > section').evaluateAll((items) => items.map((el) => el.id || 'hero')), ['hero', 'features', 'cli-compatibility', 'newsletter']);
       await expect(page.locator('.hero h1')).toContainText(fixture.hero.title);
       await expect(page.locator('[data-hero-video]')).toHaveAttribute('data-video-id', youtubeId);
       await expect(page.locator('[data-video-player]')).toHaveAttribute('aria-label', fixture.hero.player.videoTitle);
       await assertMedia(page, '[data-video-poster] img', fixture.hero.previewAlt);
-      await expect(page.locator('.roadmap-legend')).toContainText(fixture.roadmap.ui.legendCompleted);
-      await expect(page.locator('[data-roadmap-task-label]').first()).toHaveText('CMS task sentinel');
-      await expect(page.locator('.roadmap-progress-caption').first()).toContainText('CMS progress');
+      await expect(page.locator('#roadmap')).toHaveCount(0);
+      await expect(page.locator('a[href="#roadmap"], a[href="/#roadmap"]')).toHaveCount(0);
       await assertMedia(page, '[data-feature-card] img', fixture.features.items[0].alt);
       await expect(page.locator('[data-preview-toggle]')).toHaveCount(0);
       await expect(page.locator('[data-feature-card]').nth(1).locator('[data-feature-preview]')).toHaveAttribute('data-feature-preview', fixture.features.items[1].icon);
@@ -423,7 +422,7 @@ try {
   await third.close();
   assert.deepEqual(browserErrors, [], 'No runtime errors with authored CMS content');
   assert.ok(await absent(marker));
-  console.log('Passed: three isolated published-CMS builds; five routes with edited SEO/brand/theme/nav/copy/uploads; consent and form labels/client messages; feature modal and roadmap copy; custom YouTube ID; real native-video playback/control keys and preview/slide/close pausing; Remote custom media and static sample artwork; showScreenshot hides only artwork; disabled newsletter filtering with signup availability preserved; legacy installer fields never render or execute.');
+  console.log('Passed: three isolated published-CMS builds; five routes with edited SEO/brand/theme/nav/copy/uploads; consent and form labels/client messages; feature modal copy and retired roadmap filtering; custom YouTube ID; real native-video playback/control keys and preview/slide/close pausing; Remote custom media and static sample artwork; showScreenshot hides only artwork; disabled newsletter filtering with signup availability preserved; legacy installer fields never render or execute.');
 } finally {
   await browser?.close();
   await Promise.all(servers.map((server) => new Promise((resolveClose) => { server.close(resolveClose); server.closeAllConnections(); })));

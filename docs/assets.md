@@ -19,13 +19,11 @@ The social preview is a browser capture of the page with this logo.
 
 ## Cloud background
 
-Final workspace source: `src/assets/clouds.png` (1536 × 1024).
+The selected desktop homepage hero uses `src/assets/clouds.png` (1536 × 1024)
+as its light wallpaper. The hero softens the image with reduced saturation and
+a pale overlay; the source image remains unchanged.
 
-The original image and CloudBackdrop component are retained as unused assets.
-The current hero uses a white composition with the real app capture rather
-than the previous photographic panorama. The source image remains unchanged.
-
-Created using the built-in `image_gen` tool. The two user-supplied landing-page images were visual direction references, not copied into the website. Astro exports responsive AVIF and WebP versions with PNG fallbacks at build time.
+Created using the built-in `image_gen` tool. The two user-supplied landing-page images were visual direction references, not copied into the website. Astro generates responsive WebP sources with the original PNG as a fallback.
 
 Exact generation prompt:
 
@@ -33,52 +31,56 @@ Exact generation prompt:
 
 ## Application screenshots
 
-When the hero has no uploaded CMS poster, it shows
-`src/assets/product/hero-workbench.png`: a 2880 × 1800 capture of the current
-Lomi React/Vite interface with the Explorer, editor, and terminal visible in a
-single workspace. The capture was rendered from the app in Chromium at a 1440 ×
-900 CSS viewport and 2× pixel density. It uses the app's real interface and
-editor source; the native bridge and terminal output are test fixtures. Astro
-generates responsive AVIF/WebP variants, including a native-video poster.
-Uploaded CMS media takes precedence.
+The selected desktop hero combines `src/assets/hero/laptop-concrete.png`
+(1536 × 1024), a black laptop on concrete, with a real Lomi workspace capture
+projected into its screen. By default, `src/assets/product/workbench.png`
+(2880 × 1800) supplies the dark-theme Explorer, editor and terminal view.
+`src/components/WorkspaceDeck.astro` meshes the screenshot into the laptop
+display with a build-time SVG projection. An uploaded CMS Hero Poster replaces
+the screen image inside that same composition. The laptop artwork is served as
+responsive WebP with the original PNG as fallback; Astro creates an optimized
+WebP screen image for the local capture. The selected homepage hero is static
+and does not render a video, YouTube embed or player.
 
-When Download has no uploaded screenshot, it uses the same genuine app capture
-inside its existing showcase box. The contextual image alt text describes the
-Explorer, editor, and terminal visible in the workspace. Other missing product
-media uses a pale background, thin border, and 16px corners. Feature cards and
-dialogs use six Retina captures of the real Lomi workspace, composed as
-windowed desktop renders on the supplied Tahoe wallpaper with magnified
-details; see [feature previews](feature-gallery.md). Devlog and Remote
-use a centered faint Lomi wordmark; an uploaded site logo supplies their
-placeholder branding. Wordmark fallbacks are decorative, while app captures
-have descriptive alt text for their workspace interfaces.
+`src/assets/product/hero-workbench.png` remains the fallback used by Download
+and the legacy `HeroVideo.astro` component; it is not the selected homepage
+hero image. When Download has no uploaded screenshot, this capture appears in
+its existing showcase box. Its contextual image alt text describes the
+Explorer, editor and terminal. Other missing product media uses a pale
+background, thin border and 16px corners. Feature cards and dialogs use six
+Retina captures of the real Lomi workspace, composed as windowed desktop
+renders on the supplied Tahoe wallpaper with magnified details; see
+[feature previews](feature-gallery.md). Devlog and Remote use a centered faint
+Lomi wordmark; an uploaded site logo supplies their placeholder branding.
+Wordmark fallbacks are decorative, while app captures have descriptive alt
+text for their workspace interfaces.
 SVG assets remain sharp without responsive raster exports.
 
 `public/placeholders/lomi-mark.svg` contains the existing Lomi logo geometry.
 `public/placeholders/lomi-poster.svg` supplies the default design for generic
 native video posters. The old `hero-workspace.svg` remains in the public asset
-directory for compatibility but the hero now uses the real app capture instead.
-The generic poster remains a local, code-native SVG with no external requests.
-Old numbered PNGs remain archived in `src/assets/placeholders/` but are no
-longer imported by rendered pages.
+directory for compatibility; the selected hero uses the laptop artwork with a
+real workspace capture projected into its screen. The generic poster remains
+a local, code-native SVG with no external requests. Old numbered PNGs remain
+archived in `src/assets/placeholders/` but are no longer imported by rendered
+pages.
 
-`HeroVideo.astro` embeds the selected YouTube video `dQw4w9WgXcQ` directly in
-this frame after external-media permission, including remembered permission.
-The app capture or uploaded poster remains until the first playback signal.
-Custom controls sit inside the frame; see [player behavior](hero-player.md).
-The [official YouTube IFrame API](https://developers.google.com/youtube/iframe_api_reference)
-mutes before automatic playback, which begins only when half the player is in
-view and reduced motion is off. Leaving view or hiding the tab pauses playback.
-Permission revocation removes the iframe and invalidates old callbacks. The
-local image links to YouTube without JavaScript. There is no action bar under
-the preview; media permission uses the existing Cookie settings.
-The previous mobile placeholder and unused dialog component remain archived.
+The archived `HeroVideo.astro` component supports YouTube playback after
+external-media permission or an uploaded-video player, with remembered
+permission and custom controls; see [player behavior](hero-player.md). It is
+not used by the selected homepage hero. In that legacy component, the poster
+links to its selected video, or to YouTube, without JavaScript. Playback starts
+only when half the player is in view and reduced motion is off; leaving view or
+hiding the tab pauses playback. Permission revocation removes the iframe and
+invalidates old callbacks. The previous mobile placeholder and unused dialog
+component remain archived.
 The native `browser.png` capture remains a local asset for future sections.
 
-Unchanged desktop captures copied from `../lomi/docs/images/` remain archived
-in `src/assets/product/`: `workbench.png` (project explorer, TypeScript editor
-and terminal), `source-control.png` (Git history and diff), and `browser.png`.
-They remain available for future approved sections.
+The desktop captures copied from `../lomi/docs/images/` include
+`src/assets/product/workbench.png` (project explorer, TypeScript editor and
+terminal), now used as the selected hero's default screen; `source-control.png`
+(Git history and diff) and `browser.png` remain archived for future approved
+sections.
 
 `public/placeholders/download-workspace.svg` remains archived for compatibility.
 Remote uses the shared brand placeholder until its screenshot is uploaded in
@@ -99,25 +101,31 @@ The [Simple Icons collection](https://github.com/iconify/icon-sets/blob/master/j
 declares [CC0-1.0](https://github.com/simple-icons/simple-icons/blob/develop/LICENSE.md).
 The icons are served with the site; no browser request to Iconify is needed.
 
-The older root-level `workbench.png`, `workbench-light.png`, and
-`source-control.png` assets remain unused. No interface was reconstructed for
-the hero; its fallback is a browser capture of the current app UI.
+The root-level `src/assets/workbench.png`, `src/assets/workbench-light.png` and
+`src/assets/source-control.png` remain archived and unused by rendered pages.
+No interface was reconstructed for the selected hero; its laptop screen uses
+the real local workspace capture.
 
-`public/social-card.png` is a 1200 × 630 browser capture of the current hero
-with centered copy, terminal-character waves, and fixed navigation,
-scaled from a wider browser view so the headline, controls, and product composition fit.
+`public/social-card.png` is the site's 1200 × 630 social preview image.
+
+## CLI compatibility marks
+
+The compatibility list uses local Iconify SVGs in `public/cli/`. All fifteen
+brand marks and the final plus icon were downloaded from Iconify on October
+26, 2026. The source SVG geometry is unchanged. Single-color marks use CSS
+masks to follow the site's ink color; multicolor marks retain their colors.
+There are no runtime requests to Iconify.
+
+The [asset manifest](../public/cli/README.md) records every Iconify identifier,
+source URL and license. The SVG Logos and Simple Icons collections are CC0;
+theSVG and Tabler MIT notices are included beside the files.
 
 ## Archived agent marks
 
-The unused agent marks are local Iconify SVGs from the desktop
-application's existing assets. The dark and white Codex variants are retained
-alongside the other marks; none are rendered in the current hero.
-They represent Codex, Claude Code, OpenCode, Cursor CLI, Grok Build,
-and Antigravity CLI. Monochrome marks use CSS masks; colored marks retain their
-original colors. No brand geometry was recreated or generated. The unused
-Hermes mark and its original license remain archived; it is absent from the hero.
+The selected desktop hero has no agent dock. Local SVG marks remain archived
+in `public/agents/`, with no runtime Iconify request. Their sources and
+licenses are recorded in [docs/react-bits.md](react-bits.md).
 
-[docs/react-bits.md](react-bits.md) records each exact source and license.
 The Hermes MIT notice is distributed in `public/agents/LICENSE-thesvg-MIT.txt`.
 The upstream React Bits TiltedCard source and its MIT + Commons Clause notice
 are versioned together in `src/components/react-bits/`.

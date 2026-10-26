@@ -5,6 +5,7 @@ import { mkdir } from 'node:fs/promises';
 const url = process.env.VERIFY_URL || 'http://127.0.0.1:4322';
 const browserType = { chromium, firefox, webkit }[process.env.VERIFY_BROWSER || 'chromium'];
 const browser = await browserType.launch();
+const heroColor = [246, 248, 244];
 await mkdir('artifacts', { recursive: true });
 
 async function center(page, selector) {
@@ -54,31 +55,24 @@ try {
     contentType: 'application/json', body: '[]',
   }));
   await page.goto(url, { waitUntil: 'networkidle' });
-  await assertCanvas(page, [255, 255, 255]);
-  await exposedEdge(page, 'top', [255, 255, 255], 'hero');
+  await assertCanvas(page, heroColor);
+  await exposedEdge(page, 'top', heroColor, 'hero');
 
-  // Both CMS hero modes expose a nested media surface during scrolling.
-  const heroMedia = '.hero [data-video-player], .hero .workspace-capture';
-  await center(page, heroMedia);
-  const playerColor = await page.locator(heroMedia).evaluate((element) => {
-    const probe = document.createElement('span');
-    probe.style.cssText = 'display:none;color:var(--scroll-surface-color)';
-    element.append(probe);
-    const color = getComputedStyle(probe).color;
-    probe.remove();
-    return color;
-  });
-  await expect(page.locator('html')).toHaveCSS('background-color', playerColor);
+  await center(page, '.hero-copy');
+  await assertCanvas(page, heroColor);
+  await exposedEdge(page, 'top', heroColor, 'hero-copy');
+  await center(page, '#workspace');
+  await expect(page.locator('#workspace')).not.toHaveAttribute('data-scroll-surface', '');
+  await assertCanvas(page, heroColor);
   await page.mouse.move(720, 450);
   await page.mouse.wheel(0, -12000);
   await expect.poll(() => page.evaluate(() => scrollY)).toBe(0);
-  await assertCanvas(page, [255, 255, 255]);
-  await exposedEdge(page, 'top', [255, 255, 255], 'hero-after-player');
+  await assertCanvas(page, heroColor);
+  await exposedEdge(page, 'top', heroColor, 'hero-after-workspace');
 
   for (const [name, selector, color] of [
-    ['hero', '.hero-opening', [255, 255, 255]],
+    ['hero', '.hero', heroColor],
     ['features', '#features', [247, 248, 243]],
-    ['roadmap', '#roadmap', [17, 22, 16]],
     ['newsletter', '#newsletter', [247, 248, 243]],
     ['footer', '.site-footer', [200, 255, 61]],
   ]) {
@@ -99,7 +93,7 @@ try {
   await page.setViewportSize({ width: 1440, height: 900 });
 
   // A top-layer dialog must not replace the underlying section's edge color.
-  for (const [selector, color] of [['#roadmap', [17, 22, 16]], ['.hero-opening', [255, 255, 255]]]) {
+  for (const [selector, color] of [['#newsletter', [247, 248, 243]], ['.hero', heroColor]]) {
     await center(page, selector);
     await assertCanvas(page, color);
     await page.evaluate(() => { const dialog = document.createElement('dialog'); dialog.id = 'verify-native-dialog'; dialog.textContent = 'Native modal probe'; document.body.append(dialog); dialog.showModal(); });
@@ -130,7 +124,7 @@ try {
   for (const viewport of [{ width: 390, height: 844 }, { width: 320, height: 200 }]) {
     await page.setViewportSize(viewport);
     for (const [selector, color] of [
-      ['.hero-opening', [255, 255, 255]], ['#features', [247, 248, 243]], ['#roadmap', [17, 22, 16]],
+      ['.hero', heroColor], ['#features', [247, 248, 243]],
       ['#newsletter', [247, 248, 243]],
       ['.site-footer', [200, 255, 61]],
     ]) {
@@ -140,8 +134,8 @@ try {
   }
 
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(`${url}/#roadmap`, { waitUntil: 'networkidle' });
-  await assertCanvas(page, [17, 22, 16]);
+  await page.goto(`${url}/#newsletter`, { waitUntil: 'networkidle' });
+  await assertCanvas(page, [247, 248, 243]);
   await page.goto(`${url}/devlog/`, { waitUntil: 'networkidle' });
   const devlogColor = await page.locator('.devlog-surface').evaluate((element) =>
     getComputedStyle(element).backgroundColor.match(/\d+/g).slice(0, 3).map(Number));
@@ -153,13 +147,13 @@ try {
     await exposedEdge(page, edge, edgeColor, 'devlog');
   }
   await page.goBack({ waitUntil: 'networkidle' });
-  await assertCanvas(page, [17, 22, 16]);
+  await assertCanvas(page, [247, 248, 243]);
   await page.evaluate(() => scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' }));
   await assertCanvas(page, [200, 255, 61]);
   await page.keyboard.press('Control+Home');
   await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
-  await assertCanvas(page, [255, 255, 255]);
-  await exposedEdge(page, 'top', [255, 255, 255], 'hero-after-footer');
+  await assertCanvas(page, heroColor);
+  await exposedEdge(page, 'top', heroColor, 'hero-after-footer');
   await page.waitForTimeout(500);
   expect(await page.evaluate(async () => {
     let writes = 0;
@@ -178,7 +172,7 @@ try {
   });
   const staticPage = await staticContext.newPage();
   await staticPage.goto(url, { waitUntil: 'networkidle' });
-  await assertCanvas(staticPage, [200, 255, 61]);
+  await assertCanvas(staticPage, heroColor);
   await staticPage.goto(`${url}/devlog/`, { waitUntil: 'networkidle' });
   await assertCanvas(staticPage, devlogColor);
   await staticContext.close();

@@ -2,11 +2,11 @@
 import { getImage, Picture } from 'astro:assets';
 import laptop from '../assets/hero/laptop-concrete.png';
 import workbench from '../assets/product/workbench.png';
-import { resolveMedia, type MediaAsset } from '../../content/editor-schema';
+import { resolveMedia } from '../../content/editor-schema';
 import type { Landing } from '../../content/landing-schema';
 import { buildScreenMesh, screenOutline } from '../lib/laptop-screen';
 
-interface Props { content: Landing['hero']; placeholderLogo?: MediaAsset | null }
+interface Props { content: Landing['hero'] }
 const { content } = Astro.props;
 const poster = resolveMedia(content.poster, import.meta.env.CMS_URL);
 const screen = poster ? poster.url : (await getImage({ src: workbench, width: 1920, format: 'webp', quality: 90 })).src;
@@ -15,7 +15,7 @@ const mesh = buildScreenMesh();
 
 <figure class="workspace-showcase" id="workspace" role="img" aria-label={content.previewAlt}>
   <Picture src={laptop} alt="" aria-hidden="true" class="laptop-render" widths={[768, 1200, 1536]}
-    sizes="(min-width: 1874px) 1536px, (min-width: 1200px) 82vw, calc(100vw + 28px)"
+    sizes="(min-width: 1610px) 1320px, (min-width: 1200px) 82vw, (min-width: 900px) 900px, 100vw"
     formats={['webp']} quality={88} loading="eager" fetchpriority="high" />
   {/* Build-time affine tiles keep perspective identical across browsers. The
       single source image is shared by every tile and downloaded only once. */}

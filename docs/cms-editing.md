@@ -12,7 +12,7 @@ Publishing never replaces other content with the checked-in seed.
 | Navigation | Top-level links, Product groups and their links, mobile labels, GitHub labels, main action and its destination |
 | Footer | Invitation, link groups, GitHub action, social destinations and icons, legal links, copyright, Cookie settings and accessibility labels |
 | Site settings | Homepage SEO, brand name, logo, favicon, social image, language, color palette, GitHub destination, skip link and cookie dialog copy |
-| Homepage | Hero copy/actions/media, feature cards and media, roadmap milestones/tasks/statuses, newsletter copy and form feedback, section order and visibility |
+| Homepage | Hero copy/actions/media, feature cards and media, newsletter copy and form feedback, section order and visibility |
 | Page content | Download, Remote, Devlog and Cookies: SEO, copy, links, images, controls, feedback and visibility settings |
 
 Homepage **Layout** rows can be dragged to change section order. Toggle
@@ -23,13 +23,17 @@ return to the homepage when followed from a subpage. Empty Product groups and
 social lists can be removed without reappearing on the next save.
 
 Feature rows control both cards and their detail dialog. Their order also
-controls dialog navigation. Roadmap rows control milestones, and each task's
-status controls its progress indicator. A task without an explicit status
-inherits Completed from an Available milestone, or Not started otherwise.
+controls dialog navigation.
 
-The removed workflow, principles, FAQ and old download sections are hidden in
-the editor. Their stored content is retained for compatibility and history;
-they are not available as Layout rows.
+The CLI compatibility list follows Features and shares its visibility. Its
+verified catalog and Iconify marks stay in code; they are not editable claims
+in the CMS. See [CLI compatibility](cli-compatibility.md).
+
+The removed roadmap, workflow, principles, FAQ and old download sections are
+hidden in the editor. Their stored content is retained for compatibility and
+history. Existing Roadmap layout rows remain readable but are ignored by the
+public site; Roadmap cannot be selected for new layout rows. Links to the
+retired section are filtered from public navigation even in older documents.
 
 ## Devlog episodes
 
@@ -61,14 +65,17 @@ per file. Files are served from the CMS, so its media directory must remain
 available after deployments. The collection is public to read; uploading,
 editing and deleting require an administrator.
 
-Hero **Media mode** selects one image, an inline YouTube player, or an uploaded
-video. **Poster** supplies the image and the YouTube loading state. **Video URL**
-accepts an HTTPS YouTube watch, share or embed URL. The player still requires
-the visitor's external-media permission; changing content does not bypass it.
-An uploaded video uses the same custom controls and does not require YouTube.
-If the hero **Poster** is empty, the current Lomi app screenshot shows project
-files, an editor and terminal panes. Selecting a poster replaces this capture
-in image and video modes.
+The active homepage hero is a static laptop composition. **Poster** accepts an
+optional uploaded image that replaces the image projected into the laptop
+screen. When empty, the screen uses the dark workspace capture at
+`src/assets/product/workbench.png`; `src/assets/hero/laptop-concrete.png`
+provides the laptop artwork. The hero **Title**, **Accent**, **Description**,
+action labels and destinations, and **Preview alt** remain editable.
+
+The retained hero **Media mode**, **Video**, **Video URL** and **Player** fields
+are for archived layouts and do not affect the selected homepage hero. Changing
+Media mode or uploading a video will not add a YouTube embed or player to the
+current hero.
 Feature cards and dialogs use Retina renders of the matching Lomi UI on the
 supplied Tahoe wallpaper, with an enlarged detail, when
 both media fields are empty. **Preview scene** selects which function to show
@@ -81,17 +88,18 @@ centered brand logo. The uploaded site logo replaces the built-in Lomi
 wordmark there. Native video poster fallbacks use local SVGs until the
 video's first frame is ready.
 
-The hero **Player** group contains labels for playback, replay, seeking,
+The legacy hero **Player** group retains labels for playback, replay, seeking,
 volume, fullscreen and retry. Its time template supports `{current}` and
-`{duration}`. Player controls remain inside the preview frame on every screen.
+`{duration}`. The selected static homepage hero does not display these controls.
 
 Each feature can have an image and an uploaded video. With both selected, the
 video is shown and the image is its poster. **Alt** overrides the file's
 alternative text; when empty, the file description or feature title is used.
-Hero and subpage images use their contextual alternative-text fields. Empty
-image fields keep the existing local assets. Changing the uploaded logo
-replaces the header and footer wordmark; the original logo animation applies
-only to the built-in wordmark.
+The homepage **Preview alt** field supplies the accessible description for the
+laptop and its projected workspace screen. Empty image fields keep the
+existing local assets. Changing the uploaded logo replaces the header and
+footer wordmark; the original logo animation applies only to the built-in
+wordmark.
 
 ## Labels, templates and links
 
@@ -100,7 +108,6 @@ by the interface; keep a token when its changing value should remain visible:
 
 - `{platform}`, `{package}`, `{tag}` in download and installation labels.
 - `{title}` in feature controls.
-- `{phase}`, `{completed}`, `{total}` in roadmap labels.
 - `{year}` in footer copyright.
 - `{embedding}` and `{privacy}` in Cookies paragraphs insert the configured
   information links.

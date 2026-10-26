@@ -1,0 +1,48 @@
+---
+import { compatibleClis } from '../data/compatible-clis';
+---
+
+<section id="cli-compatibility" class="cli-compatibility" data-scroll-surface aria-labelledby="cli-compatibility-title">
+  <div class="cli-shell">
+    <div class="cli-heading">
+      <h2 id="cli-compatibility-title">Your CLI, right at home.</h2>
+    </div>
+    <ul class="cli-list" role="list">
+      {compatibleClis.map((cli) => <li data-cli={cli.id}>
+        {cli.monochrome
+          ? <span class="cli-mark cli-mark-mono" style={`--cli-icon:url('/cli/${cli.id}.svg')`} aria-hidden="true"></span>
+          : <img class="cli-mark" src={`/cli/${cli.id}.svg`} width="34" height="34" alt="" loading="lazy" />}
+        <span class="cli-name">{cli.name}</span>
+      </li>)}
+      <li class="cli-more" data-cli="more">
+        <span class="cli-mark cli-mark-mono" style="--cli-icon:url('/cli/more.svg')" aria-hidden="true"></span>
+        <span class="cli-name">And more</span>
+      </li>
+    </ul>
+  </div>
+</section>
+
+<style>
+  .cli-compatibility { --scroll-surface-color:var(--color-chalk); padding:20px 0 72px; color:var(--color-ink); background:var(--color-chalk); }
+  .cli-shell { width:min(1440px,calc(100% - clamp(40px,10.4vw,192px))); margin-inline:auto; }
+  .cli-heading h2 { max-width:21ch; font-size:clamp(32px,3.6vw,48px); font-weight:500; line-height:1.06; letter-spacing:-.05em; text-wrap:balance; }
+  .cli-list { display:grid; grid-template-columns:repeat(8,minmax(0,1fr)); margin:36px 0 0; padding:0; border-bottom:1px solid var(--line); list-style:none; }
+  .cli-list li { display:flex; flex-direction:column; align-items:center; justify-content:center; min-width:0; min-height:116px; padding:18px 8px; border-top:1px solid var(--line); gap:12px; text-align:center; }
+  .cli-mark { display:block; flex-shrink:0; width:34px; height:34px; object-fit:contain; }
+  .cli-mark-mono { background:currentColor; mask:var(--cli-icon) center / contain no-repeat; }
+  .cli-name { display:flex; align-items:center; justify-content:center; min-height:2.9em; max-width:100%; font-size:13px; font-weight:450; line-height:1.45; letter-spacing:-.01em; }
+  .cli-more { color:var(--color-text-secondary); }
+  @media(max-width:1100px) {
+    .cli-list { grid-template-columns:repeat(4,minmax(0,1fr)); }
+    .cli-list li { min-height:106px; padding-block:14px; }
+  }
+  @media(max-width:767px) {
+    .cli-compatibility { padding:8px 0 48px; }
+    .cli-list { margin-top:28px; }
+  }
+  @media(max-width:480px) {
+    .cli-list li { min-height:94px; padding:14px 4px; gap:8px; }
+    .cli-mark { width:28px; height:28px; }
+    .cli-name { font-size:clamp(12px,3.25vw,13px); }
+  }
+</style>

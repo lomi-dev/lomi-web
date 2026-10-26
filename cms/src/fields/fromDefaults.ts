@@ -1,7 +1,9 @@
-import type { Field } from 'payload'
+import type { Field, SelectField } from 'payload'
 import { schemaFromDefaults } from '../../../content/editor-schema'
 
 const label = (name: string) => name.replace(/([A-Z])/g, ' $1').replace(/^./, (first) => first.toUpperCase())
+const filterLayoutOptions: NonNullable<SelectField['filterOptions']> = ({ options, siblingData }) =>
+  options.filter((option) => (typeof option === 'string' ? option : option.value) !== 'roadmap' || siblingData?.section === 'roadmap')
 
 /** New fields stay optional so existing documents and drafts remain publishable. */
 export function fieldsFromDefaults(defaults: Record<string, unknown>, prefix = ''): Field[] {
@@ -20,7 +22,7 @@ export function fieldsFromDefaults(defaults: Record<string, unknown>, prefix = '
       if (!value[0] || typeof value[0] !== 'object') throw new Error(`Editor arrays need record rows: ${path}`)
       return {
         ...common, type: 'array', maxRows: 50, fields: fieldsFromDefaults(value[0], `${path}[]`),
-        admin: { initCollapsed: true, description: path === 'layout' ? 'Drag to reorder homepage sections. Each section may appear only once.' : 'Drag rows to change their order. Remove rows to hide them.' },
+        admin: { initCollapsed: true, description: path === 'layout' ? 'Drag to reorder homepage sections. Each section may appear only once. Roadmap is retired and ignored publicly; existing values are preserved.' : 'Drag rows to change their order. Remove rows to hide them.' },
         ...(path === 'layout' ? { validate: (rows: unknown) => {
           if (rows == null) return true
           const names = (rows as { section?: string }[]).map((row) => row.section)
@@ -39,7 +41,21 @@ export function fieldsFromDefaults(defaults: Record<string, unknown>, prefix = '
     const options = name === 'section' ? ['hero', 'features', 'roadmap', 'newsletter']
       : name === 'mediaMode' ? ['image', 'youtube', 'video']
         : path.startsWith('footer.socials') && name === 'icon' ? ['youtube', 'x', 'linkedin', 'tiktok'] : null
-    if (options) return { ...common, ...(name === 'mediaMode' ? { admin: { description: 'Image shows the poster. YouTube uses the video URL. Uploaded video uses the video file; the poster is its preview and fallback.' } } : {}), type: 'select', options: options.map((value) => ({ value, label: ({ youtube: 'YouTube', x: 'X', linkedin: 'LinkedIn', tiktok: 'TikTok', video: 'Uploaded video' } as Record<string, string>)[value] ?? label(value) })), validate }
+    if (options) return {
+      ...common,
+      ...(name === 'mediaMode' ? { admin: { description: 'Image shows the poster. YouTube uses the video URL. Uploaded video uses the video file; the poster is its preview and fallback.' } } : {}),
+      type: 'select',
+      options: options.map((value) => ({
+        value,
+        label: value === 'roadmap' ? 'Roadmap (retired)' : ({ youtube: 'YouTube', x: 'X', linkedin: 'LinkedIn', tiktok: 'TikTok', video: 'Uploaded video' } as Record<string, string>)[value] ?? label(value),
+      })),
+      ...(path === 'layout[].section' ? {
+        // Keep the legacy enum in storage while omitting it from new rows.
+        filterOptions: filterLayoutOptions,
+      } : {}),
+      validate,
+    }
+
     return { ...common, type: /description|body|text|note|caption|message|intro|alt$/i.test(name) || String(value).length > 150 ? 'textarea' : 'text', maxLength: 20000, validate,
       ...(name === 'videoUrl' ? { admin: { description: 'HTTPS YouTube watch, share, shorts, or embed URL.' } } : {}),
     } as Field

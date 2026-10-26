@@ -208,7 +208,6 @@ async function verify() {
             for (const [name, selector, contrast] of [
               ['hero', '[data-video-poster] img', 'light'],
               ['feature', '[data-feature-card] [data-media-placeholder]', 'dark'],
-              ['roadmap', '#roadmap', 'light'],
             ]) {
               await page.locator(selector).first().evaluate((element) => window.scrollTo({ top: scrollY + element.getBoundingClientRect().top + 100, behavior: 'instant' }));
               for (const target of await page.locator('.site-header :is(.wordmark, .navigation-link, .product-menu > summary, .header-source):visible').all()) {

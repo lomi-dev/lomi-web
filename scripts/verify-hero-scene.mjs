@@ -3,434 +3,367 @@ import AxeBuilder from '@axe-core/playwright';
 import sharp from 'sharp';
 import { mkdir } from 'node:fs/promises';
 
-const url = process.env.VERIFY_URL || 'http://127.0.0.1:4322/';
+const url = new URL(process.env.VERIFY_URL || 'http://127.0.0.1:4322/');
 const browserType = { chromium, firefox, webkit }[process.env.VERIFY_BROWSER || 'chromium'];
 if (!browserType) throw new Error(`Unknown VERIFY_BROWSER: ${process.env.VERIFY_BROWSER}`);
 const browser = await browserType.launch();
 const errors = [];
-const widths = [320, 390, 640, 768, 1024, 1200, 1280, 1440, 1920];
+const widths = [320, 390, 640, 768, 1024, 1080, 1200, 1440, 1920];
+const wallpaperAsset = /clouds/i;
+const productAsset = /laptop-concrete/i;
 await mkdir('artifacts/hero-scene', { recursive: true });
 
-async function open({ initialHash = '', ...options } = {}) {
-  const context = await browser.newContext({ viewport: { width: 1440, height: 1100 }, ...options });
+async function open({ query = '', fragment = '', javaScriptEnabled = true, viewport = { width: 1440, height: 1100 } } = {}) {
+  const context = await browser.newContext({ viewport, javaScriptEnabled });
   await context.addInitScript(() => {
     try { localStorage.setItem('lomi.cookie-consent', JSON.stringify({ version: 1, externalMedia: false, savedAt: Date.now() })); } catch { /* Storage can be unavailable in restricted browsers. */ }
   });
   const page = await context.newPage();
-  page.on('pageerror', (error) => errors.push(error.message));
+  const pageErrors = [];
+  const requests = [];
+  page.on('pageerror', (error) => { errors.push(error.message); pageErrors.push(error.message); });
+  page.on('request', (request) => requests.push(request.url()));
   await page.route('https://api.github.com/**', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }));
-  await page.goto(new URL(initialHash, url).href, { waitUntil: 'networkidle' });
-  if (options.javaScriptEnabled !== false) await page.evaluate(() => document.fonts.ready);
-  return { context, page };
+  await page.goto(new URL(`${query}${fragment}`, url).href, { waitUntil: 'networkidle' });
+  if (javaScriptEnabled) await page.evaluate(() => document.fonts.ready);
+  return { context, page, pageErrors, requests };
 }
 
-async function imageDifference(page) {
-  const hero = page.locator('.hero');
-  const visible = await hero.screenshot({ animations: 'disabled' });
-  await page.locator('[data-laptop-screen]').evaluate((element) => { element.style.visibility = 'hidden'; });
-  const hidden = await hero.screenshot({ animations: 'disabled' });
-  await page.locator('[data-laptop-screen]').evaluate((element) => { element.style.removeProperty('visibility'); });
-  const first = await sharp(visible).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-  const second = await sharp(hidden).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-  expect([second.info.width, second.info.height]).toEqual([first.info.width, first.info.height]);
-  let changedPixels = 0;
-  for (let i = 0; i < first.data.length; i += 4) {
-    if (Math.abs(first.data[i] - second.data[i]) + Math.abs(first.data[i + 1] - second.data[i + 1]) + Math.abs(first.data[i + 2] - second.data[i + 2]) > 30) changedPixels++;
-  }
-  return changedPixels;
-}
-
-async function mappedCaptureCorners(page) {
-  const markers = [
-    { name: 'top-left', x: 18, y: 18, color: '#ff00ff', match: (r, g, b) => r > 220 && g < 50 && b > 220 },
-    { name: 'top-right', x: 882, y: 18, color: '#00ff00', match: (r, g, b) => r < 50 && g > 220 && b < 50 },
-    { name: 'bottom-right', x: 882, y: 544, color: '#00ffff', match: (r, g, b) => r < 50 && g > 220 && b > 220 },
-    { name: 'bottom-left', x: 18, y: 544, color: '#ffff00', match: (r, g, b) => r > 220 && g > 220 && b < 50 },
-  ];
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="900" height="562" viewBox="0 0 900 562"><rect width="900" height="562" fill="#101010"/>${markers.map(({ x, y, color }) => `<rect x="${x - 18}" y="${y - 18}" width="36" height="36" fill="${color}"/>`).join('')}</svg>`;
-  const source = page.locator('[data-screen-source]');
-  const original = await source.getAttribute('href');
-  const probe = `data:image/svg+xml,${encodeURIComponent(svg)}`;
-  const replaceSource = (href) => source.evaluate((element, nextHref) => new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => reject(new Error('Timed out loading the temporary screen-corner probe.')), 5000);
-    element.addEventListener('load', () => {
-      clearTimeout(timeout);
-      requestAnimationFrame(() => requestAnimationFrame(resolve));
-    }, { once: true });
-    element.addEventListener('error', () => {
-      clearTimeout(timeout);
-      reject(new Error('Could not load the temporary screen-corner probe.'));
-    }, { once: true });
-    element.setAttribute('href', nextHref);
-  }), href);
-  await replaceSource(probe);
-  const screenshot = await page.locator('.hero').screenshot({ animations: 'disabled' });
-  await replaceSource(original);
-
-  const figure = await page.locator('#workspace').boundingBox();
-  const heroBounds = await page.locator('.hero').boundingBox();
-  const { data, info } = await sharp(screenshot).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-  function project(x, y) {
-    const denominator = 1 - .000188234574601623 * x - .0000998384216135245 * y;
-    return [
-      (.676301657319625 * x - .164079997471883 * y + 550) / denominator,
-      (-.100462679622081 * x + .792955948346037 * y + 166) / denominator,
-    ];
-  }
-  return markers.map((marker) => {
-    const [projectedX, projectedY] = project(marker.x, marker.y);
-    const targetX = Math.round(figure.x + projectedX / 1536 * figure.width - heroBounds.x);
-    const targetY = Math.round(figure.y + projectedY / 1024 * figure.height - heroBounds.y);
-    let matchingPixels = 0;
-    for (let row = Math.max(0, targetY - 7); row < Math.min(info.height, targetY + 8); row++) {
-      for (let column = Math.max(0, targetX - 7); column < Math.min(info.width, targetX + 8); column++) {
-        const offset = (row * info.width + column) * info.channels;
-        if (marker.match(data[offset], data[offset + 1], data[offset + 2]) && data[offset + 3] > 200) matchingPixels++;
-      }
-    }
-    return { name: marker.name, matchingPixels };
-  });
-}
-
-async function assertHeroPullRemoved(page, label) {
-  const obsoleteHooks = await page.locator('.home-pull-viewport, .home-pull-content, [data-hero-pull-ready], [data-hero-pull-state], [data-hero-pull-active], [data-hero-pull]').count();
-  expect(obsoleteHooks, `${label}: no hero pull wrappers or state hooks`).toBe(0);
-  const transforms = await page.evaluate(() => ['.hero', '.hero-opening', '.site-header', '#main']
-    .map((selector) => getComputedStyle(document.querySelector(selector)).transform));
-  expect(transforms, `${label}: hero, header, and main stay untransformed`).toEqual(['none', 'none', 'none', 'none']);
-}
-
-async function assertTopEdgeEventsAreNotCancelled(page, label) {
-  const eventResults = await page.locator('.hero-opening').evaluate((element) => {
-    const wheelResults = [-12000, -12000, -600].map((deltaY) => {
-      const event = new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY });
-      element.dispatchEvent(event);
-      return event.defaultPrevented;
-    });
-    const touchResults = [];
-    for (const [type, clientY] of [['touchstart', 20], ['touchmove', 200], ['touchend', 200]]) {
-      const event = new Event(type, { bubbles: true, cancelable: true });
-      Object.defineProperties(event, {
-        touches: { value: type === 'touchend' ? [] : [{ identifier: 1, clientX: 20, clientY }] },
-        changedTouches: { value: [{ identifier: 1, clientX: 20, clientY }] },
-      });
-      element.dispatchEvent(event);
-      touchResults.push(event.defaultPrevented);
-    }
-    return { wheelResults, touchResults };
-  });
-  expect(eventResults.wheelResults, `${label}: repeated upward wheel events are not intercepted`).toEqual([false, false, false]);
-  expect(eventResults.touchResults, `${label}: touch scrolling events are not intercepted`).toEqual([false, false, false]);
-  await assertHeroPullRemoved(page, label);
-}
-
-async function assertNoTransformsDuringFrames(page, label) {
-  const frames = await page.evaluate(() => new Promise((resolve) => {
-    const samples = [];
-    let remaining = 6;
-    const sample = () => {
-      samples.push(['.hero', '.hero-opening', '.site-header', '#main']
-        .map((selector) => getComputedStyle(document.querySelector(selector)).transform));
-      if (--remaining) requestAnimationFrame(sample);
-      else resolve(samples);
-    };
-    requestAnimationFrame(sample);
-  }));
-  expect(frames, `${label}: no element transforms during repeated animation frames`).toEqual(
-    Array.from({ length: 6 }, () => ['none', 'none', 'none', 'none']),
-  );
-}
-
-async function workspacePosition(page) {
-  return page.evaluate(() => {
-    const hero = document.querySelector('.hero');
-    const title = document.querySelector('#hero-title');
-    const workspace = document.querySelector('#workspace');
+async function imageState(locator) {
+  return locator.evaluate(async (image) => {
+    await image.decode();
+    const picture = image.closest('picture');
     return {
-      pageX: scrollX,
-      heroX: hero.scrollLeft,
-      heroY: hero.scrollTop,
-      titleX: title.getBoundingClientRect().left,
-      workspaceX: workspace.getBoundingClientRect().left,
+      alt: image.alt,
+      width: image.naturalWidth,
+      height: image.naturalHeight,
+      currentSrc: image.currentSrc,
+      sourceHint: `${image.getAttribute('src') ?? ''} ${image.getAttribute('srcset') ?? ''} ${picture?.querySelector('source')?.getAttribute('srcset') ?? ''}`,
     };
   });
 }
 
-async function assertBackdropMotion(page) {
-  const backdrop = page.locator('lomi-hero-backdrop');
-  const drift = backdrop.locator('.hero-backdrop-drift');
-  const parallax = backdrop.locator('.hero-backdrop-parallax');
-  await expect(backdrop).toHaveAttribute('data-motion', 'running');
-  await expect(backdrop).toHaveAttribute('aria-hidden', 'true');
-  const origin = await workspacePosition(page);
-  const initialDrift = await drift.evaluate((element) => getComputedStyle(element).transform);
-  await expect.poll(() => drift.evaluate((element) => getComputedStyle(element).transform)).not.toBe(initialDrift);
-
-  const originBounds = await parallax.boundingBox();
-  await page.mouse.move(1380, 120);
-  await expect.poll(async () => (await parallax.boundingBox()).x - originBounds.x).toBeGreaterThan(5);
-  await page.waitForTimeout(1000);
-  const offset = await parallax.boundingBox();
-  expect(Math.abs(offset.x - originBounds.x), 'Pointer movement stays subtle').toBeLessThanOrEqual(12);
-  expect(Math.abs(offset.y - originBounds.y), 'Vertical pointer movement stays subtle').toBeLessThanOrEqual(8);
-  expect(await workspacePosition(page), 'Interactive background does not move text, laptop or viewport').toEqual(origin);
-  await page.mouse.move(10, 1110);
-  await expect.poll(async () => Math.abs((await parallax.boundingBox()).x - originBounds.x)).toBeLessThan(.1);
-  await page.locator('#newsletter').evaluate((element) => element.scrollIntoView({ behavior: 'instant' }));
-  await expect(backdrop).toHaveAttribute('data-motion', 'paused');
-  const pausedDrift = await drift.evaluate((element) => getComputedStyle(element).transform);
-  await page.waitForTimeout(200);
-  expect(await drift.evaluate((element) => getComputedStyle(element).transform), 'Background stops while offscreen').toBe(pausedDrift);
-  await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
-  await expect(backdrop).toHaveAttribute('data-motion', 'running');
-
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  await expect(backdrop).toHaveAttribute('data-motion', 'paused');
-  await page.mouse.move(1380, 120);
-  await expect(parallax).toHaveCSS('transform', 'none');
-  await expect(drift).toHaveCSS('transform', 'none');
-  await page.emulateMedia({ reducedMotion: 'no-preference' });
-  await expect(backdrop).toHaveAttribute('data-motion', 'running');
-  // Snapshot animation cancellation uses WAAPI to restart CSS animations.
-  // Capture only after the real lifecycle checks so it cannot override pausing.
-  await page.locator('.hero').screenshot({ path: `artifacts/hero-scene/${browserType.name()}-interactive.png`, animations: 'disabled' });
+async function assertImageAsset(locator, expectedAsset, label) {
+  const image = await imageState(locator);
+  expect(image.width, `${label}: decoded image width`).toBeGreaterThan(0);
+  expect(image.height, `${label}: decoded image height`).toBeGreaterThan(0);
+  expect(new URL(image.currentSrc).origin, `${label}: image is hosted locally`).toBe(url.origin);
+  expect(image.sourceHint, `${label}: uses the approved source asset`).toMatch(expectedAsset);
+  return image;
 }
 
-async function assertAnchorPosition(page, expected, label, target = '#workspace') {
-  await expect(page).toHaveURL(new URL(target, url).href);
-  await expect(page.locator(target)).toBeInViewport();
-  let previousY;
-  let stableSamples = 0;
-  await expect.poll(async () => {
-    const currentY = await page.evaluate(() => scrollY);
-    stableSamples = previousY !== undefined && Math.abs(currentY - previousY) < .5 ? stableSamples + 1 : 0;
-    previousY = currentY;
-    return stableSamples;
-  }, { intervals: [50] }).toBeGreaterThanOrEqual(3);
-  // Native fragment scrolling can continue after the click handler returns.
-  // Sample from the test runner, since animation callbacks are disabled in
-  // the no-JS context, so a delayed sideways scroll cannot pass.
-  for (let frame = 0; frame < 12; frame++) {
-    await page.waitForTimeout(20);
-    const actual = await workspacePosition(page);
-    expect(actual.pageX, `${label}: viewport stays horizontally aligned`).toBe(0);
-    expect(actual.heroX, `${label}: hero does not scroll internally sideways`).toBe(0);
-    expect(actual.heroY, `${label}: hero does not scroll internally vertically`).toBe(0);
-    expect(Math.abs(actual.titleX - expected.titleX), `${label}: title retains its horizontal position`).toBeLessThan(1);
-    expect(Math.abs(actual.workspaceX - expected.workspaceX), `${label}: laptop retains its horizontal position`).toBeLessThan(1);
+async function projectedScreenGeometry(page) {
+  return page.locator('#workspace svg.laptop-display polygon[data-screen-boundary]').evaluate((element) => {
+    const bounds = element.getBoundingClientRect();
+    const matrix = element.getScreenCTM();
+    const points = Array.from({ length: element.points.numberOfItems }, (_, index) => {
+      const point = element.points.getItem(index);
+      const projected = new DOMPoint(point.x, point.y).matrixTransform(matrix);
+      return { x: projected.x, y: projected.y };
+    });
+    return { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height, right: bounds.right, bottom: bounds.bottom, points };
+  });
+}
+
+async function assertProjectedScreen(page, label) {
+  const source = page.locator('#workspace svg.laptop-display image[data-screen-source]');
+  await expect(source, `${label}: projected screen source exists`).toHaveCount(1);
+  const href = await source.getAttribute('href');
+  expect(href, `${label}: projected screen has a source`).toBeTruthy();
+  const absoluteHref = new URL(href, page.url()).href;
+  if (/workbench/i.test(href)) expect(new URL(absoluteHref).origin, `${label}: fallback screen asset is local`).toBe(url.origin);
+  const decoded = await page.evaluate(async (src) => {
+    const image = new Image();
+    image.src = src;
+    await image.decode();
+    return { width: image.naturalWidth, height: image.naturalHeight, currentSrc: image.currentSrc };
+  }, absoluteHref);
+  expect(decoded.width, `${label}: projected screenshot decodes`).toBeGreaterThan(0);
+  expect(decoded.height, `${label}: projected screenshot decodes`).toBeGreaterThan(0);
+  const boundary = page.locator('#workspace svg.laptop-display polygon[data-screen-boundary]');
+  await expect(boundary, `${label}: screen boundary mesh exists`).toHaveCount(1);
+  const geometry = await projectedScreenGeometry(page);
+  expect(geometry.points.length, `${label}: screen mesh has polygon points`).toBeGreaterThanOrEqual(3);
+  expect(geometry.width, `${label}: projected screen has visible width`).toBeGreaterThan(80);
+  expect(geometry.height, `${label}: projected screen has visible height`).toBeGreaterThan(40);
+  return { href, absoluteHref, geometry };
+}
+
+async function projectedScreenPixelDifference(page, label) {
+  const group = page.locator('#workspace [data-laptop-screen]');
+  const workspace = page.locator('#workspace');
+  await expect(group, `${label}: projected screen group is present`).toHaveCount(1);
+  const visible = await workspace.screenshot({ animations: 'disabled' });
+  const originalVisibility = await group.evaluate((element) => element.style.visibility);
+  await group.evaluate((element) => { element.style.visibility = 'hidden'; });
+  let hidden;
+  try {
+    hidden = await workspace.screenshot({ animations: 'disabled' });
+  } finally {
+    await group.evaluate((element, visibility) => {
+      if (visibility) element.style.visibility = visibility;
+      else element.style.removeProperty('visibility');
+    }, originalVisibility);
+  }
+  const first = await sharp(visible).resize(180, 120, { fit: 'fill' }).ensureAlpha().raw().toBuffer();
+  const second = await sharp(hidden).resize(180, 120, { fit: 'fill' }).ensureAlpha().raw().toBuffer();
+  let changed = 0;
+  for (let offset = 0; offset < first.length; offset += 4) {
+    const difference = Math.abs(first[offset] - second[offset])
+      + Math.abs(first[offset + 1] - second[offset + 1])
+      + Math.abs(first[offset + 2] - second[offset + 2]);
+    if (difference > 30) changed++;
+  }
+  expect(changed, `${label}: decoded screenshot paints inside the laptop screen`).toBeGreaterThan(20);
+}
+
+async function heroSignature(page) {
+  const hero = page.locator('section.hero.desktop-hero[aria-labelledby="hero-title"]');
+  const wallpaper = await imageState(hero.locator('.hero-wallpaper img'));
+  const product = await imageState(hero.locator('#workspace img'));
+  const screenHref = await hero.locator('#workspace image[data-screen-source]').getAttribute('href');
+  return page.evaluate(({ wallpaperSrc, productSrc, screenHref }) => {
+    const heroElement = document.querySelector('section.hero.desktop-hero[aria-labelledby="hero-title"]');
+    const normalize = (text) => text.replace(/\s+/g, ' ').trim();
+    const link = (selector) => {
+      const element = heroElement.querySelector(selector);
+      return { text: normalize(element.textContent), href: element.getAttribute('href') };
+    };
+    return {
+      heading: normalize(heroElement.querySelector('#hero-title').innerText),
+      description: normalize(heroElement.querySelector('.hero-copy > p').textContent),
+      primary: link('.hero-primary'),
+      secondary: link('.hero-secondary'),
+      wallpaper: wallpaperSrc,
+      product: productSrc,
+      productAlt: heroElement.querySelector('#workspace img').alt,
+      workspaceRole: heroElement.querySelector('#workspace').getAttribute('role'),
+      workspaceName: heroElement.querySelector('#workspace').getAttribute('aria-label'),
+      screen: new URL(screenHref, location.href).pathname,
+    };
+  }, {
+    wallpaperSrc: wallpaper.sourceHint.match(wallpaperAsset)?.[0].toLowerCase(),
+    productSrc: product.sourceHint.match(productAsset)?.[0].toLowerCase(),
+    screenHref,
+  });
+}
+
+async function assertNoHeroLabArtifacts(run, label) {
+  const counts = await run.page.evaluate(() => {
+    const templates = Array.from(document.querySelectorAll('template'))
+      .filter((template) => /hero|lab/i.test(`${template.id} ${template.className} ${template.getAttribute('data-hero') ?? ''}`)).length;
+    return {
+      concepts: document.querySelectorAll('[data-hero-concept], [data-hero-variant], [data-hero-lab], [class*="hero-lab"]').length,
+      templates,
+      pickers: document.querySelectorAll('[data-hero-picker], [data-hero-variant-switch], .hero-picker, #hero-picker, select[name*="hero"]').length,
+      legacyLabUi: document.querySelectorAll('lomi-hero-lab, .hl-review-toolbar, .hl-picker, template[data-hero-template]').length,
+      agents: document.querySelectorAll('.hero-dock, .hero-agent, [aria-label="Coding agents"]').length,
+    };
+  });
+  expect(counts, `${label}: no dormant concepts, lab templates, pickers, review UI, or agent dock`).toEqual({ concepts: 0, templates: 0, pickers: 0, legacyLabUi: 0, agents: 0 });
+  expect(run.requests.filter((request) => /hero-lab/i.test(new URL(request).pathname)), `${label}: no hero lab requests`).toEqual([]);
+  expect(run.requests.filter((request) => /\/agents\//i.test(new URL(request).pathname)), `${label}: no agent icon requests`).toEqual([]);
+}
+
+async function assertHeroPage(run, label) {
+  const { page } = run;
+  const hero = page.locator('section.hero.desktop-hero[aria-labelledby="hero-title"]');
+  await expect(page.locator('section.hero'), `${label}: one homepage hero`).toHaveCount(1);
+  await expect(hero, `${label}: approved desktop hero`).toBeVisible();
+  await expect(hero).toHaveAttribute('data-scroll-surface', '');
+  await expect(hero.locator('#hero-title')).toBeVisible();
+  await expect(hero.locator('#hero-title')).toHaveText(/Your agents\.\s*One home base\./);
+  await expect(hero.locator('.hero-copy > p')).toHaveText('Run any CLI agent in one desktop app, with terminals, an editor, source control and more.');
+  await expect(hero.locator('.hero-primary')).toHaveAttribute('href', '/download/');
+  await expect(hero.locator('.hero-primary')).toHaveText('Download lomi');
+  await expect(hero.locator('.hero-secondary')).toHaveAttribute('href', '#newsletter');
+  await expect(hero.locator('.hero-secondary')).toHaveText('Join newsletter');
+  await expect(hero.locator('.hero-primary')).toBeVisible();
+  await expect(hero.locator('.hero-secondary')).toBeVisible();
+  await expect(hero.locator('canvas, video, iframe, script')).toHaveCount(0);
+
+  const wallpaper = await assertImageAsset(hero.locator('.hero-wallpaper img'), wallpaperAsset, `${label}: cloud wallpaper`);
+  expect(wallpaper.alt, `${label}: wallpaper is decorative`).toBe('');
+  const showcase = hero.locator('figure#workspace.workspace-showcase');
+  await expect(showcase).toHaveAttribute('role', 'img');
+  await expect(showcase).toHaveAccessibleName("Lomi's workspace with its project explorer, TypeScript editor and integrated terminal.");
+  const product = await assertImageAsset(showcase.locator('picture img.laptop-render'), productAsset, `${label}: concrete laptop render`);
+  expect(product.alt, `${label}: physical laptop render is decorative`).toBe('');
+  await expect(showcase.locator('svg.laptop-display')).toBeAttached();
+  await assertProjectedScreen(page, label);
+  await expect(page.locator('#newsletter')).toBeAttached();
+  await assertNoHeroLabArtifacts(run, label);
+  return heroSignature(page);
+}
+
+async function rects(page) {
+  return page.evaluate(() => {
+    const bounds = (selector) => {
+      const element = document.querySelector(selector);
+      const { x, y, width, height, right, bottom } = element.getBoundingClientRect();
+      return { x, y, width, height, right, bottom };
+    };
+    return {
+      viewport: innerWidth,
+      document: document.documentElement.scrollWidth,
+      hero: bounds('section.hero'),
+      copy: bounds('.hero-copy'),
+      heading: bounds('#hero-title'),
+      primary: bounds('.hero-primary'),
+      secondary: bounds('.hero-secondary'),
+      product: bounds('#workspace'),
+      image: bounds('#workspace img'),
+      overflow: ['section.hero', '.hero-copy'].map((selector) => {
+        const element = document.querySelector(selector);
+        return { selector, extra: element.scrollWidth - element.clientWidth };
+      }),
+    };
+  });
+}
+
+function assertWithin(box, parent, label) {
+  expect(box.x, `${label}: left edge is not clipped`).toBeGreaterThanOrEqual(parent.x - 1);
+  expect(box.right, `${label}: right edge is not clipped`).toBeLessThanOrEqual(parent.right + 1);
+  expect(box.y, `${label}: top edge stays within the hero`).toBeGreaterThanOrEqual(parent.y - 1);
+  expect(box.bottom, `${label}: bottom edge stays within the hero`).toBeLessThanOrEqual(parent.bottom + 1);
+}
+
+function pointInRect(point, rect) {
+  return point.x >= rect.x && point.x <= rect.right && point.y >= rect.y && point.y <= rect.bottom;
+}
+
+function pointInPolygon(point, polygon) {
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const first = polygon[i];
+    const second = polygon[j];
+    const crosses = (first.y > point.y) !== (second.y > point.y)
+      && point.x < ((second.x - first.x) * (point.y - first.y)) / (second.y - first.y) + first.x;
+    if (crosses) inside = !inside;
+  }
+  return inside;
+}
+
+function segmentsIntersect(a, b, c, d) {
+  const cross = (first, second, third) => (second.x - first.x) * (third.y - first.y) - (second.y - first.y) * (third.x - first.x);
+  const onSegment = (first, second, point) => point.x >= Math.min(first.x, second.x) - 1e-6
+    && point.x <= Math.max(first.x, second.x) + 1e-6
+    && point.y >= Math.min(first.y, second.y) - 1e-6
+    && point.y <= Math.max(first.y, second.y) + 1e-6;
+  const first = cross(a, b, c);
+  const second = cross(a, b, d);
+  const third = cross(c, d, a);
+  const fourth = cross(c, d, b);
+  if (Math.abs(first) < 1e-6 && onSegment(a, b, c)) return true;
+  if (Math.abs(second) < 1e-6 && onSegment(a, b, d)) return true;
+  if (Math.abs(third) < 1e-6 && onSegment(c, d, a)) return true;
+  if (Math.abs(fourth) < 1e-6 && onSegment(c, d, b)) return true;
+  return (first > 0) !== (second > 0) && (third > 0) !== (fourth > 0);
+}
+
+function polygonIntersectsRect(polygon, rect) {
+  const corners = [
+    { x: rect.x, y: rect.y },
+    { x: rect.right, y: rect.y },
+    { x: rect.right, y: rect.bottom },
+    { x: rect.x, y: rect.bottom },
+  ];
+  if (polygon.some((point) => pointInRect(point, rect))) return true;
+  if (corners.some((point) => pointInPolygon(point, polygon))) return true;
+  const edges = corners.map((point, index) => [point, corners[(index + 1) % corners.length]]);
+  return polygon.some((point, index) => {
+    const next = polygon[(index + 1) % polygon.length];
+    return edges.some(([start, end]) => segmentsIntersect(point, next, start, end));
+  });
+}
+
+async function assertResponsiveLayout(page, width) {
+  await page.setViewportSize({ width, height: width < 768 ? 1000 : 1100 });
+  const layout = await rects(page);
+  const screen = await projectedScreenGeometry(page);
+  expect(layout.document, `${width}px: no horizontal page overflow`).toBe(layout.viewport);
+  for (const [name, box] of Object.entries({
+    copy: layout.copy,
+    heading: layout.heading,
+    primary: layout.primary,
+    secondary: layout.secondary,
+  })) assertWithin(box, layout.hero, `${width}px ${name}`);
+  assertWithin(screen, layout.hero, `${width}px projected laptop screen`);
+  for (const [name, copyArea] of [['copy', layout.copy], ['primary CTA', layout.primary], ['secondary CTA', layout.secondary]]) {
+    expect(polygonIntersectsRect(screen.points, copyArea), `${width}px: projected laptop screen does not cover ${name}`).toBe(false);
+  }
+  layout.overflow.forEach(({ selector, extra }) => expect(extra, `${width}px: ${selector} contents fit their box`).toBeLessThanOrEqual(1));
+  expect(layout.product.width, `${width}px: laptop showcase remains legible`).toBeGreaterThan(220);
+  if (width < 1200) {
+    expect(layout.product.width, `${width}px: compact laptop stays at or below 900px`).toBeLessThanOrEqual(901);
+    expect(layout.product.x, `${width}px: compact laptop stays inside the hero`).toBeGreaterThanOrEqual(layout.hero.x - 1);
+    expect(layout.product.right, `${width}px: compact laptop stays inside the hero`).toBeLessThanOrEqual(layout.hero.right + 1);
+    expect(layout.product.y, `${width}px: compact laptop follows the copy`).toBeGreaterThanOrEqual(layout.copy.bottom - 1);
+    const transforms = await page.locator('#workspace').evaluate((element) => {
+      const hero = document.querySelector('section.hero');
+      const active = [];
+      for (let current = element; current && current !== hero; current = current.parentElement) {
+        const transform = getComputedStyle(current).transform;
+        if (transform !== 'none') active.push({ element: current.tagName, className: current.className?.baseVal ?? current.className, transform });
+      }
+      return active;
+    });
+    expect(transforms, `${width}px: compact laptop has no offset rotation`).toEqual([]);
+  }
+  if ([320, 390, 1080, 1440, 1920].includes(width)) {
+    await page.locator('section.hero').screenshot({ path: `artifacts/hero-scene/${browserType.name()}-${width}.png`, animations: 'disabled' });
   }
 }
 
 try {
-  const { context, page } = await open();
-  const hero = page.locator('.hero');
-  await expect(hero).toBeVisible();
-  await expect(hero.getByRole('heading', { level: 1 })).toBeVisible();
-  await expect(hero).toHaveAttribute('data-scroll-surface', '');
-  await expect(hero.locator('#workspace')).toHaveAttribute('role', 'img');
-  await expect(hero.locator('.hero-eyebrow, .hero-note')).toHaveCount(0);
-  await expect(hero.locator('.hero-description')).toHaveText('Run any CLI agent in one desktop app, with terminals, an editor, source control and more.');
-  await expect(hero.locator('lomi-shape-waves, [data-hero-video], video, iframe')).toHaveCount(0);
-  await expect(page.locator('.site-header')).toHaveAttribute('data-theme', 'light');
-  await expect(page.locator('.site-header .header-action')).toBeVisible();
-  await expect(hero.locator('.hero-download')).toHaveAttribute('href', '/download/');
-  await expect(hero.locator('.hero-explore')).toHaveAttribute('href', '#newsletter');
-  await expect(hero.locator('.hero-explore')).toHaveAccessibleName('Join newsletter');
-  await expect(page.locator('html'), 'Homepage contains vertical edge scrolling').toHaveCSS('overscroll-behavior-y', 'none');
-  await assertHeroPullRemoved(page, 'initial homepage');
-  await assertBackdropMotion(page);
+  const base = await open();
+  const { page } = base;
+  const signature = await assertHeroPage(base, 'homepage');
+  await projectedScreenPixelDifference(page, '1440px workspace');
 
-  const imageState = await hero.locator('#workspace picture img').evaluateAll(async (images) => {
-    await Promise.all(images.map((image) => image.decode()));
-    return images.map((image) => ({ width: image.naturalWidth, height: image.naturalHeight, source: image.currentSrc }));
-  });
-  expect(imageState).toHaveLength(1);
-  imageState.forEach((image) => {
-    expect(image.width, 'Every hero image decodes').toBeGreaterThan(0);
-    expect(new URL(image.source).origin, 'Hero artwork is hosted locally').toBe(new URL(url).origin);
-  });
-  const screenImage = hero.locator('[data-screen-source]');
-  await expect(screenImage).toHaveAttribute('href', /workbench/);
-  const decodedScreen = await screenImage.evaluate(async (element) => {
-    const image = new Image();
-    image.src = element.href.baseVal;
-    await image.decode();
-    return { width: image.naturalWidth, height: image.naturalHeight, source: image.currentSrc };
-  });
-  expect(decodedScreen.width, 'The screen capture source decodes').toBeGreaterThan(0);
-  expect(new URL(decodedScreen.source).origin, 'The screen capture is hosted locally').toBe(new URL(url).origin);
-  await expect(hero.locator('[data-screen-boundary]')).toBeAttached();
-
-  for (const width of widths) {
-    await page.setViewportSize({ width, height: width < 768 ? 1000 : 1100 });
-    await page.waitForTimeout(75);
-    const layout = await page.evaluate(() => {
-      const bounds = (selector) => {
-        const element = document.querySelector(selector);
-        const { x, y, width, height, right, bottom } = element.getBoundingClientRect();
-        return { x, y, width, height, right, bottom };
-      };
-      return {
-        viewport: innerWidth,
-        document: document.documentElement.scrollWidth,
-        hero: bounds('.hero'),
-        copy: bounds('.hero-content'),
-        screen: bounds('[data-screen-boundary]'),
-        scene: bounds('#workspace'),
-        stack: getComputedStyle(document.querySelector('.hero-product')).position,
-        heading: bounds('#hero-title'),
-      };
-    });
-    expect(layout.document, `${width}px: no horizontal scrolling`).toBe(layout.viewport);
-    expect(layout.heading.width, `${width}px: heading fits the viewport`).toBeGreaterThan(200);
-    expect(layout.scene.width, `${width}px: scene is large enough to read`).toBeGreaterThan(240);
-    expect(layout.screen.width, `${width}px: the app interface remains visible`).toBeGreaterThan(120);
-    const sceneWidth = layout.scene.width;
-    const sceneHeight = layout.scene.height;
-    const screenFrame = {
-      left: (layout.screen.x - layout.scene.x) / sceneWidth,
-      right: (layout.screen.right - layout.scene.x) / sceneWidth,
-      top: (layout.screen.y - layout.scene.y) / sceneHeight,
-      bottom: (layout.screen.bottom - layout.scene.y) / sceneHeight,
-    };
-    for (const [edge, actual, expected, scale] of [
-      ['left', screenFrame.left, .3158, sceneWidth],
-      ['right', screenFrame.right, .9089, sceneWidth],
-      ['top', screenFrame.top, .0889, sceneHeight],
-      ['bottom', screenFrame.bottom, .6572, sceneHeight],
-    ]) {
-      expect(Math.abs(actual - expected) * scale, `${width}px: screen ${edge} aligns with laptop bezel`).toBeLessThan(18);
+  for (const query of ['?id=15', '?id=1', '?id=all']) {
+    const variant = await open({ query });
+    try {
+      const variantSignature = await assertHeroPage(variant, query);
+      expect(variantSignature, `${query}: URL query does not change the approved hero`).toEqual(signature);
+    } finally {
+      await variant.context.close();
     }
-    if (width <= 1199) expect(layout.stack, `${width}px: scene follows the copy`).toBe('relative');
-    else {
-      expect(layout.stack, `${width}px: scene layers in the hero`).toBe('absolute');
-      const intersectionWidth = Math.max(0, Math.min(layout.copy.right, layout.screen.right) - Math.max(layout.copy.x, layout.screen.x));
-      const intersectionHeight = Math.max(0, Math.min(layout.copy.bottom, layout.screen.bottom) - Math.max(layout.copy.y, layout.screen.y));
-      expect(intersectionWidth * intersectionHeight, `${width}px: interface does not cover copy`).toBe(0);
-    }
-    if ([320, 1200, 1280, 1920].includes(width)) {
-      await page.locator('.hero').screenshot({ path: `artifacts/hero-scene/${browserType.name()}-${width}.png`, animations: 'disabled' });
-    }
-    const beforeAnchor = await workspacePosition(page);
-    await page.locator('.hero-explore').click();
-    await assertAnchorPosition(page, beforeAnchor, `${width}px newsletter link`, '#newsletter');
-    // Repeated activation must not introduce an internal offset either.
-    await page.evaluate(() => scrollTo({ left: 0, top: 0, behavior: 'instant' }));
-    await expect.poll(() => page.evaluate(() => scrollY)).toBe(0);
-    await page.locator('.hero-explore').click();
-    await assertAnchorPosition(page, beforeAnchor, `${width}px repeated newsletter link`, '#newsletter');
-    await page.evaluate(() => {
-      history.replaceState(null, '', location.pathname + location.search);
-      scrollTo({ left: 0, top: 0, behavior: 'instant' });
-    });
   }
 
-  await page.setViewportSize({ width: 1440, height: 1100 });
-  const desktopDiff = await imageDifference(page);
-  expect(desktopDiff, 'Projected product capture is painted on the laptop').toBeGreaterThan(1000);
-  const desktopMapping = await mappedCaptureCorners(page);
-  desktopMapping.forEach(({ name, matchingPixels }) => expect(matchingPixels, `1440px: source ${name} paints at the projected bezel corner`).toBeGreaterThan(8));
-  await page.locator('.hero').screenshot({ path: `artifacts/hero-scene/${browserType.name()}-desktop.png`, animations: 'disabled' });
-  await expect(page.locator('.hero .hero-download')).toBeVisible();
-  await expect(page.locator('.hero .hero-explore')).toBeVisible();
+  for (const width of widths) await assertResponsiveLayout(page, width);
 
   await page.setViewportSize({ width: 390, height: 1000 });
-  const mobileDiff = await imageDifference(page);
-  const mobileMapping = await mappedCaptureCorners(page);
-  mobileMapping.forEach(({ name, matchingPixels }) => expect(matchingPixels, `390px: source ${name} paints at the projected bezel corner`).toBeGreaterThan(2));
-  await page.locator('.hero').screenshot({ path: `artifacts/hero-scene/${browserType.name()}-mobile.png`, animations: 'disabled' });
-  expect(mobileDiff, 'Projected product capture is painted on the mobile laptop').toBeGreaterThan(500);
-  const axe = await new AxeBuilder({ page }).include('.hero').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
-  expect(axe.violations, 'Hero accessibility at 390px').toEqual([]);
-
-  const mobileMenu = page.locator('#mobile-navigation');
-  const menuSummary = mobileMenu.locator(':scope > summary');
-  await expect(menuSummary).toBeVisible();
-  await menuSummary.click();
-  await expect(mobileMenu).toHaveAttribute('open', '');
-  await page.keyboard.press('Escape');
-  await expect(mobileMenu).not.toHaveAttribute('open');
-  await expect(menuSummary).toBeFocused();
+  const mobileAxe = await new AxeBuilder({ page }).include('.hero').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
+  expect(mobileAxe.violations, 'Hero accessibility at 390px').toEqual([]);
 
   await page.setViewportSize({ width: 1440, height: 1100 });
   const desktopAxe = await new AxeBuilder({ page }).include('.hero').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
   expect(desktopAxe.violations, 'Hero accessibility at 1440px').toEqual([]);
-
-  await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
-  await expect.poll(() => page.evaluate(() => scrollY)).toBe(0);
-  await assertTopEdgeEventsAreNotCancelled(page, 'homepage top edge');
-  await assertNoTransformsDuringFrames(page, 'homepage top edge');
-  await expect.poll(() => page.evaluate(() => scrollY)).toBe(0);
-  await expect.poll(() => page.locator('html').evaluate((element) => getComputedStyle(element).backgroundColor)).toBe('rgb(255, 255, 255)');
-
-  await page.mouse.move(900, 850);
-  await page.mouse.wheel(0, 500);
-  await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(0);
-  await assertHeroPullRemoved(page, 'after ordinary downward scrolling');
-  const downScrollY = await page.evaluate(() => scrollY);
-  await page.mouse.wheel(0, -120);
-  await expect.poll(() => page.evaluate(() => scrollY)).toBeLessThan(downScrollY);
-  await assertNoTransformsDuringFrames(page, 'after ordinary upward scrolling');
-  await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
-  await expect.poll(() => page.evaluate(() => scrollY)).toBe(0);
-
-  await page.mouse.move(900, 850);
-  for (const [index, deltaY] of [-12000, -12000, -600].entries()) {
-    await page.mouse.wheel(0, deltaY);
-    await page.waitForTimeout(60);
-    await expect.poll(() => page.evaluate(() => scrollY), { message: `Upward wheel ${index + 1} at page top keeps scroll position at zero` }).toBe(0);
-    await assertNoTransformsDuringFrames(page, `upward mouse wheel ${index + 1} at page top`);
-  }
-  await page.mouse.wheel(0, 240);
-  await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(0);
-  await assertHeroPullRemoved(page, 'downward wheel after upward top-edge input');
-  await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
-  await expect.poll(() => page.evaluate(() => scrollY)).toBe(0);
-
-  await page.locator('.hero .hero-explore').click();
-  await expect(page).toHaveURL(/#newsletter$/);
+  const secondary = page.locator('.hero-secondary');
+  await secondary.focus();
+  await expect(secondary, 'Newsletter anchor is keyboard focusable').toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(new URL('#newsletter', url).href);
   await expect(page.locator('#newsletter')).toBeInViewport();
-  await expect(page.locator('html'), 'Homepage anchor retains vertical edge containment').toHaveCSS('overscroll-behavior-y', 'none');
-  await assertHeroPullRemoved(page, 'newsletter anchor');
-  await context.close();
 
-  const noJs = await open({ javaScriptEnabled: false, viewport: { width: 390, height: 1000 } });
-  await expect(noJs.page.locator('.hero h1')).toBeVisible();
-  await expect(noJs.page.locator('#workspace img').nth(0)).toBeVisible();
-  await expect(noJs.page.locator('#workspace [data-screen-source]')).toBeAttached();
-  await expect(noJs.page.locator('.hero-download')).toHaveAttribute('href', '/download/');
-  await expect(noJs.page.locator('.hero-explore')).toHaveAttribute('href', '#newsletter');
-  expect(await imageDifference(noJs.page), 'Product capture remains visible without JavaScript').toBeGreaterThan(500);
-  const noJsPosition = await workspacePosition(noJs.page);
-  await noJs.page.locator('.hero-explore').click();
-  await assertAnchorPosition(noJs.page, noJsPosition, 'no-JS newsletter link', '#newsletter');
-  await expect(noJs.page.locator('html'), 'No-JS homepage contains vertical edge scrolling').toHaveCSS('overscroll-behavior-y', 'none');
-  await assertHeroPullRemoved(noJs.page, 'no-JS homepage');
-  await noJs.context.close();
-
-  const reduced = await open({ reducedMotion: 'reduce', viewport: { width: 390, height: 1000 } });
-  await expect(reduced.page.locator('.hero h1')).toBeVisible();
-  await expect(reduced.page.locator('#workspace img').nth(0)).toBeVisible();
-  await expect(reduced.page.locator('.hero-download')).toHaveAttribute('href', '/download/');
-  await expect(reduced.page.locator('html'), 'Reduced-motion homepage contains vertical edge scrolling').toHaveCSS('overscroll-behavior-y', 'none');
-  await assertTopEdgeEventsAreNotCancelled(reduced.page, 'reduced-motion homepage top edge');
-  await assertNoTransformsDuringFrames(reduced.page, 'reduced-motion homepage top edge');
-  await assertHeroPullRemoved(reduced.page, 'reduced-motion homepage');
-  const reducedPosition = await workspacePosition(reduced.page);
-  await reduced.page.locator('.hero-explore').click();
-  await assertAnchorPosition(reduced.page, reducedPosition, 'reduced-motion newsletter link', '#newsletter');
-  await reduced.context.close();
-
-  const direct = await open({ viewport: { width: 1440, height: 1100 }, initialHash: '#workspace' });
-  const directPosition = await workspacePosition(direct.page);
-  expect(directPosition.titleX, 'Direct workspace fragment keeps the title aligned with its shell').toBeCloseTo(
-    await direct.page.locator('.hero-shell').evaluate((element) => element.getBoundingClientRect().left), 0,
-  );
-  await assertAnchorPosition(direct.page, directPosition, 'direct workspace fragment');
+  const direct = await open({ fragment: '#newsletter' });
+  await expect(direct.page).toHaveURL(new URL('#newsletter', url).href);
+  await expect(direct.page.locator('#newsletter')).toBeInViewport();
   await direct.context.close();
 
-  expect(errors, 'Hero scenarios have no page errors').toEqual([]);
-  console.log(`Passed (${browserType.name()}): hero copy, CMS links, light header, optimized local images, projected screen source and colored corner pixels at 390/1440, nine responsive widths and bezel bounds, no text overlap or horizontal scroll, axe at 390/1440, mobile Escape navigation, workspace anchor, uncancelled top-edge wheel/touch events, repeated top-edge mouse wheels, ordinary up/down scrolling, no pull hooks or transforms, homepage vertical overscroll containment, no-JS rendering and reduced-motion rendering.`);
+  const noJs = await open({ javaScriptEnabled: false, viewport: { width: 390, height: 1000 } });
+  const noJsSignature = await assertHeroPage(noJs, 'no-JS');
+  expect(noJsSignature, 'Server-rendered hero matches the interactive hero').toEqual(signature);
+  expect(noJs.pageErrors, 'No-JS hero has no runtime errors').toEqual([]);
+  const noJsSecondary = noJs.page.locator('.hero-secondary');
+  await noJsSecondary.click();
+  await expect(noJs.page).toHaveURL(new URL('#newsletter', url).href);
+  await expect(noJs.page.locator('#newsletter')).toBeInViewport();
+  await noJs.context.close();
+
+  expect(errors, 'Hero/query/no-JS scenarios have no page errors').toEqual([]);
+  console.log(`Passed (${browserType.name()}): approved SSR cloud hero and concrete laptop/screen assets, unchanged CMS copy/actions for base and ?id=15/1/all, decoded projected screen with visible screenshot pixels, no hero scripts/canvas/media/agent requests or lab UI, nine widths with unclipped copy/CTAs and projected screen, desktop screen/copy separation, compact unrotated laptop flow, keyboard/native newsletter anchors, no-JS parity, and axe at 390/1440.`);
 } finally {
   await browser.close();
 }

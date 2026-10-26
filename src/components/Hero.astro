@@ -1,66 +1,115 @@
 ---
+import { Picture } from 'astro:assets';
+import clouds from '../assets/clouds.png';
+import type { HeroProps } from './hero/types';
+import HeroActions from './hero/Actions.astro';
 import WorkspaceDeck from './WorkspaceDeck.astro';
-import HeroBackdrop from './HeroBackdrop.astro';
-import Icon from './Icon';
-import { activeLandingLinks } from '../data/navigation';
-import type { Landing } from '../../content/landing-schema';
-import type { MediaAsset } from '../../content/editor-schema';
 
-interface Props { content: Landing['hero']; layout?: Landing['layout']; placeholderLogo?: MediaAsset | null }
-const { content, layout, placeholderLogo } = Astro.props;
-const primary = activeLandingLinks([{label: content.primaryLabel, href: content.primaryHref}], layout)[0];
-const secondary = activeLandingLinks([{label: content.secondaryLabel, href: content.secondaryHref}], layout)[0];
+interface Props extends HeroProps {}
+const { content, layout } = Astro.props;
 ---
 
-<section class="hero" aria-labelledby="hero-title" data-scroll-surface>
-  <HeroBackdrop />
-  <div class="hero-opening hero-shell">
-    <div class="hero-content">
-      <h1 id="hero-title">{content.title}<span>{content.accent}</span></h1>
-      <p class="hero-description">{content.description}</p>
-      <div class="hero-actions">
-        {primary && <a class="hero-download" href={primary.href}><Icon name="download" width={18} height={18} />{primary.label}</a>}
-        {secondary && <a class="hero-explore" href={secondary.href}>{secondary.label}<span aria-hidden="true">↓</span></a>}
-      </div>
+<section class="hero desktop-hero" data-scroll-surface aria-labelledby="hero-title">
+  <div class="hero-wallpaper" aria-hidden="true">
+    <Picture src={clouds} alt="" widths={[768, 1280, 1536]} sizes="100vw" formats={['webp']} quality={78} loading="eager" fetchpriority="low" />
+  </div>
+
+  <div class="hero-layout">
+    <div class="hero-copy">
+      <h1 id="hero-title"><span>{content.title}</span><span>{content.accent}</span></h1>
+      <p>{content.description}</p>
+      <HeroActions content={content} layout={layout} class="desktop-actions" />
     </div>
   </div>
-  <div class="hero-product">
-    <WorkspaceDeck content={content} placeholderLogo={placeholderLogo} />
-  </div>
+  <div class="hero-desktop"><WorkspaceDeck content={content} /></div>
 </section>
 
 <style>
-  /* Clip the artwork without making the hero scrollable by fragment links. */
-  .hero { --scroll-surface-color: #ffffff; --hero-gutter: clamp(24px, 5.2vw, 80px); --hero-height: clamp(930px, 62.5vw, 1100px); position: relative; isolation: isolate; min-height: var(--hero-height); overflow: clip; background: #ffffff; color: var(--color-ink); }
-  .hero-shell { width: min(1440px, calc(100% - var(--hero-gutter) * 2)); margin-inline: auto; }
-  .hero-opening { position: relative; z-index: 2; min-height: var(--hero-height); display: flex; align-items: flex-start; padding: clamp(218px, 24svh, 276px) 0 180px; }
-  .hero-content { position: relative; z-index: 2; width: min(500px, 42%); }
-  h1 { margin: 0; font-size: clamp(58px, 5.6vw, 82px); font-weight: 500; letter-spacing: -.06em; line-height: 1.01; text-wrap: balance; overflow-wrap: anywhere; }
-  h1 > span { display: block; }
-  .hero-description { max-width: 460px; margin: 27px 0 0; color: var(--color-text-secondary); font-size: clamp(16px, 1.2vw, 18px); line-height: 1.7; text-wrap: pretty; }
-  .hero-actions { display: flex; align-items: center; justify-content: flex-start; flex-wrap: wrap; gap: 12px; margin-top: 30px; }
-  .hero-download { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 52px; padding: 0 23px; border: 1px solid var(--color-lime); border-radius: 3px; color: #0b0d0c; background: var(--color-lime); font-size: 14px; font-weight: 550; transition: background-color 150ms ease, transform 150ms var(--ease-out); }
-  .hero-download:active { background: var(--color-lime-pressed); transform: scale(.98); }
-  .hero-explore { display: inline-flex; align-items: center; justify-content: center; gap: 13px; min-height: 52px; padding: 0 19px; border: 1px solid var(--line); border-radius: 3px; background: rgb(255 255 255 / 80%); color: var(--color-ink); font-size: 14px; transition: background-color 150ms ease, border-color 150ms ease; }
-  .hero-explore > span { color: var(--color-focus); font-size: 18px; }
-  .hero-product { position: absolute; z-index: 1; bottom: 0; left: 26%; width: min(1536px, 82vw); margin: 0; }
-  .hero :focus-visible { outline-color: var(--color-focus); }
-  @media (hover: hover) {
-    .hero-download:hover { background: var(--color-lime-hover); }
-    .hero-explore:hover { background: #f0f4e9; border-color: #b7c5a8; }
+  .desktop-hero {
+    --scroll-surface-color: #f6f8f4;
+    --hero-button-radius: 4px;
+    --hero-button-fill: #c8ff3d;
+    --hero-button-ink: #101410;
+    --hero-button-line: #cbd2c6;
+    position: relative;
+    min-height: 960px;
+    overflow: clip;
+    isolation: isolate;
+    background: #f6f8f4;
+    color: #101410;
   }
+  .hero-wallpaper { position: absolute; z-index: -1; inset: 0; overflow: hidden; background: #f6f8f4; }
+  .hero-wallpaper::after {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(105deg, rgb(248 250 246 / .88) 0%, rgb(248 250 246 / .72) 40%, rgb(248 250 246 / .52) 100%);
+    content: '';
+  }
+  :global(.hero-wallpaper picture),
+  :global(.hero-wallpaper img) { display: block; width: 100%; height: 100%; }
+  :global(.hero-wallpaper img) { object-fit: cover; object-position: center 46%; filter: saturate(.55); }
+  .hero-layout {
+    box-sizing: border-box;
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(280px, .72fr) minmax(620px, 1.28fr);
+    align-items: start;
+    column-gap: clamp(42px, 6vw, 88px);
+    width: min(1312px, calc(100% - 96px));
+    min-height: 960px;
+    margin-inline: auto;
+    padding: 166px 0 82px;
+  }
+  .hero-copy {
+    grid-column: 1;
+    position: relative;
+    z-index: 2;
+    max-width: 420px;
+    padding-top: 22px;
+  }
+  .desktop-hero h1 {
+    margin: 0;
+    font-size: clamp(52px, 5.8vw, 78px);
+    font-weight: 520;
+    letter-spacing: -.076em;
+    line-height: .98;
+    text-wrap: balance;
+  }
+  .desktop-hero h1 span { display: block; }
+  .desktop-hero h1 span + span { margin-top: .11em; }
+  .hero-copy > p {
+    max-width: 385px;
+    margin: 23px 0 0;
+    color: #505a51;
+    font-size: 15px;
+    line-height: 1.7;
+    text-wrap: pretty;
+  }
+  .desktop-actions { margin-top: 26px; }
+  .hero-desktop {
+    position: absolute;
+    z-index: 1;
+    right: 0;
+    bottom: 0;
+    width: min(1320px, 82vw);
+  }
+  .desktop-hero :focus-visible { outline: 2px solid #345600; outline-offset: 4px; }
   @media (max-width: 1199px) {
-    .hero { min-height: 0; }
-    .hero-opening { min-height: 0; padding: 142px 0 0; }
-    .hero-content { width: min(600px, 100%); }
-    h1 { font-size: clamp(46px, 8.7vw, 68px); letter-spacing: -.06em; line-height: 1.04; }
-    .hero-description { max-width: 540px; margin-top: 19px; font-size: 15px; line-height: 1.7; }
-    .hero-actions { gap: 10px; margin-top: 22px; }
-    .hero-download { min-height: 48px; padding-inline: 16px; gap: 9px; font-size: 12px; }
-    .hero-explore { min-height: 48px; padding-inline: 14px; gap: 8px; font-size: 12px; }
-    .hero-explore > span { font-size: 16px; }
-    .hero-product { position: relative; bottom: auto; left: auto; width: calc(100% + 28px); max-width: none; margin: 18px 0 0 -14px; }
+    .desktop-hero { min-height: 0; }
+    .hero-layout {
+      grid-template-columns: minmax(0, 1fr);
+      width: min(100% - 56px, 780px);
+      min-height: 0;
+      padding: 150px 0 0;
+    }
+    .hero-copy { grid-column: 1; max-width: 580px; padding-top: 0; }
+    .desktop-hero h1 { font-size: clamp(52px, 8vw, 72px); }
+    .hero-desktop { position: relative; right: auto; bottom: auto; width: min(100%, 900px); margin: 12px auto 0; }
   }
-  @media (max-width: 767px) { .hero { --hero-gutter: 20px; } }
-  @media (prefers-reduced-motion: reduce) { .hero-download { transition: background-color 150ms ease; } .hero-download:active { transform: none; } }
+  @media (max-width: 620px) {
+    .hero-layout { width: calc(100% - 40px); padding: 142px 0 0; }
+    .desktop-hero h1 { font-size: clamp(48px, 13vw, 62px); }
+    .hero-copy > p { margin-top: 17px; font-size: 15px; }
+    .desktop-actions { margin-top: 20px; }
+  }
 </style>

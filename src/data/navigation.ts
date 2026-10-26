@@ -1,7 +1,7 @@
 import type { Landing } from '../../content/landing-schema';
 import { site } from './site';
 
-const removedAnchors = new Set(['#workflow', '#principles', '#faq']);
+const removedAnchors = new Set(['#workflow', '#principles', '#faq', '#roadmap']);
 
 export const agentWorkflowLinks = [
   { label: 'Claude Code in lomi', href: '/claude-code/' },

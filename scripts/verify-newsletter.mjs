@@ -407,12 +407,12 @@ try {
   await expect(email).toBeFocused();
   await expect(button).toContainText('Subscribed');
   await expect(form).toHaveAttribute('aria-busy', 'false');
-  await expect(page.locator('.letter-accepted')).toHaveCSS('opacity', '1');
+  await expect(button.locator('.newsletter-check')).toBeVisible();
   await page.locator('#newsletter').screenshot({ path: `artifacts/newsletter-${browserType.name()}-success.png` });
   await email.fill('retry@example.test');
   await expect(root).toHaveAttribute('data-state', 'idle');
   await expect(page.locator('#newsletter-status')).toBeEmpty();
-  await expect(page.locator('.letter-accepted')).toHaveCSS('opacity', '0');
+  await expect(button.locator('.newsletter-check')).not.toBeVisible();
 
   for (const [status, body, message] of [[200, '{"accepted":true}', 'couldn’t'], [202, '{"accepted":false}', 'couldn’t'], [202, '{', 'couldn’t'], [503, '{}', 'couldn’t'], [429, '{}', 'Too many']]) {
     await mock(page, status, body);
@@ -443,7 +443,7 @@ try {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await button.click();
   await expect(root).toHaveAttribute('data-state', 'success');
-  await expect(page.locator('.letter-accepted')).toHaveCSS('animation-name', 'none');
+  await expect(button).toHaveCSS('transition-duration', '0s');
   await email.fill('');
 
   await layout(page);

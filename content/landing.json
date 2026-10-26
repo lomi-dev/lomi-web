@@ -6,10 +6,6 @@
   "navigation": {
     "links": [
       {
-        "label": "Roadmap",
-        "href": "#roadmap"
-      },
-      {
         "label": "Newsletter",
         "href": "#newsletter"
       },
@@ -203,7 +199,7 @@
       },
       {
         "question": "How do I report a problem or contribute?",
-        "answer": "Open an issue on GitHub with the steps to reproduce a problem, or propose an improvement there. You can also inspect the source and submit a pull request. The roadmap lists proposed priorities, which may change."
+        "answer": "Open an issue on GitHub with the steps to reproduce a problem, or propose an improvement there. You can also inspect the source and submit a pull request."
       }
     ]
   },
@@ -231,10 +227,6 @@
           {
             "label": "Features",
             "href": "#features"
-          },
-          {
-            "label": "Roadmap",
-            "href": "#roadmap"
           },
           {
             "label": "Download",

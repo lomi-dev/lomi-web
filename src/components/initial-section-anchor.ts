@@ -23,7 +23,7 @@ export function alignInitialSectionAnchor(): void {
         await new Promise<void>((resolve) => document.addEventListener('DOMContentLoaded', () => resolve(), { once: true }));
       }
       await document.fonts.ready;
-      // Let font measurements and the roadmap's scheduled layout finish first.
+      // Let font measurements and the initial layout finish first.
       await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
       if (!interrupted && location.hash === hash && target.isConnected) {
         target.scrollIntoView({ block: 'start', behavior: 'instant' });

@@ -1,8 +1,9 @@
 # React Bits and agent marks
 
-The CLI card scene is archived. The current hero uses real product captures
-and the authored Shape Waves background; it does not import TiltedCard or
-hydrate a React island. The source and licenses below remain versioned.
+The CLI card scene and Shape Waves background are archived. The current hero
+uses cloud wallpaper and a real workspace capture projected into laptop
+artwork; it has no agent dock and does not import TiltedCard or hydrate a React
+island. The source and licenses below remain versioned.
 
 ## Vendored TiltedCard
 
@@ -56,8 +57,9 @@ For positioned agent cards use explicit matching container/body sizes,
 `floating={false}`, `intro={false}`, `gyroscope={false}`,
 `rotateAmplitude={10}`, `scaleOnHover={1.03}`, and `showTooltip={false}`.
 Custom visible marks and labels can be passed in `overlayContent` with
-`displayOverlayContent`; the overlay fills the card body. The consumer owns the
-six active card positions and any CSS float animation, allowing room for central copy.
+`displayOverlayContent`; the overlay fills the card body. The archived card
+scene owned its six card positions and any CSS float animation, allowing room
+for central copy.
 
 Server rendering produces the actual card content without requiring JavaScript.
 Pointer depth begins after hydration. Intro uses an effect to initialize motion;
@@ -87,8 +89,8 @@ Neither configuration adds a runtime dependency to the website.
 
 ## Agent mark provenance
 
-Six marks are active in the hero. Hermes is retained as an unused asset
-with its original license, and is no longer rendered.
+No local agent marks are used in the selected hero. The SVG files remain
+archived with their original licenses.
 
 The seven base SVGs in `public/agents` were copied byte-for-byte from Lomi's
 existing `src/cli-icons` assets. Their original download date is September 24,
