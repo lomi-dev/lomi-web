@@ -31,7 +31,7 @@ const placeholders = [
         <button type="button" data-updates-previous aria-label="Previous updates" aria-controls="updates-list" disabled><Icon name="arrow" width={20} height={20} /></button>
         <button type="button" data-updates-next aria-label="Next updates" aria-controls="updates-list"><Icon name="arrow" width={20} height={20} /></button>
       </div>
-      <a class="updates-all" href="/devlog/" data-updates-all>All devlogs<Icon name="arrow" width={16} height={16} /></a>
+      <a class="button button-secondary button-compact updates-all" href="/devlog/" data-updates-all>All devlogs<Icon name="arrow" width={16} height={16} /></a>
     </div>
   </div>
 
@@ -85,10 +85,9 @@ const placeholders = [
   .updates-actions { display:flex; align-items:center; flex-shrink:0; gap:18px; }
   .updates-buttons { display:flex; gap:8px; }
   .updates-buttons[hidden] { display:none; }
-  .updates-buttons button { display:grid; place-items:center; width:44px; height:44px; padding:0; border:1px solid #aeb5a8; border-radius:50%; background:transparent; color:var(--color-ink); cursor:pointer; }
+  .updates-buttons button { display:grid; place-items:center; width:44px; height:44px; padding:0; border:1px solid #aeb5a8; border-radius:var(--button-radius); background:transparent; color:var(--color-ink); cursor:pointer; }
   .updates-buttons button:disabled { border-color:#d5dacf; color:#aab2a1; cursor:default; }
   [data-updates-previous] :global(svg) { transform:rotate(180deg); }
-  .updates-all { display:inline-flex; align-items:center; justify-content:center; gap:14px; min-height:44px; padding:0 16px; border:1px solid #aeb5a8; border-radius:5px; font-size:13px; line-height:1.4; font-weight:500; }
   .updates-rail { display:grid; grid-auto-flow:column; grid-auto-columns:clamp(280px,27vw,420px); align-items:stretch; gap:24px; overflow-x:auto; overscroll-behavior-x:contain; margin:36px 0 0; padding:0 var(--updates-gutter) 12px; scroll-padding-inline:var(--updates-gutter); scroll-snap-type:x proximity; scrollbar-width:none; list-style:none; }
   .updates-rail::-webkit-scrollbar { display:none; }
   .updates-rail > li { display:flex; min-width:0; scroll-snap-align:start; }
@@ -112,7 +111,7 @@ const placeholders = [
   .update-soon { color:var(--color-text-secondary); }
   .update-link:focus-visible { outline-offset:-3px; }
   .updates-rail:focus-visible { outline-offset:-3px; border-radius:0; }
-  @media(hover:hover) { .updates-all:hover, .updates-buttons button:not(:disabled):hover { border-color:var(--color-ink); background:#e9ede3; } .update-link:hover .update-read { text-decoration:underline; text-underline-offset:4px; } }
+  @media(hover:hover) { .updates-buttons button:not(:disabled):hover { border-color:var(--color-ink); background:#e9ede3; } .update-link:hover .update-read { text-decoration:underline; text-underline-offset:4px; } }
   @media(max-width:767px) {
     .home-updates { padding:16px 0 48px; }
     .updates-heading { align-items:flex-start; gap:24px; flex-wrap:wrap; }

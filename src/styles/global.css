@@ -16,6 +16,12 @@
   --color-focus: #345600;
   --color-selection: #eaf5cc;
 }
+:root {
+  --button-radius: 8px;
+  --button-height: 48px;
+  --button-font-size: 14px;
+  --button-font-weight: 550;
+}
 :root { font-family: var(--font-sans); color: var(--color-ink); background: var(--page-canvas-background, var(--page-edge-background, var(--color-chalk))); font-synthesis: none; -webkit-font-smoothing: antialiased; --line: #ccd2c7; --ease-out: cubic-bezier(0.23, 1, 0.32, 1); --site-header-height: 72px; }
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; scroll-padding-top: calc(var(--site-header-height) + 16px); }
@@ -46,10 +52,21 @@ h3 { font-size: 23px; font-weight: 500; letter-spacing: -.035em; line-height: 1.
 .section-heading-split > .section-description { margin: 0 0 5px; }
 .text-link { display: inline-flex; align-items: center; gap: 12px; min-height: 44px; font-size: 12px; font-weight: 500; text-underline-offset: 5px; }
 .text-link:hover { text-decoration: underline; }
-.button { display: inline-flex; align-items: center; justify-content: space-between; gap: 30px; min-height: 50px; padding: 0 20px; font-size: 13px; font-weight: 550; border-radius: 3px; border: 1px solid var(--color-ink); transition: background-color 140ms; }
-.button-primary { background: var(--color-lime); }
-.button-primary:hover { background: var(--color-lime-hover); }
-.button-primary:active { background: var(--color-lime-pressed); }
+.button { display: inline-flex; align-items: center; justify-content: center; gap: 12px; min-width: 0; min-height: var(--button-height); padding: 12px 20px; border: 1px solid transparent; border-radius: var(--button-radius); font-family: var(--font-sans); font-size: var(--button-font-size); font-weight: var(--button-font-weight); line-height: 1.4; text-align: center; text-decoration: none; cursor: pointer; transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease; }
+.button-compact { min-height: 44px; padding: 10px 16px; font-size: 13px; }
+.button-primary { border-color: #b6e43b; background: var(--color-lime); color: var(--color-ink); }
+.button-secondary { border-color: var(--button-secondary-border, #cbd2c6); background: var(--button-secondary-background, rgb(255 255 255 / .7)); color: var(--button-secondary-color, var(--color-ink)); }
+.button-inverse { border-color: var(--color-ink); background: var(--color-ink); color: var(--color-lime); }
+.button:disabled { opacity: .6; cursor: not-allowed; }
+.button:focus-visible { outline: 2px solid var(--button-focus-color, var(--color-focus)); outline-offset: 4px; border-radius: var(--button-radius); }
+@media (hover: hover) {
+  .button-primary:not(:disabled):hover { background: var(--color-lime-hover); }
+  .button-secondary:not(:disabled):hover { background: var(--button-secondary-hover, #e9ede3); }
+  .button-inverse:not(:disabled):hover { background: #243019; }
+}
+.button-primary:not(:disabled):active { background: var(--color-lime-pressed); }
+.button-secondary:not(:disabled):active { background: var(--button-secondary-active, #dfe5d7); }
+.button-inverse:not(:disabled):active { background: #1c2515; }
 .status-dot { display: inline-block; flex-shrink: 0; width: 6px; height: 6px; background: var(--color-lime); border-radius: 50%; }
 
 .workflow-layout { display: grid; grid-template-columns: 1fr 1.2fr; gap: 118px; }

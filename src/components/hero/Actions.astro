@@ -7,13 +7,10 @@ const primary = activeLandingLinks([{ label: content.primaryLabel, href: content
 const secondary = activeLandingLinks([{ label: content.secondaryLabel, href: content.secondaryHref }], layout)[0];
 ---
 <div {...attributes} class:list={['hero-actions', className]}>
-  {primary && <a class="hero-primary" href={primary.href}>{primary.label}<svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 3v10m-4-4 4 4 4-4M4 14v3h12v-3" stroke="currentColor" stroke-width="1.4" /></svg></a>}
-  {secondary && <a class="hero-secondary" href={secondary.href}>{secondary.label}</a>}
+  {primary && <a class="button button-primary hero-primary" href={primary.href}>{primary.label}<svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 3v10m-4-4 4 4 4-4M4 14v3h12v-3" stroke="currentColor" stroke-width="1.4" /></svg></a>}
+  {secondary && <a class="button button-secondary hero-secondary" href={secondary.href}>{secondary.label}</a>}
 </div>
 <style>
   .hero-actions { display:flex; align-items:center; flex-wrap:wrap; gap:var(--hero-actions-gap,12px); }
-  .hero-primary, .hero-secondary { display:inline-flex; align-items:center; justify-content:center; gap:var(--hero-action-gap,18px); min-height:var(--hero-action-height,48px); padding:0 var(--hero-action-padding,20px); font-size:var(--hero-action-font-size,14px); line-height:1.2; font-weight:500; border-radius:var(--hero-button-radius, 4px); }
-  .hero-primary { color:var(--hero-button-ink, #101410); background:var(--hero-button-fill, var(--color-lime)); border:1px solid var(--hero-button-fill, var(--color-lime)); }
-  .hero-secondary { color:inherit; border:1px solid var(--hero-button-line, #cdd3c9); background:var(--hero-secondary-fill, rgb(255 255 255 / .7)); }
-  @media (hover:hover) { .hero-primary:hover { filter:brightness(.96); } .hero-secondary:hover { background:#f0f3ea; } }
+  .hero-primary, .hero-secondary { gap:var(--hero-action-gap,12px); min-height:var(--hero-action-height,var(--button-height)); padding-inline:var(--hero-action-padding,20px); font-size:var(--hero-action-font-size,var(--button-font-size)); }
 </style>

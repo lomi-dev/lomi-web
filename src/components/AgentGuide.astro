@@ -30,7 +30,7 @@ const sections = [
         <h1 id="guide-title">{guide.title}</h1>
         <p class="guide-summary">{guide.summary}</p>
         <div class="guide-actions">
-          <a class="guide-download" href="/download/">Download Lomi<Icon name="diagonal" width={15} height={15} /></a>
+          <a class="button button-primary guide-download" href="/download/">Download Lomi<Icon name="diagonal" width={15} height={15} /></a>
           <a class="guide-official" href={guide.officialDocs.href}>{guide.officialDocs.label}<Icon name="diagonal" width={14} height={14} /></a>
         </div>
       </div>
@@ -151,9 +151,7 @@ const sections = [
   .guide-opening h1 { max-width: 12ch; margin: 17px 0 0; font-size: clamp(48px, 5.3vw, 72px); font-weight: 500; letter-spacing: -.06em; line-height: 1.03; text-wrap: balance; }
   .guide-summary { max-width: 47ch; margin-top: 22px; color: var(--color-text-secondary); font-size: 17px; line-height: 1.75; text-wrap: pretty; }
   .guide-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; margin-top: 28px; }
-  .guide-download, .guide-official { display: inline-flex; align-items: center; justify-content: center; gap: 12px; min-height: 48px; }
-  .guide-download { padding: 0 19px; border: 1px solid var(--color-ink); border-radius: 999px; background: var(--color-lime); font-size: 13px; font-weight: 550; }
-  .guide-download:hover { background: var(--color-lime-hover); }
+  .guide-official { display: inline-flex; align-items: center; justify-content: center; gap: 12px; min-height: 48px; }
   .guide-official { color: #35452b; font-size: 12px; line-height: 1.55; text-decoration: underline; text-decoration-color: #9ba891; text-underline-offset: 4px; }
   .guide-visual { min-width: 0; margin: 0; }
   .guide-visual :global(picture) { display: block; overflow: hidden; border: 1px solid color-mix(in srgb, var(--color-ink) 14%, transparent); border-radius: 12px; background: #131714; box-shadow: 0 20px 50px -28px rgb(20 28 14 / 45%); }

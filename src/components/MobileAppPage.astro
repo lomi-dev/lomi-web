@@ -80,14 +80,10 @@ const { content, newsletterForm } = Astro.props;
   .mobile-newsletter-description { margin: 8px 0 20px; color: var(--mobile-muted); font-size: 13px; line-height: 1.65; }
   #mobile-newsletter :global(.newsletter-controls) { grid-template-columns: minmax(0, 1fr) auto; }
   #mobile-newsletter :global(.newsletter input) { min-height: 52px; padding-inline: 12px; background: var(--color-paper); }
-  #mobile-newsletter :global(.newsletter button) { width: auto; padding-inline: 16px; border: 1px solid #b6e43b; border-radius: 10px; background: var(--color-lime); color: #0b0e0b; font-size: 13px; white-space: nowrap; }
-  #mobile-newsletter :global(.newsletter button:not(:disabled):active) { background: var(--color-lime-pressed); }
+  #mobile-newsletter :global(.newsletter button) { width: auto; padding-inline: 16px; white-space: nowrap; }
   #mobile-newsletter :global(.newsletter-submit-icon) { display: none; }
   #mobile-newsletter :global(.newsletter-status) { min-height: 1.5em; margin-top: 8px; }
   #mobile-newsletter :global(.newsletter-note) { margin-top: 8px; text-align: left; }
-  @media (hover: hover) and (pointer: fine) {
-    #mobile-newsletter :global(.newsletter button:not(:disabled):hover) { background: #dcff83; }
-  }
   .mobile-capabilities { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px; margin: 32px 0 0; padding: 0; list-style: none; }
   .mobile-capabilities li { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 12px; padding: 20px 0; border-top: 1px solid #d8dfd0; }
   .mobile-capability-mark { display: grid; place-items: center; width: 26px; height: 26px; border: 1px solid #d2dac9; border-radius: 50%; color: #536344; }

@@ -38,7 +38,7 @@ const action = activeLandingLinks([{ label: content.actionLabel, href: content.a
     </nav>
     <div class="header-actions">
       <a class="header-source" href={site.githubUrl} aria-label={content.sourceAriaLabel}><Icon name="github" width={17} height={17} /><span>{content.sourceLabel}</span><Icon name="diagonal" width={13} height={13} /></a>
-      {action && <a class="header-action" href={homeHref(action.href)}>{action.label}<Icon name="diagonal" width={16} height={16} /></a>}
+      {action && <a class="button button-primary button-compact header-action" href={homeHref(action.href)}>{action.label}<Icon name="diagonal" width={16} height={16} /></a>}
     </div>
     <details class="mobile-navigation" id="mobile-navigation">
       <summary><span>{content.menuLabel}</span><span class="menu-symbol" aria-hidden="true"></span></summary>
@@ -50,7 +50,7 @@ const action = activeLandingLinks([{ label: content.actionLabel, href: content.a
           </div>
         </details>}
         {navigationLinks.map((link) => <a class="mobile-root-link" href={homeHref(link.href)} aria-current={link.href.replace(/\/$/, '') === Astro.url.pathname.replace(/\/$/, '') ? 'page' : undefined}>{link.label}<Icon name={isPageLink(link.href) ? 'diagonal' : 'arrow'} width={16} height={16} /></a>)}
-        <div class="mobile-utilities"><a href={site.githubUrl}>{content.sourceLabel}<Icon name="diagonal" width={15} height={15} /></a>{action && <a class="mobile-download" href={homeHref(action.href)}>{action.label}<Icon name="diagonal" width={15} height={15} /></a>}</div>
+        <div class="mobile-utilities"><a href={site.githubUrl}>{content.sourceLabel}<Icon name="diagonal" width={15} height={15} /></a>{action && <a class="button button-primary button-compact mobile-download" href={homeHref(action.href)}>{action.label}<Icon name="diagonal" width={15} height={15} /></a>}</div>
       </nav>
     </details>
   </div>
@@ -257,7 +257,7 @@ const action = activeLandingLinks([{ label: content.actionLabel, href: content.a
   .desktop-navigation { display: flex; align-items: stretch; gap: 4px; align-self: stretch; margin-left: 24px; margin-right: auto; }
   .product-menu { display: none; align-items: center; align-self: stretch; }
   .site-header[data-navigation-ready] .product-menu { display: flex; }
-  .navigation-link, .product-fallback, .product-menu > summary { display: inline-flex; align-items: center; justify-content: center; gap: 7px; align-self: center; min-height: 44px; padding-inline: 14px; border-radius: 6px; font-size: 13px; font-weight: 500; color: var(--header-muted); transition: color 150ms ease, background-color 150ms ease; }
+  .navigation-link, .product-fallback, .product-menu > summary { display: inline-flex; align-items: center; justify-content: center; gap: 7px; align-self: center; min-height: 44px; padding-inline: 14px; border-radius: var(--button-radius); font-size: 13px; font-weight: 500; color: var(--header-muted); transition: color 150ms ease, background-color 150ms ease; }
   .site-header[data-navigation-ready] .product-fallback { display: none; }
   summary { list-style: none; cursor: pointer; }
   summary::-webkit-details-marker { display: none; }
@@ -272,9 +272,8 @@ const action = activeLandingLinks([{ label: content.actionLabel, href: content.a
   .product-link:focus-visible { text-decoration-line: underline; }
   .product-link[aria-current='page'] .product-link-title { text-decoration: underline; text-underline-offset: 4px; }
   .header-actions { display: flex; align-items: center; flex-shrink: 0; gap: 12px; padding-left: 20px; }
-  .header-source { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-width: 44px; min-height: 44px; padding-inline: 10px; border-radius: 6px; color: var(--header-muted); font-size: 12px; font-weight: 500; transition: color 150ms ease, background-color 150ms ease; }
-  .header-action { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 44px; padding: 0 17px; border: 1px solid #b6e43b; border-radius: 8px; color: #0b0e0b; background: var(--color-lime); font-size: 12px; font-weight: 550; transition: background-color 150ms ease, transform 150ms ease-out; }
-  .header-action:active { background: var(--color-lime-pressed); transform: scale(.96); }
+  .header-source { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-width: 44px; min-height: 44px; padding-inline: 10px; border-radius: var(--button-radius); color: var(--header-muted); font-size: 12px; font-weight: 500; transition: color 150ms ease, background-color 150ms ease; }
+  .header-action { gap: 10px; }
   .site-header :focus-visible { outline: 2px solid var(--header-focus); outline-offset: 3px; }
   .mobile-navigation { display: none; }
   .product-menu[open] .product-panel, .mobile-navigation[open] > .mobile-panel { animation: panel-enter 180ms var(--ease-out); }
@@ -282,7 +281,6 @@ const action = activeLandingLinks([{ label: content.actionLabel, href: content.a
   @media (hover: hover) {
     .navigation-link:hover, .product-fallback:hover, .product-menu > summary:hover, .header-source:hover { color: var(--header-text); background: var(--header-hover); }
     .product-link:hover { text-decoration-line: underline; }
-    .header-action:hover { background: #dcff83; }
   }
   @media (max-width: 1100px) { .header-source > span { display: none; } }
   @media (max-width: 1000px) { .header-inner { gap: 16px; } .desktop-navigation { gap: 2px; margin-left: 8px; } .navigation-link, .product-fallback, .product-menu > summary { padding-inline: 10px; font-size: 12px; } .header-actions { gap: 8px; padding-left: 12px; } .header-action { padding-inline: 13px; font-size: 11px; } }
@@ -301,7 +299,7 @@ const action = activeLandingLinks([{ label: content.actionLabel, href: content.a
     .site-header:not([data-navigation-ready]) .header-inner { gap: 8px; }
     .site-header:not([data-navigation-ready]) .desktop-navigation { display: flex; flex-wrap: wrap; justify-content: flex-end; align-content: center; gap: 0; margin: 0 0 0 auto; }
     .site-header:not([data-navigation-ready]) .navigation-link, .site-header:not([data-navigation-ready]) .product-fallback { min-width: 44px; padding-inline: 6px; font-size: 11px; }
-    .mobile-navigation > summary { display: inline-flex; align-items: center; gap: 12px; min-height: 44px; padding-inline: 12px; border: 1px solid var(--header-line); border-radius: 7px; font-size: 12px; font-weight: 500; color: var(--header-text); }
+    .mobile-navigation > summary { display: inline-flex; align-items: center; gap: 12px; min-height: 44px; padding-inline: 12px; border: 1px solid var(--header-line); border-radius: var(--button-radius); font-size: 12px; font-weight: 500; color: var(--header-text); }
     .mobile-navigation[open] > summary { background: var(--header-hover); }
     .menu-symbol { position: relative; width: 16px; height: 8px; border-block: 1px solid currentColor; }
     .mobile-navigation[open] .menu-symbol { height: 16px; border-block-color: transparent; }
@@ -319,8 +317,7 @@ const action = activeLandingLinks([{ label: content.actionLabel, href: content.a
     .mobile-product[open] .mobile-product-enter { display: none; }
     .mobile-panel:has(.mobile-product[open]) > .mobile-root-link, .mobile-panel:has(.mobile-product[open]) > .mobile-utilities { display: none; }
     .mobile-utilities { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding-top: 20px; }
-    .mobile-utilities > a { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 44px; font-size: 12px; }
-    .mobile-utilities .mobile-download { padding-inline: 14px; border: 1px solid #b6e43b; border-radius: 8px; background: var(--color-lime); color: #0b0e0b; font-weight: 550; }
+    .mobile-utilities > a:not(.button) { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 44px; font-size: 12px; }
     .mobile-product-panel { padding-bottom: 8px; }
     .product-group + .product-group { margin-top: 20px; }
     .product-group-label { margin-bottom: 4px; }
@@ -336,7 +333,6 @@ const action = activeLandingLinks([{ label: content.actionLabel, href: content.a
   @media (prefers-reduced-motion: reduce) {
     .product-menu[open] .product-panel, .mobile-navigation[open] > .mobile-panel { animation: none; }
     .site-header::before, .menu-chevron, .navigation-backdrop { transition: none; }
-    .header-action:active { transform: none; }
   }
   @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
     .site-header::before { background: var(--header-panel); }

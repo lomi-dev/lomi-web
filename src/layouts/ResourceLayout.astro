@@ -64,7 +64,7 @@ const publishedBreadcrumbs = breadcrumbs.at(-1)?.href === Astro.url.pathname
         <p class="resource-summary">{summary}</p>
         {reviewDate && <p class="resource-reviewed">Reviewed <time datetime={reviewDate.toISOString()}>{reviewDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' })}</time> · Lomi team</p>}
         <div class="resource-actions">
-          <a class="resource-primary" href="/download/">Download Lomi</a>
+          <a class="button button-primary resource-primary" href="/download/">Download Lomi</a>
           <a class="resource-secondary" href="https://docs.lomi.dev/features/">Explore Lomi features</a>
         </div>
       </header>
@@ -94,9 +94,7 @@ const publishedBreadcrumbs = breadcrumbs.at(-1)?.href === Astro.url.pathname
   .resource-summary { max-width: 66ch; margin: 22px 0 0; color: var(--color-text-secondary); font-size: clamp(1.0625rem, 1.5vw, 1.25rem); line-height: 1.65; text-wrap: pretty; }
   .resource-reviewed { margin: 18px 0 0; color: var(--color-text-secondary); font-size: .875rem; line-height: 1.6; }
   .resource-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; margin-top: 28px; }
-  .resource-primary, .resource-secondary { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; }
-  .resource-primary { padding-inline: 19px; border: 1px solid var(--color-ink); border-radius: 999px; background: var(--color-lime); color: var(--color-ink); font-size: .875rem; font-weight: 550; text-decoration: none; }
-  .resource-primary:hover { background: var(--color-lime-hover); }
+  .resource-secondary { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; }
   .resource-secondary { color: #304719; font-size: .875rem; text-decoration-color: #a2b091; text-underline-offset: 4px; }
   .resource-body { display: grid; grid-template-columns: minmax(180px, 220px) minmax(0, 740px); justify-content: space-between; gap: clamp(48px, 7vw, 100px); margin-top: 84px; }
   .resource-toc { position: sticky; top: calc(var(--site-header-height) + 30px); align-self: start; padding-top: 16px; border-top: 1px solid var(--line); }

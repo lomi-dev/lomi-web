@@ -16,9 +16,9 @@ import MediaPlaceholder from './MediaPlaceholder.astro';
       <p id="video-consent-description">YouTube videos require your permission. Playing this video connects your browser to YouTube, which may store cookies and process your data.</p>
       <p class="video-consent-note">We remember your choice. You can change it anytime in Cookie settings.</p>
       <div class="video-consent-actions">
-        <button type="button" class="video-consent-allow" data-video-allow>Allow YouTube &amp; play</button>
-        <a data-video-external href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" target="_blank" rel="noopener noreferrer">Open on YouTube</a>
-        <button type="button" data-video-decline>Not now</button>
+        <button type="button" class="button button-primary video-consent-allow" data-video-allow>Allow YouTube &amp; play</button>
+        <a class="button button-secondary" data-video-external href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" target="_blank" rel="noopener noreferrer">Open on YouTube</a>
+        <button class="button button-secondary" type="button" data-video-decline>Not now</button>
       </div>
     </section>
   </div>
@@ -351,11 +351,7 @@ import MediaPlaceholder from './MediaPlaceholder.astro';
   .video-consent h2 { max-width: 560px; margin: 12px 0 16px; font-size: clamp(24px, 4vw, 36px); font-weight: 500; line-height: 1.15; letter-spacing: -0.04em; text-wrap: balance; }
   .video-consent p { max-width: 600px; margin: 0 0 16px; color: #f0f4e9; font-size: 16px; line-height: 1.6; }
   .video-consent .video-consent-note { color: #b8c0b2; font-size: 14px; }
-  .video-consent-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 28px; }
-  .video-consent-actions :is(button, a) { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; padding: 10px 16px; border: 1px solid #f0f4e933; border-radius: 8px; background: #050705; color: #f0f4e9; font: inherit; font-size: 14px; font-weight: 500; line-height: 1.4; text-align: center; text-decoration: none; cursor: pointer; }
-  .video-consent-actions .video-consent-allow { border-color: var(--color-lime); background: var(--color-lime); color: #152414; }
-  .video-consent-actions :is(button, a):hover { border-color: #f0f4e9; }
-  .video-consent-actions :is(button, a):focus-visible { outline: 2px solid var(--color-lime); outline-offset: 4px; }
+  .video-consent-actions { --button-secondary-background: #050705; --button-secondary-border: #f0f4e933; --button-secondary-color: #f0f4e9; --button-secondary-hover: #1c2515; --button-secondary-active: #243019; --button-focus-color: var(--color-lime); display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 28px; }
   .video-mount { opacity: 0; pointer-events: none; }
   .video-player[data-video-status='playing'] .video-mount, .video-player[data-video-status='fallback'] .video-mount { opacity: 1; pointer-events: auto; }
   .video-player[data-video-status='playing'] .video-poster, .video-player[data-video-status='fallback'] .video-poster { opacity: 0; }

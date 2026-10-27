@@ -16,8 +16,8 @@ const { content = editorDefaults.site.cookie } = Astro.props;
 
     <div class="cookie-compact" data-cookie-compact>
       <div class="cookie-actions">
-        <button type="button" class="cookie-button cookie-customize" data-cookie-customize aria-expanded="false" aria-controls="cookie-preferences">{content.customizeLabel}</button>
-        <button type="button" class="cookie-button cookie-primary" data-cookie-accept>{content.acceptLabel}</button>
+        <button type="button" class="button button-secondary button-compact cookie-button cookie-customize" data-cookie-customize aria-expanded="false" aria-controls="cookie-preferences">{content.customizeLabel}</button>
+        <button type="button" class="button button-primary button-compact cookie-button cookie-primary" data-cookie-accept>{content.acceptLabel}</button>
       </div>
       <button type="button" class="cookie-reject" data-cookie-reject>{content.rejectLabel}</button>
     </div>
@@ -33,7 +33,7 @@ const { content = editorDefaults.site.cookie } = Astro.props;
           <p id="cookie-media-description">{content.mediaDescription}</p>
         </div>
         <p class="cookie-retention">{content.retention}</p>
-        <button type="submit" class="cookie-button cookie-primary cookie-save" data-cookie-save>{content.saveLabel}</button>
+        <button type="submit" class="button button-primary button-compact cookie-button cookie-primary cookie-save" data-cookie-save>{content.saveLabel}</button>
         <button type="button" class="cookie-reject" data-cookie-reject>{content.rejectLabel}</button>
       </form>
     </div>
@@ -60,9 +60,8 @@ const { content = editorDefaults.site.cookie } = Astro.props;
   .cookie-introduction { margin-top: 14px; color: #535c56; font-size: 14px; line-height: 1.65; }
   .cookie-introduction a { color: #535c56; text-decoration: underline; text-decoration-color: #9aa392; text-underline-offset: 3px; }
   .cookie-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 20px; }
-  .cookie-button { display: inline-flex; align-items: center; justify-content: center; min-width: 0; min-height: 46px; padding: 11px 12px; border: 1px solid #d8ddd2; border-radius: 9px; background: #f0f1ee; color: var(--color-ink); font: 500 13px/1.5 var(--font-sans); cursor: pointer; }
-  .cookie-primary { border-color: var(--color-ink); background: var(--color-ink); color: #fff; }
-  .cookie-reject { display: flex; align-items: center; justify-content: center; min-height: 44px; width: 100%; margin-top: 4px; padding: 8px 12px; border: 0; border-radius: 8px; background: transparent; color: #46533e; font: 500 12px/1.5 var(--font-sans); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+  .cookie-button { min-height: 46px; padding-inline: 12px; }
+  .cookie-reject { display: flex; align-items: center; justify-content: center; min-height: 44px; width: 100%; margin-top: 4px; padding: 8px 12px; border: 0; border-radius: var(--button-radius); background: transparent; color: #46533e; font: 500 12px/1.5 var(--font-sans); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
   .cookie-preferences { padding-top: 20px; }
   .cookie-preferences:focus { outline: none; }
   .cookie-category { padding: 12px 16px 16px; border-radius: 12px; background: #f7f8f5; }
@@ -78,18 +77,17 @@ const { content = editorDefaults.site.cookie } = Astro.props;
   .cookie-media-label input:checked::before, .cookie-necessary-switch > span { left: 18px; }
   .cookie-retention { margin-top: 16px; color: #535c56; font-size: 11px; line-height: 1.65; }
   .cookie-save { width: 100%; margin-top: 16px; }
-  .cookie-close { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: #535c56; cursor: pointer; }
+  .cookie-close { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: var(--button-radius); background: transparent; color: #535c56; cursor: pointer; }
   .cookie-feedback { position: fixed; z-index: 62; right: max(20px, env(safe-area-inset-right)); bottom: max(20px, env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 12px; width: min(420px, calc(100% - 40px)); padding: 12px 12px 12px 20px; border: 1px solid #dfe4d8; border-radius: 12px; box-shadow: 0 12px 48px #13210d1f; }
   .cookie-feedback p { font-size: 12px; line-height: 1.6; }
   [data-cookie-consent] :focus-visible:not(.cookie-preferences) { outline: 2px solid var(--color-focus); outline-offset: 3px; }
   @media (hover: hover) {
-    .cookie-customize:hover, .cookie-close:hover { background: #e5e8e1; }
-    .cookie-primary:hover { background: #26321d; border-color: #26321d; }
+    .cookie-close:hover { background: #e5e8e1; }
     .cookie-reject:hover { background: #f1f4eb; color: var(--color-ink); }
     .cookie-introduction a:hover { color: var(--color-ink); }
   }
   @media (prefers-reduced-motion: no-preference) {
-    .cookie-button, .cookie-close, .cookie-reject { transition: background-color 150ms ease, border-color 150ms ease; }
+    .cookie-close, .cookie-reject { transition: background-color 150ms ease, border-color 150ms ease; }
     .cookie-media-label input::before { transition: left 150ms ease; }
   }
   @media (max-width: 479px) {

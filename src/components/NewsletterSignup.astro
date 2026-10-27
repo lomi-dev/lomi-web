@@ -31,7 +31,7 @@ const isConfigured = Boolean(endpoint);
         disabled
         aria-describedby={showNote ? 'newsletter-status newsletter-note' : 'newsletter-status'}
       />
-      <button type="submit" disabled>
+      <button class="button button-primary" type="submit" disabled>
         <span data-submit-label>{content.submitLabel}</span>
         <span class="newsletter-submit-icon" aria-hidden="true">
           <svg class="newsletter-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15m-6-7 7 7-7 7" /></svg>
@@ -79,7 +79,7 @@ const isConfigured = Boolean(endpoint);
     min-height: 56px;
     padding: 14px 16px;
     border: 1px solid var(--nl-field-border,#adb79f);
-    border-radius: var(--nl-field-radius,10px);
+    border-radius: var(--button-radius);
     background: var(--nl-field-bg,#f5f6ef);
     color: var(--nl-field-ink,var(--color-ink));
     font: inherit;
@@ -88,33 +88,15 @@ const isConfigured = Boolean(endpoint);
   }
   .newsletter input::placeholder { color: #62695b; opacity: 1; }
   .newsletter button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    box-sizing: border-box;
     width: 100%;
     min-height: 52px;
-    padding: 13px 20px;
-    border: 1px solid var(--nl-button-bg,var(--color-ink));
-    border-radius: var(--nl-button-radius,999px);
-    background: var(--nl-button-bg,var(--color-ink));
-    color: var(--nl-button-ink,var(--color-lime));
-    font: inherit;
-    font-size: 14px;
-    line-height: 1.5;
-    font-weight: 500;
-    cursor: pointer;
   }
   .newsletter-submit-icon { display: flex; flex: 0 0 20px; }
   .newsletter-check { display: none; }
   .newsletter[data-state="success"] .newsletter-arrow { display: none; }
   .newsletter[data-state="success"] .newsletter-check { display: block; }
-  .newsletter button:not(:disabled):active { background:var(--nl-button-active,var(--nl-button-bg,#30362c)); }
-  .newsletter button:disabled { cursor: not-allowed; background:var(--nl-disabled-bg,#30362c); border-color:var(--nl-disabled-bg,#30362c); color:var(--nl-disabled-ink,var(--nl-button-ink,var(--color-lime))); }
   .newsletter input:disabled { color: #62695b; cursor: not-allowed; opacity: 1; }
-  .newsletter input:focus-visible,
-  .newsletter button:focus-visible { outline: 2px solid #476c16; outline-offset: 4px; }
+  .newsletter input:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 4px; }
   .newsletter-status {
     min-height: 3em;
     margin: 8px 0 0;
@@ -135,11 +117,4 @@ const isConfigured = Boolean(endpoint);
   }
   .newsletter-noscript { margin: 12px 0 0; font-size: 12px; line-height: 1.5; }
 
-  @media (hover: hover) and (pointer: fine) {
-    .newsletter button:not(:disabled):hover { background:var(--nl-button-hover,var(--nl-button-bg,#272e22)); }
-  }
-  @media (prefers-reduced-motion: no-preference) {
-    .newsletter button { transition: background-color 160ms ease, transform 160ms ease; }
-    .newsletter button:not(:disabled):active { transform: translateY(1px); }
-  }
 </style>

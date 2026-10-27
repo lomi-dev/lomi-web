@@ -22,15 +22,7 @@ const { content } = Astro.props;
     --nl-control-gap:10px;
     --nl-field-bg:var(--color-paper,#fff);
     --nl-field-border:#bdc6b5;
-    --nl-field-radius:999px;
     --nl-field-size:16px;
-    --nl-button-bg:var(--color-lime);
-    --nl-button-ink:#0b0e0b;
-    --nl-button-hover:#dcff83;
-    --nl-button-active:var(--color-lime-pressed);
-    --nl-button-radius:999px;
-    --nl-disabled-bg:var(--color-lime);
-    --nl-disabled-ink:#0b0e0b;
     --nl-note-align:center;
     --nl-note-size:12px;
     padding:56px 0;
@@ -44,8 +36,7 @@ const { content } = Astro.props;
   .release-description { margin-top:16px; color:var(--color-text-secondary); font-size:16px; line-height:1.6; }
   .release-signup { width:100%; min-width:0; max-width:660px; justify-self:center; }
   .release-signup :global(.newsletter input) { min-height:56px; padding-inline:20px; }
-  .release-signup :global(.newsletter button) { justify-content:space-between; min-height:56px; padding:8px 10px 8px 20px; gap:20px; }
-  .release-signup :global(.newsletter-submit-icon) { display:grid; place-items:center; flex:0 0 32px; width:32px; height:32px; border:1px solid currentColor; border-radius:50%; }
+  .release-signup :global(.newsletter button) { min-height:56px; }
   .release-signup :global(.newsletter-status) { min-height:1.5em; margin-top:10px; }
   .release-signup :global(.newsletter-note) { margin-top:6px; }
   @media(max-width:900px) {

@@ -51,7 +51,7 @@ const socials = (content.socials.length ? content.socials : editorDefaults.foote
       <div class="footer-invitation">
         <h2>{content.signoff}</h2>
         <div class="footer-actions">
-          <a class="footer-github" href={site.githubUrl}>
+          <a class="button button-inverse footer-github" href={site.githubUrl}>
             <Icon name="github" width={19} height={19} />
             <span>{content.githubLabel}</span>
             <span class="footer-github-arrow" aria-hidden="true"><Icon name="diagonal" width={19} height={19} /></span>
@@ -115,7 +115,7 @@ const socials = (content.socials.length ? content.socials : editorDefaults.foote
 
   .site-footer * { box-sizing: border-box; }
   .site-footer ::selection { background: var(--footer-ink); color: var(--footer-lime); }
-  .site-footer a { color: inherit; text-decoration: none; }
+  .site-footer a:not(.button) { color: inherit; text-decoration: none; }
   .site-footer :focus-visible { outline: 2px solid var(--footer-ink); outline-offset: 4px; }
 
   .footer-frame {
@@ -153,31 +153,12 @@ const socials = (content.socials.length ? content.socials : editorDefaults.foote
   }
   .footer-actions { --footer-action-gap: 8px; display: flex; flex-wrap: wrap; align-items: center; gap: var(--footer-action-gap); margin-top: 25px; }
   .footer-github {
-    display: inline-flex;
-    align-items: center;
-    gap: 11px;
     max-width: 100%;
-    min-height: 48px;
-    padding: 5px 5px 5px 18px;
-    border: 1px solid var(--footer-ink);
-    border-radius: 999px;
-    background: var(--footer-ink);
-    color: var(--footer-lime) !important;
-    font-size: 13px;
-    font-weight: 550;
-    line-height: 1.4;
-    transition: background-color 150ms ease-out;
   }
-  .footer-github > span:not(.footer-github-arrow) { padding-block: 6px; }
   .footer-github-arrow {
     display: grid;
     place-items: center;
     flex-shrink: 0;
-    width: 36px;
-    height: 36px;
-    margin-left: 10px;
-    border: 1px solid rgb(200 255 61 / 35%);
-    border-radius: 50%;
   }
 
   .footer-navigation {
@@ -250,7 +231,7 @@ const socials = (content.socials.length ? content.socials : editorDefaults.foote
     height: 48px;
     flex-shrink: 0;
     border: 1px solid rgb(11 13 12 / 30%);
-    border-radius: 50%;
+    border-radius: var(--button-radius);
   }
   a.footer-social { transition: color 150ms ease-out, background-color 150ms ease-out; }
   .footer-takeoff { display: inline-flex; align-items: center; gap: 15px; min-height: 44px; justify-self: end; font-size: 12px; }
@@ -260,7 +241,7 @@ const socials = (content.socials.length ? content.socials : editorDefaults.foote
     width: 40px;
     height: 40px;
     border: 1px solid rgb(11 13 12 / 35%);
-    border-radius: 50%;
+    border-radius: var(--button-radius);
     color: var(--footer-ink);
     font-size: 21px;
     line-height: 1;
@@ -268,22 +249,12 @@ const socials = (content.socials.length ? content.socials : editorDefaults.foote
   }
 
   @media (hover: hover) {
-    .footer-github:hover { background: #243019; }
     .footer-link-group a:hover, .footer-legal a:hover { color: var(--footer-ink); }
     .footer-link-group a:hover { text-decoration: underline; text-underline-offset: 4px; }
     .footer-link-group a:hover :global(svg) { opacity: 1; }
     .footer-legal a:hover { text-decoration: underline; text-underline-offset: 4px; }
     .footer-takeoff:hover .footer-takeoff-arrow { color: var(--footer-lime); background: var(--footer-ink); }
-    a.footer-social:hover { color: var(--footer-lime); background: var(--footer-ink); }
-  }
-
-  @media (prefers-reduced-motion: no-preference) {
-    .footer-github { transition: background-color 150ms ease-out, scale 150ms ease-out; }
-    .footer-github:active { scale: .96; }
-    .footer-github-arrow :global(svg) { transition: transform 200ms cubic-bezier(.2, 0, 0, 1); }
-  }
-  @media (hover: hover) and (prefers-reduced-motion: no-preference) {
-    .footer-github:hover .footer-github-arrow :global(svg) { transform: rotate(45deg); }
+    .site-footer a.footer-social:hover { color: var(--footer-lime); background: var(--footer-ink); }
   }
 
   @media (max-width: 760px) {

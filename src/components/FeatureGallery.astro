@@ -89,7 +89,7 @@ const count = content.items.length;
   .gallery-media :global(img) { width: 100%; height: 100%; object-fit: contain; }
   .gallery-grid[data-layout='editorial'] > .gallery-tile:first-child .gallery-preview { flex: 1; }
   .gallery-grid[data-layout='editorial'] > .gallery-tile:first-child .gallery-media { flex: 1; min-height: 240px; aspect-ratio: auto; }
-  .gallery-open { position: absolute; z-index: 2; bottom: 18px; right: 18px; display: grid; width: 42px; height: 42px; place-items: center; border: 1px solid rgb(255 255 255 / 25%); border-radius: 50%; background: #151a13; color: #f3f6ed; transition: background-color 150ms ease, color 150ms ease; }
+  .gallery-open { position: absolute; z-index: 2; bottom: 18px; right: 18px; display: grid; width: 42px; height: 42px; place-items: center; border: 1px solid rgb(255 255 255 / 25%); border-radius: var(--button-radius); background: #151a13; color: #f3f6ed; transition: background-color 150ms ease, color 150ms ease; }
   .gallery-caption { display: flex; flex-direction: column; gap: 7px; align-items: flex-start; padding: 20px 2px 8px; }
   .gallery-caption h3 { font-size: clamp(18px, 1.6vw, 23px); font-weight: 500; letter-spacing: -.03em; line-height: 1.25; }
   .gallery-caption > span { color: #60695b; font-size: 13px; line-height: 1.5; }
@@ -102,7 +102,7 @@ const count = content.items.length;
   .feature-dialog:not([open]) { display: none; }
   .feature-dialog::backdrop { background: rgb(31 40 24 / 26%); backdrop-filter: blur(12px); }
   .feature-dialog-chrome { position: absolute; z-index: 5; inset: 0 0 auto; height: 0; }
-  .feature-modal-close { position: absolute; top: 18px; right: 18px; display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid #ccd5c1; border-radius: 50%; color: #37422e; background: var(--color-paper); cursor: pointer; }
+  .feature-modal-close { position: absolute; top: 18px; right: 18px; display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid #ccd5c1; border-radius: var(--button-radius); color: #37422e; background: var(--color-paper); cursor: pointer; }
   .feature-modal-panel { --feature-columns: minmax(0, 1.8fr) minmax(300px, 1fr); --feature-rows: minmax(0, 1fr); position: relative; height: min(78dvh, calc(100dvh - 50px), 760px); overflow: hidden; border-radius: inherit; }
   .feature-slides { position: relative; z-index: 0; isolation: isolate; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); width: 100%; height: 100%; min-width: 0; min-height: 0; overflow: clip; }
   .feature-slide { display: grid; grid-area: 1 / 1; grid-template-columns: var(--feature-columns); grid-template-rows: var(--feature-rows); width: 100%; height: 100%; min-width: 0; min-height: 0; background: var(--color-paper); }
@@ -118,7 +118,7 @@ const count = content.items.length;
   .feature-modal-description { margin-top: 24px; color: #535c4d; font-size: 15px; line-height: 1.75; white-space: pre-line; }
   .feature-modal-navigation { position: absolute; z-index: 6; inset: 0; pointer-events: none; }
   .feature-modal-navigation[hidden] { display: none; }
-  .feature-modal-navigation > button { position: absolute; top: 50%; display: grid; place-items: center; width: var(--feature-arrow-size); height: var(--feature-arrow-size); padding: 0; transform: translateY(-50%); border: 1px solid #ccd5c1; border-radius: 50%; color: #37422e; background: var(--color-paper); box-shadow: 0 4px 16px rgb(24 35 15 / 10%); cursor: pointer; pointer-events: auto; }
+  .feature-modal-navigation > button { position: absolute; top: 50%; display: grid; place-items: center; width: var(--feature-arrow-size); height: var(--feature-arrow-size); padding: 0; transform: translateY(-50%); border: 1px solid #ccd5c1; border-radius: var(--button-radius); color: #37422e; background: var(--color-paper); box-shadow: 0 4px 16px rgb(24 35 15 / 10%); cursor: pointer; pointer-events: auto; }
   .feature-modal-previous { left: calc(var(--feature-arrow-size) / -2); }
   .feature-modal-next { right: calc(var(--feature-arrow-size) / -2); }
   .feature-modal-previous svg { transform: rotate(180deg); }

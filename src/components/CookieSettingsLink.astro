@@ -1,12 +1,12 @@
 ---
 import { editorDefaults } from '../../content/editor-defaults';
-interface Props { label?: string }
-const { label = editorDefaults.footer.cookieSettingsLabel } = Astro.props;
+interface Props { label?: string; variant?: 'link' | 'button' }
+const { label = editorDefaults.footer.cookieSettingsLabel, variant = 'link' } = Astro.props;
 ---
 
-<a class="cookie-settings-link" href="/cookies/#preferences" data-cookie-settings>{label}</a>
+<a class:list={['cookie-settings-link', { 'button button-primary': variant === 'button' }]} href="/cookies/#preferences" data-cookie-settings>{label}</a>
 
 <style>
-  .cookie-settings-link { display: inline-flex; align-items: center; min-height: 44px; color: inherit; font: inherit; text-underline-offset: 4px; }
-  .cookie-settings-link:hover { text-decoration: underline; }
+  .cookie-settings-link:not(.button) { display: inline-flex; align-items: center; min-height: 44px; color: inherit; font: inherit; text-underline-offset: 4px; }
+  .cookie-settings-link:not(.button):hover { text-decoration: underline; }
 </style>

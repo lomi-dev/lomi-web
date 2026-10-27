@@ -32,7 +32,7 @@ const footerContent = {
           {section.showStorage && paragraphIndex === 0 && <dl>{page.storage.map((row) => <div><dt>{row.label}</dt><dd>{row.code ? <code>{row.value}</code> : row.value}</dd></div>)}</dl>}
         </>)}
         {section.showStorage && section.paragraphs.length === 0 && <dl>{page.storage.map((row) => <div><dt>{row.label}</dt><dd>{row.code ? <code>{row.value}</code> : row.value}</dd></div>)}</dl>}
-        {section.showSettings && <CookieSettingsLink label={page.settingsLabel} />}
+        {section.showSettings && <CookieSettingsLink label={page.settingsLabel} variant="button" />}
         {section.showNoscript && <noscript><p>{section.noscript}</p></noscript>}
       </section>)}
     </div>
@@ -49,7 +49,7 @@ const footerContent = {
   h2 { font-size: 24px; font-weight: 500; line-height: 1.25; letter-spacing: -.035em; }
   section p { margin-top: 16px; color: var(--color-text-secondary); font-size: 14px; line-height: 1.8; }
   section p a { color: #263b15; text-decoration: underline; text-underline-offset: 3px; }
-  section :global(.cookie-settings-link) { margin-top: 16px; padding: 0 18px; border: 1px solid #b6e43b; border-radius: 999px; background: var(--color-lime); font-size: 13px; font-weight: 500; }
+  section :global(.cookie-settings-link) { margin-top: 16px; }
   dl { margin: 20px 0; font-size: 13px; line-height: 1.65; }
   dl > div { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 8px 24px; padding-block: 12px; border-bottom: 1px solid #edf0e9; }
   dt { color: var(--color-text-secondary); }

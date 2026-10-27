@@ -86,8 +86,8 @@ async function layout(page, rootSelector = '#newsletter') {
     if (stackedLaunchForm) {
       const input = root.locator('input');
       const button = root.locator('button');
-      await expect(input).toHaveCSS('border-radius', '10px');
-      await expect(button).toHaveCSS('border-radius', '10px');
+      await expect(input).toHaveCSS('border-radius', '8px');
+      await expect(button).toHaveCSS('border-radius', '8px');
       const inputBox = await input.boundingBox();
       const buttonBox = await button.boundingBox();
       const gap = buttonBox.y - inputBox.y - inputBox.height;
