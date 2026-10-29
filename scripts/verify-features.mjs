@@ -131,7 +131,7 @@ async function edgeNavigationGeometry(page) {
     const nextProbe = { x: nextBox.right - nextBox.width * .25, y: nextBox.centerY };
     const targetAt = (point) => document.elementFromPoint(point.x, point.y)?.closest('button');
     const width = innerWidth;
-    const expectedWidth = Math.min(width >= 900 ? 1360 : 660, width - (width >= 900 ? 112 : 64));
+    const expectedWidth = width < 600 ? width - 32 : Math.min(width >= 900 ? 1360 : 660, width - (width >= 900 ? 160 : 128));
     return {
       parentIsDialog: navigation.parentElement === modal,
       directChild: [...modal.children].includes(navigation),
@@ -141,6 +141,7 @@ async function edgeNavigationGeometry(page) {
       panelRadius: Number.parseFloat(getComputedStyle(panel).borderTopLeftRadius),
       modalBox, panelBox: rect(panel), slidesBox: rect(slides), previousBox, nextBox,
       expectedWidth, viewportWidth: width,
+      buttonRadius: Number.parseFloat(getComputedStyle(modal).getPropertyValue('--button-radius')),
       previousOuterHalfHits: targetAt(previousProbe) === previous,
       nextOuterHalfHits: targetAt(nextProbe) === next,
       previousProbe, nextProbe,
@@ -154,20 +155,25 @@ async function edgeNavigationGeometry(page) {
   expect(['hidden', 'clip'].includes(geometry.panelOverflow), 'The panel clips moving slides').toBe(true);
   expect(geometry.panelRadius, 'The clipped panel keeps rounded corners').toBeGreaterThan(0);
   expect(Math.abs(geometry.modalBox.width - geometry.expectedWidth), 'Modal width preserves its responsive outer gutters').toBeLessThanOrEqual(2);
-  for (const [side, button, edge] of [
-    ['previous', geometry.previousBox, geometry.modalBox.left],
-    ['next', geometry.nextBox, geometry.modalBox.right],
+  for (const [side, button] of [
+    ['previous', geometry.previousBox],
+    ['next', geometry.nextBox],
   ]) {
     const expectedSize = geometry.viewportWidth < 900 ? 44 : 48;
     expect(Math.abs(button.width - expectedSize), `${side} arrow has the expected touch diameter`).toBeLessThanOrEqual(1);
-    expect(Math.abs(button.height - expectedSize), `${side} arrow is circular`).toBeLessThanOrEqual(1);
-    expect(button.borderRadius, `${side} arrow is round`).toBeGreaterThanOrEqual(expectedSize / 2 - 1);
-    expect(Math.abs(button.centerX - edge), `${side} arrow sits half outside the modal edge`).toBeLessThanOrEqual(2);
-    expect(Math.abs(button.centerY - geometry.modalBox.centerY), `${side} arrow is centered on the full modal`).toBeLessThanOrEqual(2);
+    expect(Math.abs(button.height - expectedSize), `${side} arrow has the expected touch height`).toBeLessThanOrEqual(1);
+    expect(button.borderRadius, `${side} arrow uses the shared button radius`).toBe(geometry.buttonRadius);
+    if (geometry.viewportWidth < 600) {
+      expect(button.top - geometry.panelBox.bottom, `${side} arrow sits below the panel`).toBeGreaterThanOrEqual(11);
+    } else {
+      const gap = side === 'previous' ? geometry.panelBox.left - button.right : button.left - geometry.panelBox.right;
+      expect(gap, `${side} arrow sits fully outside the panel`).toBeGreaterThanOrEqual(7);
+      expect(Math.abs(button.centerY - geometry.modalBox.centerY), `${side} arrow is centered on the full modal`).toBeLessThanOrEqual(2);
+    }
     expect(button.left >= -1 && button.right <= geometry.viewportWidth + 1,
       `${side} arrow stays inside the viewport: ${JSON.stringify(button)}`).toBe(true);
   }
-  expect(geometry.previousProbeInViewport && geometry.nextProbeInViewport, 'The outside halves of both arrows remain inside the viewport').toBe(true);
+  expect(geometry.previousProbeInViewport && geometry.nextProbeInViewport, 'Both external arrows remain inside the viewport').toBe(true);
   expect(geometry.previousOuterHalfHits, 'The outer half of the previous arrow receives pointer hits').toBe(true);
   expect(geometry.nextOuterHalfHits, 'The outer half of the next arrow receives pointer hits').toBe(true);
   return geometry;
