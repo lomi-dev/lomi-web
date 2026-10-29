@@ -36,7 +36,8 @@
     "cms:dev": "bun run --cwd cms dev",
     "cms:seed": "bun run --cwd cms seed",
     "cms:check": "bun run --cwd cms check",
-    "verify:newsletter-section": "node scripts/verify-newsletter-section.mjs"
+    "verify:newsletter-section": "node scripts/verify-newsletter-section.mjs",
+    "verify:header": "node scripts/verify-header.mjs"
   },
   "dependencies": {
     "@astrojs/react": "^6.0.6",

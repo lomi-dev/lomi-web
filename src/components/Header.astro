@@ -57,6 +57,8 @@ const action = activeLandingLinks([{ label: content.actionLabel, href: content.a
 </header>
 
 <script>
+  import { initHeaderContrast } from './header-contrast';
+
   const header = document.querySelector<HTMLElement>('.site-header');
   const product = document.querySelector<HTMLDetailsElement>('#product-menu');
   const mobile = document.querySelector<HTMLDetailsElement>('#mobile-navigation');
@@ -143,73 +145,7 @@ const action = activeLandingLinks([{ label: content.actionLabel, href: content.a
       }
     }
   }));
-  type SurfaceColor = [number, number, number];
-  const surfaceColor = (surface: Element): SurfaceColor => {
-    // Product captures have a dark interface inside their white image frames.
-    if (surface.closest('.deck-frame, .deck-detail')) return [19, 23, 20];
-    for (let element: Element | null = surface; element; element = element.parentElement) {
-      const background = getComputedStyle(element).backgroundColor;
-      const channels = background.match(/[\d.]+/g)?.map(Number);
-      // color-mix(in srgb, ...) is serialized with 0 to 1 channels, unlike rgb().
-      if (channels && background.startsWith('color(srgb ')) {
-        for (let index = 0; index < 3; index++) channels[index] *= 255;
-      }
-      if (channels && channels.length >= 3 && (channels[3] ?? 1) >= .95) {
-        return channels.slice(0, 3) as SurfaceColor;
-      }
-      if (element.matches('.hero')) return [255, 255, 255];
-    }
-    return [247, 248, 243];
-  };
-  const contrastTargets = header?.querySelectorAll<HTMLElement>('.wordmark, .product-fallback, .navigation-link, .product-menu > summary, .header-source, .mobile-navigation > summary') ?? [];
-  const frostedBackdrop = CSS.supports('backdrop-filter', 'blur(1px)') || CSS.supports('-webkit-backdrop-filter', 'blur(1px)');
-  const syncHeaderSurface = () => {
-    if (!header) return;
-    header.toggleAttribute('data-scrolled', window.scrollY > 24);
-    if (!frostedBackdrop || document.querySelector('dialog[open]')) return;
-    if (product?.open || mobile?.open) {
-      const contrast = header.dataset.theme === 'dark' ? 'light' : 'dark';
-      contrastTargets.forEach((target) => { if (target.dataset.contrast !== contrast) target.dataset.contrast = contrast; });
-      return;
-    }
-    // When menus are closed, colors come from the native backdrop blur. Only
-    // each individual control's foreground needs a local contrast adjustment.
-    contrastTargets.forEach((target) => {
-      const bounds = target.getBoundingClientRect();
-      if (!bounds.width || !bounds.height) return;
-      const rgb: SurfaceColor = [0, 0, 0];
-      // Include neighboring surfaces to account for the blur at image edges.
-      const weights = [1, 3, 3, 1];
-      for (let row = 0; row < 4; row++) for (let column = 0; column < 4; column++) {
-        const x = Math.max(0, Math.min(innerWidth - 1, bounds.left + bounds.width / 2 + (column * 2 - 3) * 14));
-        const y = Math.max(0, bounds.top + bounds.height / 2 + (row * 2 - 3) * 14);
-        const underlying = document.elementsFromPoint(x, y).find((element) => !header.contains(element));
-        const color = underlying ? surfaceColor(underlying) : [247, 248, 243];
-        const weight = weights[row] * weights[column] / 64;
-        color.forEach((channel, index) => { rgb[index] += channel * weight; });
-      }
-      const linear = rgb.map((channel) => {
-        const value = (channel * .94 + 255 * .06) / 255;
-        return value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4;
-      });
-      const luminance = .2126 * linear[0] + .7152 * linear[1] + .0722 * linear[2];
-      const contrast = luminance > .179 ? 'dark' : 'light';
-      if (target.dataset.contrast !== contrast) target.dataset.contrast = contrast;
-    });
-  };
-  let surfaceFrame = 0;
-  const scheduleHeaderSurface = () => {
-    if (surfaceFrame) return;
-    surfaceFrame = requestAnimationFrame(() => { surfaceFrame = 0; syncHeaderSurface(); });
-  };
-  syncHeaderSurface();
-  window.addEventListener('scroll', scheduleHeaderSurface, { passive: true });
-  window.addEventListener('resize', scheduleHeaderSurface, { passive: true });
-  window.addEventListener('pageshow', scheduleHeaderSurface);
-  product?.addEventListener('toggle', scheduleHeaderSurface);
-  mobile?.addEventListener('toggle', scheduleHeaderSurface);
-  document.addEventListener('close', scheduleHeaderSurface, true);
-  document.addEventListener('lomi:media-surface-change', scheduleHeaderSurface);
+  if (header) initHeaderContrast(header);
   if (header) header.dataset.navigationReady = '';
   desktop.addEventListener('change', () => {
     const active = document.activeElement;
@@ -239,16 +175,23 @@ const action = activeLandingLinks([{ label: content.actionLabel, href: content.a
     position: fixed; top: 0; inset-inline: 0; z-index: 20;
     color: var(--header-text);
   }
-  .site-header::before { content: ''; position: absolute; z-index: 0; inset: 0; pointer-events: none; background: rgb(255 255 255 / 6%); -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px); opacity: 0; transition: opacity 180ms ease; }
+  .site-header::before { content: ''; position: absolute; z-index: 0; inset: 0; pointer-events: none; background: rgb(255 255 255 / 6%); -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px); opacity: 0; }
   .site-header[data-scrolled]::before, .site-header:not([data-navigation-ready])::before, .site-header:has(.product-menu[open], .mobile-navigation[open])::before { opacity: 1; }
   .site-header:has(.product-menu[open], .mobile-navigation[open])::before { background: var(--header-panel); -webkit-backdrop-filter: none; backdrop-filter: none; }
   .site-header:not([data-navigation-ready])::before { background: var(--header-surface); }
   .site-header[data-theme='light'] { --header-surface: rgb(255 255 255 / 72%); --header-panel: var(--color-paper); --header-line: #dfe5d8; --header-text: #202c18; --header-muted: #3f4b36; --header-subtle: #5c6b4e; --header-hover: #eef3e8; --header-icon: #4b6c16; --header-focus: var(--color-focus); }
-  .site-header [data-contrast] { transition: background-color 150ms ease; }
-  .site-header [data-contrast='light'] { --header-text: #fff; --header-muted: #fff; --header-line: rgb(255 255 255 / 30%); --header-hover: rgb(255 255 255 / 12%); --header-focus: var(--color-lime); color: var(--header-text); }
-  .site-header [data-contrast='dark'] { --header-text: #000; --header-muted: #000; --header-line: rgb(11 14 11 / 25%); --header-hover: rgb(11 14 11 / 7%); --header-focus: var(--color-focus); color: var(--header-text); }
+  .site-header [data-contrast] {
+    --header-text: var(--adaptive-ink);
+    --header-muted: var(--adaptive-ink);
+    --header-line: color-mix(in srgb, var(--adaptive-ink) 28%, transparent);
+    --header-focus: var(--adaptive-ink);
+    color: var(--header-text);
+    transition: background-color 150ms ease;
+  }
+  .site-header [data-contrast='light'] { --adaptive-ink: #fff; --header-hover: rgb(0 0 0 / 9%); }
+  .site-header [data-contrast='dark'] { --adaptive-ink: #000; --header-hover: rgb(255 255 255 / 9%); }
   .site-header:has(.product-menu[open], .mobile-navigation[open]) [data-contrast] { --header-text: inherit; --header-muted: inherit; --header-line: inherit; --header-hover: inherit; --header-focus: inherit; }
-  .navigation-backdrop { position: fixed; inset: 0; z-index: -1; visibility: hidden; opacity: 0; background: rgb(5 10 5 / 26%); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); transition: opacity 180ms ease, visibility 180ms; }
+  .navigation-backdrop { position: fixed; inset: 0; z-index: -1; visibility: hidden; opacity: 0; background: rgb(5 10 5 / 26%); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
   .site-header[data-theme='light'] .navigation-backdrop { background: rgb(30 43 21 / 10%); }
   .site-header[data-navigation-ready]:has(.product-menu[open], .mobile-navigation[open]) .navigation-backdrop { visibility: visible; opacity: 1; }
   .header-inner { position: relative; z-index: 1; display: flex; align-items: center; width: min(1440px, calc(100% - clamp(40px, 10.4vw, 160px))); min-height: var(--site-header-height); padding: 0; gap: 24px; }
