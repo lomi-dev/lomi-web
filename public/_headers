@@ -1,6 +1,16 @@
 /_astro/*
   Cache-Control: public, max-age=31536000, immutable
 
+/remote/install.sh
+  Content-Type: text/plain; charset=utf-8
+  Cache-Control: no-store
+  X-Robots-Tag: noindex
+
+/remote/install.ps1
+  Content-Type: text/plain; charset=utf-8
+  Cache-Control: no-store
+  X-Robots-Tag: noindex
+
 /*
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin

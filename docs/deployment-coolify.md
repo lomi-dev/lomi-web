@@ -5,6 +5,10 @@ both the Astro website and Payload CMS. It includes the Dockerfile settings,
 HTTPS domains, persistent storage, administrator initialization, automatic
 rebuild queue, verification, and backup procedure.
 
+For `/remote/install.sh` and `/remote/install.ps1`, configure the two public
+catalog build arguments described in [Remote installation](remote-installation.md).
+Both endpoints report unavailable until a reviewed signed release is configured.
+
 The CMS Docker image initializes its first administrator from the runtime-only
 `CMS_ADMIN_EMAIL` and `CMS_ADMIN_PASSWORD` variables before opening its HTTP
 port. An empty production database without valid credentials fails startup.

@@ -5,6 +5,7 @@ import tailwindcss from '@tailwindcss/vite';
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { remoteInstallers } from './scripts/remote-installers.mjs';
 
 function sitemapWithoutEmptyDevlog() {
   let config;
@@ -52,7 +53,7 @@ function sitemapWithoutEmptyDevlog() {
 export default defineConfig({
   site: process.env.SITE_URL || 'https://lomi.dev',
   output: 'static',
-  integrations: [react(), sitemapWithoutEmptyDevlog()],
+  integrations: [react(), sitemapWithoutEmptyDevlog(), remoteInstallers()],
   vite: { plugins: [tailwindcss()] },
   devToolbar: { enabled: false },
 });

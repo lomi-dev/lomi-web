@@ -1,5 +1,9 @@
 # Remote launch page
 
+The separate [Remote installation endpoints](remote-installation.md) document
+the generated `/remote/install.sh` and `/remote/install.ps1` scripts and their
+release inputs. Their availability does not alter the launch page below.
+
 `/remote/` presents Lomi Remote as an upcoming product. It keeps the original
 centered layout on a white canvas: opening, disabled platform badges, a wide
 static terminal render and a compact launch newsletter below the preview. There

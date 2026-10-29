@@ -86,6 +86,13 @@ CMS_URL=https://cms.lomi.dev
 SITE_URL=https://lomi.dev
 ```
 
+The `/remote/install.sh` and `/remote/install.ps1` entry points also accept
+`LOMI_REMOTE_INSTALLATION_CATALOG_JSON` and
+`LOMI_REMOTE_INSTALLATION_CATALOG_SHA256` as public build arguments. Follow
+[Remote installation](../docs/remote-installation.md) to prepare and review
+them. Without both values, the scripts report that installation is unavailable;
+inconsistent values fail the build.
+
 The build fetches only published website content and Devlogs. It fails on an
 unavailable CMS, invalid content, or draft responses. Uploaded media remains
 publicly served by the CMS, so its domain must stay available to visitors.

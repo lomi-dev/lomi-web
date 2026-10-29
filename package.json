@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "astro dev --host 127.0.0.1",
     "check": "astro check",
+    "test:remote-installers": "node --test scripts/remote-installers.test.mjs",
     "build": "astro check && astro build",
     "preview": "astro preview --host 127.0.0.1",
     "render:remote-preview": "node scripts/render-remote-preview.mjs",
