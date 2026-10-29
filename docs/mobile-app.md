@@ -40,10 +40,3 @@ Product navigation starts with Features, followed by Remote and Mobile App in
 both desktop and mobile menus. `activeProductGroups` also updates legacy CMS
 workspace groups, removing Overview and adding the mobile route without
 overwriting intentionally empty menus or unrelated custom groups.
-
-Run `bun run test:content` for link-policy and CMS navigation cases. After
-`bun run build`, use `VERIFY_URL=http://127.0.0.1:4322 bun run verify:mobile-app`
-against the preview server; set `VERIFY_BROWSER=webkit` for WebKit.
-The newsletter verifier also checks this page with a configured fake endpoint,
-including pending, accepted, rate-limited and failed requests. It intercepts
-every request so tests never create a real subscription.

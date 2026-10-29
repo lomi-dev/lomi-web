@@ -260,4 +260,3 @@ export const queueDeletedMediaRebuild: CollectionAfterDeleteHook = async ({ doc,
 export const rebuildSiteAutorun = siteRebuildEnabled
   ? [{ cron: '* * * * *', queue: 'site-rebuild', limit: 1, disableScheduling: true, silent: { info: true, error: false } }]
   : undefined
-

@@ -10,12 +10,10 @@ does not draw app controls, labels, or interface elements.
 
 By default, `scripts/render-feature-demos.mjs` reads the prepared videos from
 `src/assets/product/demos/`. It accepts `.mp4`, `.webm`, and `.mov` files named
-`terminal`, `panels`, `code`, `expand`, `git`, and `spark`. Capture footage can
-be selected with `--input-dir` when it has been retimed to the configured demo
-duration. Per-feature output duration, source duration, focus, and camera timing
-are in the tracked `cues.json`; configured values there override matching
-capture-manifest values. A feature with `zoom: 1` uses a static camera and does
-not need a focus point. Zoomed features use normalized focus coordinates, where
+`terminal`, `panels`, `code`, `expand`, `git`, and `spark`. Inputs must match the
+configured demo duration. Per-feature output duration, source duration, focus,
+and camera timing are in the tracked `cues.json`. A feature with `zoom: 1` uses
+a static camera and does not need a focus point. Zoomed features use normalized focus coordinates, where
 `(0, 0)` is top-left and `(1, 1)` is bottom-right.
 
 ```json
@@ -52,13 +50,13 @@ node scripts/render-feature-demos.mjs --only code --quality draft --no-gif
 node scripts/render-feature-demos.mjs --quality delivery
 ```
 
-The optional `--only` flag is intended for the first camera proof and review.
+Use the optional `--only` flag to render selected features.
 Final MP4s are written to `artifacts/feature-demos/rendered/`, first-frame
 WebP posters to `artifacts/feature-demos/posters/`, and optional 960×600
 looping GIFs to `artifacts/feature-demos/gif/`. The shared timing contract
 and six feature keys live in [`cues.json`](./cues.json). The website uses the
-raw native recordings with the same cue data; these full-frame composites are
-separate downloadable and review exports.
+shipped product recordings with the same cue data; these full-frame composites
+are separate downloadable compositions.
 
 The HyperFrames CLI is pinned in this project at version `0.8.193`. Use
 Node.js 22 or newer. Rendering is local; the script does not call hosted

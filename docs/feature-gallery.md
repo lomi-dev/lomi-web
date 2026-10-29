@@ -24,25 +24,10 @@ and responsive placement, with no added border. Preparation trims the thin
 native frame outline at the edge of the footage. The wallpaper stays stationary. Short, wide
 dialog panes reduce the window width to keep the complete window visible.
 
-`scripts/capture-feature-movies.mjs` builds an isolated copy of the neighboring
-desktop checkout and records its macOS window. It uses a fresh app identity and
-profile, temporary projects, a real local terminal and Git repository, and a
-localhost page in the actual child WebView. Chat uses an isolated deterministic
-provider fixture, with no paid provider calls. It does not drive the user's
-running app or projects. Capture helpers are kept in
-`scripts/feature-movies-capture/`; raw recordings and cue evidence are ignored
-under `artifacts/feature-demos/raw/`. Prepare the web assets with
-`node scripts/prepare-feature-videos.mjs`; the resulting MP4s and native
-first-frame posters live in `src/assets/product/demos/`. Shared camera cues
-are in `media/feature-demos/cues.json`. The wallpaper is the user's supplied
-`tahoe-light.jpg`, copied
-without modification; Astro generates the delivered WebP version.
-
-macOS replaces the traffic lights with a purple indicator while recording a
-window. Asset preparation restores only that small OS controls area from a
-screenshot of the same native window taken immediately before recording.
-The original movies and window screenshots are retained as capture evidence;
-no application controls or titlebars are drawn or recreated.
+The current MP4s and first-frame WebP posters are shipped in
+`src/assets/product/demos/`. Shared camera cues are in
+`media/feature-demos/cues.json`. The wallpaper is the supplied
+`tahoe-light.jpg`; Astro generates the delivered WebP version.
 
 All assets load locally and reserve their dimensions. Video sources are assigned
 only when their preview is visible. Playback pauses offscreen, in hidden tabs,
@@ -88,20 +73,6 @@ reopening.
 Without JavaScript or native dialog support, every description stays visible
 below its preview and the links jump to the matching text.
 
-Run the render checks against the built site. The script starts and
-closes its own temporary static server when no verification URL is supplied:
-
-```sh
-bun run build
-bun run verify:feature-previews
-```
-
-To export the six complete scenes as 1920 × 1200 PNGs, together with desktop
-and mobile gallery previews, run `node scripts/export-feature-renders.mjs`
-after building. Files are saved to `artifacts/feature-renders/`. The export
-uses the site's actual composition, waits for all lazy images to decode,
-and removes page chrome from the resulting images.
-
-For full wallpaper compositions and looping GIF downloads, run
-`node scripts/render-feature-demos.mjs --quality delivery` after capturing.
+For full wallpaper compositions and looping GIF downloads based on the shipped
+media, run `node scripts/render-feature-demos.mjs --quality delivery`.
 See [the editable HyperFrames project](../media/feature-demos/README.md).

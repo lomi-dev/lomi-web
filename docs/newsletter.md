@@ -17,12 +17,3 @@ The form has an explicit label and live feedback. Reduced motion disables
 button transitions. Without JavaScript the section stays readable and the
 form explains how to enable it.
 An unconfigured endpoint retains the existing unavailable state.
-
-Validation against a running preview:
-
-- `bun run verify:newsletter-section`: responsive layout, section order,
-  retired roadmap/preview controls, shared navigation, no-JavaScript reading,
-  and accessibility. Set `VERIFY_BROWSER=webkit` for WebKit.
-- `bun run verify:newsletter`: request contract, accepted/error/pending states,
-  retries and the shared Remote/Mobile App forms. Requests use test fixtures.
-- `bun run verify:backdrop`: section colors and page-edge behavior.

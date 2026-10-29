@@ -74,21 +74,3 @@ without saving leaves the prior decision intact. Optional controls start off.
 This design follows the practical accept/reject, informed choice and withdrawal
 principles in the
 [EDPB cookie-banner taskforce report](https://www.edpb.europa.eu/system/files/2023-01/edpb_20230118_report_cookie_banner_taskforce_en.pdf).
-
-## Verification
-
-```sh
-bun test tests/consent.test.ts
-bun run build
-bun run verify:cookies
-VERIFY_BROWSER=firefox bun run verify:cookies
-bun run verify
-```
-
-The consent suite mocks YouTube and blocks form submissions. It checks no media
-requests before permission, acceptance/refusal, persistence, malformed and
-expired records, blocked storage, direct video permission, real cross-tab
-withdrawal and clearing, keyboard/focus, narrow/short layouts, reduced motion,
-no-JavaScript reading and axe. Existing general browser suites seed an explicit
-valid media choice to exercise their permitted-video and page interactions;
-the first-visit path is tested by the dedicated consent suite.

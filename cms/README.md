@@ -78,7 +78,6 @@ rebuilds while the previous CMS instance is stopped.
 
 ```sh
 bun run check          # TypeScript
-bun run test           # Isolated SQLite integration checks
 bun run generate:types # Regenerate Payload types after schema changes
 bun run build          # Generate the admin import map and build Next.js
 bun run start          # Serve the production build on port 3001
@@ -139,5 +138,3 @@ Existing website rows and version history are preserved. Its rollback removes
 Devlog episodes and their history plus the new copy columns, while retaining
 older website data and uploads. Back up before rolling back. Roll back this
 migration before older website migrations, then reapply dependencies in order.
-`bun run test` includes an isolated Devlog integration check using disposable
-SQLite and upload directories.

@@ -71,9 +71,7 @@ The footer's large dark wordmark uses the original SVG paths, rendered as
 halftone dots. A mouse or pen gently parts the dots; clicking sends a ripple
 through them. It initializes on entry, stops drawing when settled or offscreen,
 and preserves touch scrolling. Reduced motion, unavailable Canvas 2D, and
-JavaScript-disabled browsers show the original static SVG. Run
-`bun run verify:footer` against the preview server for the focused layout,
-keyboard, accessibility, motion, and fallback checks.
+JavaScript-disabled browsers show the original static SVG.
 
 The document canvas follows the section at the viewport midpoint during native
 elastic overscroll in every direction: light fog for the hero, chalk for the main
@@ -85,8 +83,6 @@ Devlog stays light. Native vertical bounce is contained on the homepage;
 other pages keep native bounce and scroll chaining.
 Firefox exposes one solid canvas color, so mixed sections share the midpoint
 section's edge color. The native OS trackpad gesture still needs manual QA.
-Run `bun run verify:backdrop` (or prefix `VERIFY_BROWSER=firefox`) for section,
-edge pixel, navigation, viewport, and fallback regression checks.
 
 Footer social profiles, labels and icons are configured in Payload under
 **Website → Footer → Socials**.
@@ -259,61 +255,27 @@ zoom around the action and return to the full window before looping. Timing
 and camera cues live in `media/feature-demos/cues.json`. The app window has no
 added border, and preparation trims the thin captured macOS frame outline.
 
-Keep capture inputs in the ignored `artifacts/feature-demos/raw/` folder. After
-recording, prepare the native-window MP4s and first-frame WebP posters used by
-Astro, then optionally render the full wallpaper compositions and GIF exports:
+The MP4s and first-frame WebP posters used by Astro are shipped in
+`src/assets/product/demos/`. Render full wallpaper compositions and optional
+GIF exports from those assets with:
 
 ```sh
 node scripts/prepare-feature-videos.mjs
 node scripts/render-feature-demos.mjs --quality delivery
 ```
 
-See [the composition documentation](media/feature-demos/README.md) for capture
-input names and cue coordinates. Playback loads only visible previews and pauses
+See [the composition documentation](media/feature-demos/README.md) for cue
+coordinates and render options. Playback loads only visible previews and pauses
 outside the viewport or behind the modal. There are no play/pause buttons in
 the gallery. Reduced-motion preferences disable automatic playback and camera
 movement. Without JavaScript, the native first-frame poster remains visible.
 
-## Validation
+## Build and preview
 
 ```sh
-bun run test:content
-bun run test:devlog
-bun run verify:devlog
-bun run verify:placeholders
-bun run verify:feature-previews
-bun run verify:cms-content
 bun run check
 bun run build
 bun run preview --port 4322
-# In a second terminal:
-PLAYWRIGHT_CHANNEL=chrome bun run verify
-```
-
-Browser verification covers seven viewport widths, short landscape, section
-anchors, unique IDs, keyboard navigation, Product dropdown and mobile drill-in,
-Devlog navigation with and without JavaScript, absence of retired sections,
-all seven installer mappings, release failures, download navigation, no-JavaScript
-fallbacks, the inline video lifecycle, reduced motion, and desktop/mobile/dialog
-accessibility with axe. Hero checks cover the absence of CLI cards and React
-islands, single-preview layout, live reduced motion,
-actual background pixel changes and frozen states, canvas resizing, and static
-fallback without JavaScript or Canvas 2D.
-Footer dimensions, resizing, and keyboard access to every
-link are checked at eight window sizes from 320 × 200 to 1920 × 1080, both with
-and without JavaScript. The 640px check covers the available CSS width of a
-1280px window at 200% zoom. Screenshots and
-audit output are written to ignored `artifacts/`.
-
-Run `bun run verify:newsletter` against the default preview to check the
-unavailable state and a temporary configured development fixture. Signup
-responses are mocked; no email is sent and backend settings stay unchanged.
-
-The CMS has separate TypeScript and isolated SQLite integration tests:
-
-```sh
-bun run --cwd cms check
-bun run --cwd cms test
 ```
 
 ## Before launch

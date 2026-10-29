@@ -65,21 +65,3 @@ The former installer fields remain in the CMS schema for existing database
 documents. They are unused by the launch page and are never rendered or
 executed. This change requires no CMS database migration. The old installer
 controller and its client-side clipboard code have been removed.
-
-## Verification
-
-Run `bun run build`, then verify against the static preview:
-
-```sh
-VERIFY_URL=http://127.0.0.1:4322 bun run verify:remote
-VERIFY_URL=http://127.0.0.1:4322 VERIFY_BROWSER=webkit bun run verify:remote
-VERIFY_URL=http://127.0.0.1:4322 bun run verify:newsletter
-bun run test:content
-bun run verify:seo
-```
-
-The Remote verifier covers launch metadata, the static image, disabled target
-platforms, removed installer controls, responsive layouts, keyboard navigation,
-no-JavaScript behavior and accessibility. Newsletter checks use a configured
-fake endpoint and intercept every signup request; they never create a real
-subscription. Screenshots and reports go to `artifacts/`.

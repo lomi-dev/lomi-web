@@ -146,18 +146,4 @@ production CMS. Back up its database and media directory, apply the checked-in
 migrations, then start the updated CMS. Running the seed again never overwrites
 existing published content or drafts.
 
-## Verification
-
-```sh
-bun run test:content
-bun run verify:cms-content
-bun run --cwd cms check
-bun run --cwd cms test
-```
-
-The browser verifier builds against an isolated published-content fixture,
-checks authored changes across all five routes, and cleans up its temporary
-output. The CMS integration suite separately uses disposable SQLite databases
-and upload directories to check real migrations, publishing, draft isolation,
-media persistence, validation and safe updates. Neither suite edits the real
-CMS database.
+Run `bun run --cwd cms check` before changing CMS TypeScript source.

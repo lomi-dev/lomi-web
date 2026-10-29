@@ -10,6 +10,3 @@ The roadmap editor group is hidden, and its layout option is omitted from new
 rows while remaining readable on existing rows. Even
 an older document with an enabled roadmap row renders only active sections;
 shared navigation filters both `#roadmap` and `/#roadmap` links.
-
-Run `bun run test:content` for legacy-document and navigation checks, and
-`bun run verify:newsletter-section` against the preview for public-page checks.

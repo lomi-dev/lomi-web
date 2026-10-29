@@ -17,5 +17,4 @@ Real uploaded media takes precedence over the fallbacks.
 
 ```sh
 bun run build
-bun run verify:placeholders
 ```

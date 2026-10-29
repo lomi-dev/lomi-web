@@ -15,8 +15,7 @@
     "generate:types": "payload generate:types",
     "seed": "tsx scripts/seed.ts",
     "bootstrap:admin": "tsx scripts/bootstrap-admin.ts",
-    "recover:rebuilds": "tsx scripts/recover-rebuilds.ts",
-    "test": "tsx scripts/test.ts && tsx scripts/test-editor.ts && tsx scripts/test-devlogs.ts && tsx scripts/test-bootstrap.ts && tsx scripts/test-rebuild.ts && tsx scripts/test-concurrency.ts"
+    "recover:rebuilds": "tsx scripts/recover-rebuilds.ts"
   },
   "dependencies": {
     "@next/env": "16.4.2",

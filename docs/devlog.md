@@ -65,17 +65,3 @@ existing Website settings.
 Without `CMS_URL`, local development intentionally shows the empty state.
 To upgrade an existing CMS, back up its database and media and apply the new
 `20261020_150000_devlogs` migration before building against its API.
-
-## Validation
-
-```sh
-bun run test:devlog
-bun run verify:devlog
-bun run --cwd cms test
-```
-
-The isolated browser verifier builds empty and populated CMS fixtures without
-changing the real database or `dist/`, checks normal and keyboard links with
-and without JavaScript, and checks responsive layouts and accessibility. Its
-episodes are test data only. CMS tests verify drafts, publication, access,
-validation, uploads and migration preservation in temporary databases.

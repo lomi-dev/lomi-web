@@ -46,16 +46,3 @@ uploaded video keeps its browser controls. Custom controls are only revealed
 after the controller initializes. Native fullscreen uses a WebKit fallback
 where available; exact behavior and volume restrictions on physical iPhones
 need device testing.
-
-```sh
-bun run verify:hero-player
-```
-
-The isolated browser suite builds YouTube, uploaded-video and image fixtures
-without changing the real CMS or the normal `dist/`. It checks API controls,
-consent and stale callbacks, first-frame loading, blocked autoplay, seeking,
-volume, fullscreen calls, idle visibility, mouse/touch/keyboard interactions,
-reduced motion, mobile layout,
-accessibility and fallbacks. YouTube's API is mocked to keep its network and
-advertising behavior out of the tests. Native playback uses a real
-Chromium-recorded WebM and tests actual decoding and error recovery.

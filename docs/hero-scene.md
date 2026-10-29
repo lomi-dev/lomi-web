@@ -53,13 +53,3 @@ videos, newsletter, footer, and consent behavior are unchanged.
 The CMS controls the headline, description, actions, and optional screenshot
 inside the laptop. Legacy media-mode/video fields stay available for older
 layouts; this hero renders a static scene.
-
-## Validation
-
-Run `bun run build` and `bun run verify:hero-scene` with
-`VERIFY_URL=http://127.0.0.1:48740`. Use `VERIFY_BROWSER=webkit` for WebKit.
-Checks cover the actual device and screen assets, projection visibility,
-two-dimensional viewport coverage including 16:9, portrait and short landscape,
-viewport-height section boundaries, responsive copy/screen bounds and device
-grounding, readable overflow with long text, absence of the dock and gallery,
-keyboard/native anchors, no-JS and reduced-motion rendering, and accessibility.
