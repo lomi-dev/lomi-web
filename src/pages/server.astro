@@ -1,0 +1,132 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import { activeLandingLinks } from '../data/navigation';
+import { loadLanding } from '../../content/load-landing';
+import { loadServerRelease, serverTargetLabels } from '../lib/server-release';
+
+const content = await loadLanding(import.meta.env.CMS_URL);
+const release = loadServerRelease(process.env.LOMI_REMOTE_INSTALLATION_CATALOG_JSON, process.env.LOMI_REMOTE_INSTALLATION_CATALOG_SHA256);
+const footerContent = {
+  ...content.footer,
+  groups: content.footer.groups.map((group) => ({ ...group,
+    links: activeLandingLinks(group.links, content.layout).map((link) => ({ ...link,
+      href: link.href.startsWith('#') ? `/${link.href}` : link.href,
+    })),
+  }))
+    .filter((group) => group.links.length > 0),
+};
+---
+
+<Layout title="Install Lomi Remote" description="Install the Lomi Remote host, choose its startup mode and explicitly share a workspace." website={content} themeColor={content.site.theme.paper} edgeColor="var(--color-lime)">
+  <Header content={content.navigation} site={content.site} layout={content.layout} theme="light" />
+  <main id="main" tabindex="-1" class="server-page">
+    <header class="server-intro">
+      <p class="eyebrow">Lomi Remote host</p>
+      <h1>Your workspace.<br />Available beyond your desktop.</h1>
+      <p>Run the host on your computer or server. Connect from Lomi on another computer, your browser or your phone.</p>
+    </header>
+
+    <section aria-labelledby="install-heading">
+      <h2 id="install-heading">Install the host</h2>
+      {release ? <>
+        <p>Release <strong>{release.version}</strong>. Choose the operating system and architecture of the computer that will run your terminals.</p>
+        <div class="server-targets">
+          {release.targets.map((target) => <details class="server-target">
+            <summary>{serverTargetLabels[target.platform]}</summary>
+            {target.linuxBootstrap ? <>
+              <p>Run this release-specific command on the host. It verifies the installer and signed archive before running bundle code.</p>
+              <pre tabindex="0" aria-label={`${serverTargetLabels[target.platform]} installation command`}><code>{target.linuxBootstrap.command}</code></pre>
+              <p>Requires curl, OpenSSL 3, sha256sum, unzip and GNU core utilities. Keep the complete command when copying it.</p>
+              <ul>
+                <li><a href={target.linuxBootstrap.manifest.url}>Bootstrap manifest</a></li>
+                <li><a href={target.linuxBootstrap.signature.url}>Ed25519 signature</a></li>
+                <li><a href={target.linuxBootstrap.publicKey.url}>Public verification key</a> · SHA-256 <code class="digest">{target.linuxBootstrap.publicKey.sha256}</code></li>
+              </ul>
+            </> : target.platform.startsWith('macos-') ? <>
+              <p>Download the signed, notarized bundle. In its download folder, verify its SHA-256 against this page before extracting or running any downloaded code. This command extracts only if verification succeeds and preserves the macOS signatures:</p>
+              <pre tabindex="0" aria-label="Verify and extract macOS bundle"><code>{`printf '%s\n' '${target.archive.sha256}  ./${new URL(target.archive.url).pathname.split('/').at(-1)}' | shasum -a 256 -c - &&\nditto -x -k './${new URL(target.archive.url).pathname.split('/').at(-1)}' './lomi-remote-release'`}</code></pre>
+              <p>From the verified extracted bundle, choose the ordinary account and startup mode explicitly:</p>
+              <pre tabindex="0" aria-label="macOS administrator installation"><code>sudo ./install.sh admin-install ACCOUNT manual</code></pre>
+              <p>Replace <code>ACCOUNT</code> with the account that owns the workspace. Choose <code>login</code> or <code>boot</code> instead of <code>manual</code> for automatic startup. The installer prints the exact setup command for that account.</p>
+            </> : <>
+              <p>Download the Authenticode-signed bundle. In PowerShell in its download folder, verify its SHA-256 against this page before extracting or running any downloaded code:</p>
+              <pre tabindex="0" aria-label="Verify and extract Windows bundle"><code>{`& {\n  $ErrorActionPreference = 'Stop'\n  $archiveHash = (Get-FileHash -LiteralPath './${new URL(target.archive.url).pathname.split('/').at(-1)}' -Algorithm SHA256).Hash\n  if ($archiveHash -cne '${target.archive.sha256.toUpperCase()}') { throw 'Lomi archive verification failed' }\n  Expand-Archive -LiteralPath './${new URL(target.archive.url).pathname.split('/').at(-1)}' -DestinationPath './lomi-remote-release'\n}`}</code></pre>
+              <p>After successful verification, run the installer from the extracted bundle folder:</p>
+              <pre tabindex="0" aria-label="Windows installation"><code>.\install.ps1</code></pre>
+              <p>Follow its printed setup command. A boot service requires the separate administrator Host-service path and an ordinary service account; opening a normal user installer does not install a system service.</p>
+            </>}
+            <p><a href={target.archive.url}>Download {serverTargetLabels[target.platform]} bundle</a></p>
+            <p class="artifact-hash">Bundle SHA-256 <code class="digest">{target.archive.sha256}</code></p>
+          </details>)}
+        </div>
+        <p><a href={release.releaseSet.url}>Release manifest</a> · SHA-256 <code class="digest">{release.releaseSet.sha256}</code></p>
+        <p><a href={release.publicRoot.url}>Public TUF root metadata</a> · SHA-256 <code class="digest">{release.publicRoot.sha256}</code></p>
+      </> : <div class="server-notice" role="status">
+        <p><strong>The Remote host release is being prepared.</strong></p>
+        <p>Installation commands and downloads will appear here after release approval. You can review the setup and system requirements below.</p>
+      </div>}
+    </section>
+
+    <section aria-labelledby="setup-heading">
+      <h2 id="setup-heading">Set up and share</h2>
+      <ol>
+        <li>Run the setup command printed by the installer under the account that owns your project files.</li>
+        <li>Choose manual, login or boot startup and the available secret storage.</li>
+        <li>Open the displayed verification page on your phone or another browser and approve the device code for your account.</li>
+        <li>Select the project directory and review the workspace permissions. Enable sharing explicitly.</li>
+        <li>Open that workspace from another Lomi client. Opening a terminal view attaches to its existing session; creating or restarting a terminal starts a shell.</li>
+      </ol>
+      <p>Closing the browser, desktop, TUI or SSH connection leaves an independently running host and its terminals active. A host restart ends live shells. Saved terminal entries return as stopped or lost and require an explicit restart.</p>
+    </section>
+
+    <section aria-labelledby="requirements-heading">
+      <h2 id="requirements-heading">System requirements</h2>
+      <table>
+        <thead><tr><th scope="col">System</th><th scope="col">Host targets</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Linux</th><td>Ubuntu 22.04+ or Debian 12+, x86_64 and ARM64.</td></tr>
+          <tr><th scope="row">macOS</th><td>macOS 14+, Apple silicon and Intel.</td></tr>
+          <tr><th scope="row">Windows</th><td>Windows 11 on x64 and ARM64. Windows Server 2022+, including Server Core, on x64.</td></tr>
+        </tbody>
+      </table>
+      {!release && <p>These are the target requirements. Availability is confirmed by the approved release manifest when downloads open.</p>}
+      <p>Boot startup uses systemd with administrator-enabled linger on Linux, the protected LaunchDaemon on macOS, and SCM on Windows. Login startup requires a user session. FileVault may require unlocking the Mac before the account’s encrypted files become available; locked secret storage is reported by setup.</p>
+    </section>
+
+    <section aria-labelledby="maintenance-heading">
+      <h2 id="maintenance-heading">Updates, removal and access</h2>
+      <p>Run <code>lomiremote update --confirm</code> from the installed release. Updates announce terminal interruption and check signatures and database compatibility before activation. Use <code>--version X.Y.Z</code> to request an exact version allowed by signed release metadata. Keep your project directories and host configuration backed up.</p>
+      <p>Run <code>lomiremote uninstall --confirm</code> to stop the host, revoke its authorization and remove the program. Protected installations require administrator authorization; Windows Boot services require an elevated console. Project directories are preserved. If the account service cannot confirm revocation, follow the displayed instructions to revoke the host from your Lomi account.</p>
+      <p>Add <code>--purge</code> to clear the host’s workspace registrations, settings and Git credentials after revocation is confirmed. Project files, installation identity and update trust state remain. Unsharing removes remote access to one workspace; revoking the host from your account removes access through that host without deleting project files.</p>
+    </section>
+  </main>
+  <Footer content={footerContent} site={content.site} layout={content.layout} />
+</Layout>
+
+<style>
+  .server-page { margin-inline: auto; max-width: 76rem; padding: 132px clamp(1.25rem, 5vw, 4rem) 4rem; color: var(--color-ink, #182018); }
+  .server-intro { max-width: 58rem; margin-bottom: 4rem; }
+  .eyebrow { font-size: .875rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+  h1 { font-size: clamp(2.5rem, 5.5vw, 5rem); line-height: 1.08; letter-spacing: -.045em; margin-block: 1rem 1.5rem; }
+  h2 { font-size: clamp(1.5rem, 3vw, 2rem); line-height: 1.2; letter-spacing: -.02em; margin-block: 0 1.25rem; }
+  section { padding-block: 2.5rem; border-top: 1px solid currentColor; }
+  p, li, td { line-height: 1.7; }
+  p { max-width: 70ch; margin-block: .75rem; }
+  a { text-decoration: underline; text-underline-offset: .2em; }
+  a:focus-visible, summary:focus-visible, pre:focus-visible { outline: 2px solid currentColor; outline-offset: 4px; }
+  ol, ul { padding-left: 1.5rem; }
+  li { padding-left: .25rem; margin-block: .5rem; }
+  .server-notice { padding: 1rem 1.5rem; border-left: 3px solid currentColor; background: rgb(0 0 0 / .035); }
+  .server-targets { margin-block: 1.5rem; }
+  .server-target { border-block-end: 1px solid rgb(0 0 0 / .2); padding-block: 1.25rem; }
+  summary { cursor: pointer; font-size: 1.125rem; font-weight: 600; }
+  pre { max-width: 100%; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; padding: 1rem; margin-block: 1rem; background: rgb(0 0 0 / .05); font-size: .8125rem; line-height: 1.65; }
+  code { font-family: monospace; font-size: .9em; }
+  .digest { overflow-wrap: anywhere; }
+  .artifact-hash { font-size: .875rem; }
+  table { width: 100%; border-collapse: collapse; text-align: left; }
+  th, td { padding: .875rem .75rem; border-bottom: 1px solid rgb(0 0 0 / .2); vertical-align: top; }
+  @media (max-width: 40rem) { .server-intro { margin-bottom: 2rem; } th, td { padding-inline: .375rem; font-size: .875rem; } }
+</style>
