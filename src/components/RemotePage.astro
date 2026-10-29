@@ -6,7 +6,6 @@ import type { Editable, MediaAsset } from '../../content/editor-schema';
 import type { Landing } from '../../content/landing-schema';
 import { pageDefaults } from '../../content/page-defaults';
 import { remoteLaunch } from '../data/remote';
-import { loadServerRelease } from '../lib/server-release';
 
 interface Props {
   content: Editable<typeof pageDefaults.remote>;
@@ -15,7 +14,6 @@ interface Props {
 }
 
 const { content, placeholderLogo, newsletterForm } = Astro.props;
-const release = loadServerRelease(process.env.LOMI_REMOTE_INSTALLATION_CATALOG_JSON, process.env.LOMI_REMOTE_INSTALLATION_CATALOG_SHA256);
 const platforms = [
   { id: 'macos', label: 'macOS' },
   { id: 'windows', label: 'Windows' },
@@ -30,17 +28,13 @@ const platforms = [
       <p>{content.description.map((line, index) => <>{index > 0 && <br />}{line.text}</>)}</p>
       <div class="remote-platforms" aria-label="Target platforms">
         {platforms.map((platform) => <div class="remote-platform-wrap">
-          {release ? <a class="remote-platform remote-platform-link" href="/server/#install-heading" aria-label={`Install the ${platform.label} host`}>
+          <button class="remote-platform" type="button" disabled aria-label={`${platform.label}, coming soon`}>
             <img src={`/icons/download-${platform.id}.svg`} width="16" height="16" alt="" />
             <span>{platform.label}</span>
-          </a> : <button class="remote-platform" type="button" disabled aria-label={`${platform.label}, coming soon`}>
-            <img src={`/icons/download-${platform.id}.svg`} width="16" height="16" alt="" />
-            <span>{platform.label}</span>
-          </button>}
-          <span class="remote-platform-soon">{release ? `Version ${release.version}` : 'Coming soon'}</span>
+          </button>
+          <span class="remote-platform-soon">Coming soon</span>
         </div>)}
       </div>
-      <p><a class="remote-setup-guide" href="/server/">Installation and system requirements</a></p>
     </header>
 
     {content.showScreenshot && <section class="remote-showcase" aria-label="Lomi Remote CLI preview">
@@ -78,10 +72,6 @@ const platforms = [
   .remote-platform { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-width: 118px; min-height: 48px; padding: 9px 14px; border: 1px solid #c9cec7; border-radius: var(--button-radius); background: #e5e8e2; color: #424944; font: inherit; font-size: 13px; font-weight: var(--button-font-weight); line-height: 1.4; opacity: 1; }
   .remote-platform:disabled { opacity: 1; }
   .remote-platform { cursor: not-allowed; }
-  .remote-platform-link { cursor: pointer; text-decoration: none; }
-  .remote-platform-link:hover { background: #d9ded5; }
-  .remote-platform-link:focus-visible, .remote-setup-guide:focus-visible { outline: 2px solid currentColor; outline-offset: 4px; }
-  .remote-setup-guide { text-decoration: underline; text-underline-offset: .2em; font-size: 14px; }
   .remote-platform img { flex: 0 0 16px; width: 16px; height: 16px; opacity: .65; }
   .remote-platform-soon { color: #60695f; font-size: 10px; line-height: 1.4; }
   .remote-showcase { width: min(100%, 1000px); min-width: 0; margin: 48px auto 0; }
