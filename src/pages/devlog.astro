@@ -2,9 +2,11 @@
 import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
-import Icon from '../components/Icon';
 import DevlogCard from '../components/DevlogCard.astro';
-import MediaPlaceholder from '../components/MediaPlaceholder.astro';
+import releases from '../../content/releases.json';
+import GlassBackdrop from '../components/GlassBackdrop.astro';
+import ReleaseLog from '../components/ReleaseLog.astro';
+import NewsletterSection from '../components/NewsletterSection.astro';
 import { activeLandingLinks } from '../data/navigation';
 import { loadLanding } from '../../content/load-landing';
 import { loadDevlogs } from '../../content/load-devlogs';
@@ -22,76 +24,91 @@ const footerContent = {
   })).filter((group) => group.links.length > 0),
 };
 const [latest, ...archive] = episodes;
+const release = releases[0];
+const releaseDate = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(release.date));
 ---
 
-<Layout title={page.seo.title} description={page.seo.description} website={content} robots={episodes.length ? 'index,follow' : 'noindex,follow'} themeColor={content.site.theme.background} edgeColor="var(--color-chalk)">
+<Layout title={page.seo.title} description={page.seo.description} website={content} robots="index,follow" themeColor="#0e0e11" edgeColor="var(--color-chalk)">
   <div class="devlog-surface" data-scroll-surface>
-    <Header content={content.navigation} site={content.site} layout={content.layout} theme="light" />
-    <main id="main" class="devlog-page devlog-shell" tabindex="-1">
-      <header class="devlog-intro">
-        <h1>{page.title.map((line, index) => <>{index > 0 && ' '}{line.text}</>)}{page.accent && <span aria-hidden="true">{page.accent}</span>}</h1>
-        <p class="devlog-description">{page.description.map((line, index) => <>{index > 0 && <br />}{line.text}</>)}</p>
-        <a class="devlog-home" href={page.cta.href}><Icon name="arrow" width={17} height={17} />{page.cta.label}</a>
-      </header>
+    <Header content={content.navigation} site={content.site} layout={content.layout} theme="dark" />
+    <main id="main" tabindex="-1">
+      <section class="dl-hero" data-enter aria-labelledby="devlog-title">
+        <GlassBackdrop />
+        <div class="shell dl-hero-inner">
+          <div class="dl-copy">
+            <h1 id="devlog-title">{page.title.map((line, index) => <>{index > 0 && ' '}{line.text}</>)}{page.accent && <span aria-hidden="true">{page.accent}</span>}</h1>
+            <p class="dl-description">{page.description.map((line, index) => <>{index > 0 && <br />}{line.text}</>)}</p>
+            <div class="dl-actions">
+              <a class="button button-primary" href="#newsletter">Get new episodes</a>
+              <a class="button button-secondary" href="#releases">Release notes</a>
+            </div>
+          </div>
+          {/* The newest release, frosted over the glass. */}
+          <a class="dl-latest" href="#releases">
+            <span class="eyebrow"><i class="sig sig-live" aria-hidden="true"></i>Latest release</span>
+            <strong>{release.version}</strong>
+            <time datetime={release.date}>{releaseDate}</time>
+            <p>{release.summary}</p>
+            <span class="dl-latest-more">What changed <span aria-hidden="true">↓</span></span>
+          </a>
+        </div>
+      </section>
 
-      <div class="devlog-recordings">
+      <section class="shell dl-recordings" aria-labelledby={latest ? 'latest-label' : 'empty-title'}>
         {latest ? <>
-          <section class="devlog-latest" aria-labelledby="latest-label">
+          <div class="devlog-latest">
             <h2 id="latest-label" class="devlog-section-heading">{page.latestLabel}</h2>
             <DevlogCard episode={latest} featured language={content.site.language} watchLabel={page.watchLabel} placeholderLogo={content.site.brand.logo} />
-          </section>
-          {archive.length > 0 && <section class="devlog-archive" aria-labelledby="archive-label">
-            <h2 id="archive-label" class="devlog-section-heading">{page.archiveLabel}</h2>
+          </div>
+          {archive.length > 0 && <div class="devlog-archive">
+            <h2 class="devlog-section-heading">{page.archiveLabel}</h2>
             <div class="devlog-grid">{archive.map((episode) => <DevlogCard episode={episode} language={content.site.language} watchLabel={page.watchLabel} placeholderLogo={content.site.brand.logo} />)}</div>
-          </section>}
-        </> : <section class="devlog-empty" data-devlog-empty aria-labelledby="empty-title">
-          <div class="empty-preview" aria-hidden="true">
-            <MediaPlaceholder logo={content.site.brand.logo} aspect="16 / 9" />
-          </div>
-          <div class="empty-copy">
-            <h2 id="empty-title">{page.empty.title}</h2>
-            <p class="empty-description">{page.empty.description}</p>
-          </div>
-        </section>}
-      </div>
+          </div>}
+        </> : <div class="dl-empty" data-devlog-empty>
+          <span class="eyebrow">Recordings</span>
+          <h2 id="empty-title">First episodes are in production.</h2>
+          <a class="text-link" href="#newsletter">Get new episodes</a>
+        </div>}
+      </section>
+
+      <ReleaseLog />
+      <NewsletterSection content={content.newsletter} />
     </main>
     <Footer content={footerContent} site={content.site} layout={content.layout} />
   </div>
 </Layout>
 
 <style>
-  .devlog-surface { --scroll-surface-color: var(--color-chalk); --devlog-muted: var(--color-text-secondary); --devlog-line: var(--line); min-height: 100svh; display: flex; flex-direction: column; background: var(--color-chalk); color: var(--color-ink); overflow-wrap: anywhere; }
-  .devlog-shell { width: min(1440px, calc(100% - clamp(40px, 10.4vw, 192px))); margin-inline: auto; }
-  .devlog-page { display: grid; grid-template-columns: minmax(0, .75fr) minmax(0, 2.25fr); align-items: start; flex: 1; gap: clamp(44px, 6vw, 88px); padding-top: 156px; padding-bottom: 100px; }
-  .devlog-intro { position: sticky; top: calc(var(--site-header-height) + 56px); }
-  h1 { margin: 0; font-size: clamp(46px, 4.8vw, 72px); font-weight: 500; letter-spacing: -.055em; line-height: 1.06; text-wrap: balance; }
-  .devlog-description { max-width: 240px; margin-top: 22px; color: var(--devlog-muted); font-size: 16px; line-height: 1.75; text-wrap: pretty; }
-  .devlog-home { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; margin-top: 27px; color: var(--devlog-muted); font-size: 13px; }
-  .devlog-home :global(svg) { transform: rotate(180deg); }
-  .devlog-home:hover { color: var(--color-ink); text-decoration: underline; text-underline-offset: 4px; }
-  .devlog-recordings { min-width: 0; padding-top: 8px; }
-  .devlog-section-heading { margin: 0 0 22px; color: var(--devlog-muted); font-size: 13px; font-weight: 400; letter-spacing: normal; line-height: 1.5; }
+  .devlog-surface { --scroll-surface-color: var(--color-chalk); min-height: 100svh; display: flex; flex-direction: column; background: var(--color-chalk); color: var(--color-ink); overflow-wrap: anywhere; }
+  main { flex: 1; min-width: 0; }
+  .dl-hero { position: relative; isolation: isolate; overflow: clip; height: min(78svh, 760px); min-height: 560px; background: var(--color-night-950); }
+  .dl-hero-inner { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 48px; height: 100%; padding-top: var(--site-header-height); }
+  .dl-copy { display: flex; flex-direction: column; align-items: flex-start; max-width: 620px; }
+  h1 { font-size: clamp(48px, 7vw, 104px); line-height: .94; text-wrap: balance; }
+  .dl-description { max-width: 36ch; margin-top: 24px; color: #c8c8d0; font-size: clamp(17px, 1.4vw, 20px); line-height: 1.5; text-wrap: pretty; }
+  .dl-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
+  .dl-recordings { padding-block: 56px 0; }
+  .dl-empty { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; max-width: 620px; padding-bottom: 8px; }
+  .dl-empty h2 { font-size: clamp(26px, 3vw, 36px); line-height: 1.1; }
+  .dl-empty p { color: var(--color-text-secondary); font-size: 16px; line-height: 1.6; }
+  .devlog-section-heading { margin: 0 0 24px; color: var(--color-text-secondary); font-family: var(--font-mono); font-size: 12px; font-weight: 500; font-stretch: 100%; letter-spacing: .04em; line-height: 1.3; text-transform: uppercase; }
   .devlog-archive { margin-top: 54px; padding-top: 28px; border-top: 1px solid var(--line); }
   .devlog-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 36px 24px; }
-  .empty-preview { aspect-ratio: 16 / 9; }
-  .empty-copy { padding: 27px 0 0; }
-  .empty-copy h2 { font-size: 24px; line-height: 1.3; letter-spacing: -.025em; }
-  .empty-description { max-width: 420px; margin-top: 10px; color: var(--devlog-muted); font-size: 15px; line-height: 1.75; text-wrap: pretty; }
-  @media (max-width: 1000px) { .devlog-page { grid-template-columns: minmax(0, .8fr) minmax(0, 2fr); gap: 40px; } h1 { font-size: 50px; } .devlog-description { font-size: 15px; } }
-  @media (max-width: 767px) {
-    .devlog-page { display: block; padding-top: 116px; padding-bottom: 64px; }
-    .devlog-intro { position: static; margin-bottom: 38px; }
-    h1 { font-size: 54px; }
-    .devlog-description { max-width: 360px; margin-top: 16px; }
-    .devlog-home { margin-top: 15px; }
-    .devlog-recordings { padding-top: 0; }
-    .devlog-section-heading { margin-bottom: 18px; }
-    .empty-copy { padding-top: 22px; }
-    .empty-copy h2 { font-size: 22px; }
-    .empty-description { font-size: 14px; }
-    .devlog-archive { margin-top: 36px; padding-top: 24px; }
-  }
+  .dl-latest { display: flex; flex-direction: column; align-items: flex-start; width: min(420px, 38%); padding: 28px; border: 1px solid rgb(247 247 249 / .14); border-radius: var(--radius-xl); background: rgb(14 14 17 / .5); -webkit-backdrop-filter: blur(24px) saturate(1.4); backdrop-filter: blur(24px) saturate(1.4); box-shadow: inset 0 1px 0 rgb(255 255 255 / .08), 0 40px 100px -30px rgb(0 0 0 / .8); transition: transform 180ms var(--ease-out), border-color 120ms ease-out; }
+  .dl-latest:hover { transform: translateY(-2px); border-color: rgb(247 247 249 / .24); }
+  .dl-latest .eyebrow { color: #dcdce2; }
+  .dl-latest strong { margin-top: 20px; font-size: 64px; font-weight: 800; font-stretch: 125%; letter-spacing: -.03em; line-height: 1; }
+  .dl-latest time { margin-top: 10px; color: var(--color-text-secondary); font-family: var(--font-mono); font-size: 13px; }
+  .dl-latest p { margin-top: 20px; color: #dcdce2; font-size: 16px; line-height: 1.55; }
+  .dl-latest-more { margin-top: 20px; font-size: 14px; font-weight: 600; }
+  @media (max-width: 900px) { .dl-hero { height: auto; } .dl-hero-inner { flex-direction: column; align-items: flex-start; padding-block: calc(var(--site-header-height) + 56px) 72px; } .dl-latest { width: 100%; max-width: 480px; } }
+  @media (max-width: 767px) { .dl-hero { min-height: 520px; } h1 { font-size: clamp(44px, 13vw, 60px); } .dl-actions { width: 100%; } .dl-actions .button { flex: 1 1 100%; } .dl-recordings { padding-top: 40px; } }
   @media (max-width: 540px) { .devlog-grid { grid-template-columns: 1fr; gap: 28px; } }
-  @media (max-height: 600px) { .devlog-intro { position: static; } }
-  @media (prefers-reduced-motion: no-preference) { .devlog-home :global(svg) { transition: transform 160ms ease; } .devlog-home:hover :global(svg) { transform: rotate(180deg) translateX(3px); } }
+  @media (prefers-reduced-motion: no-preference) {
+    .dl-copy > * { animation: hero-rise 800ms var(--ease-out) both; }
+    .dl-latest { animation: hero-rise 900ms var(--ease-out) 300ms both; }
+    .dl-copy > :nth-child(2) { animation-delay: 80ms; }
+    .dl-copy > :nth-child(3) { animation-delay: 160ms; }
+  }
+  @keyframes hero-rise { from { opacity: 0; transform: translateY(16px); filter: blur(6px); } }
 </style>

@@ -11,3 +11,5 @@ cms/.next/
 cms/*.db
 cms/*.db-*
 cms/*.tsbuildinfo
+.taste-skill/
+shots/

@@ -145,9 +145,8 @@ wokół komunikatu i związek materiału z produktem.
 
 W Lomi sześć rzeczywistych narzędzi otacza nagłówek „Your agents. One home base.”.
 Ich rozmieszczenie pozostaje stałe; osobne fazy i amplitudy delikatnego unoszenia
-utrzymują czytelny środek. Karty wykorzystują React Bits TiltedCard do reakcji na
-kursor. Bez JavaScriptu są widoczne i nieruchome. Przy ograniczonym ruchu oraz
-po użyciu Pause motion wyłączone są unoszenie i przechylenie. Na telefonie
+utrzymują czytelny środek. Bez JavaScriptu są widoczne i nieruchome. Przy ograniczonym ruchu oraz
+po użyciu Pause motion wyłączone jest unoszenie. Na telefonie
 wszystkie znaki tworzą osobny pas nad treścią, zamiast wchodzić na tekst.
 
 Po usunięciu Hermes Agent pozostało sześć kafelków z logo. Mają wspólną,
@@ -228,7 +227,7 @@ spójność decyzji z działaniem aplikacji i wartość informacji dla odwiedzaj
 | Tło | Pełna siatka trójkątów, kół i kwadratów; jasne fale po ruchu kursora, inspirowane Shape Waves | Tło reaguje na ruch myszy bez zasłaniania treści ani przechwytywania kliknięć |
 | Nawigacja | Zachowana ciemna kapsuła, rozwijany Product, bezpośrednie Roadmap / Devlog / Docs | Czytelny wybór sekcji i osobna przestrzeń na przyszłe wpisy |
 | Demonstracja | Build / Preview / Review z prawdziwymi zrzutami | Wybór pokazuje zmianę rodzaju pracy w tym samym środowisku |
-| Typografia | Geist dla treści, lokalny JetBrains Mono dla metadanych | Wyraźny podział między komunikatem a technicznym opisem |
+| Typografia | Mona Sans dla treści, Geist Mono dla metadanych | Wyraźny podział między komunikatem a technicznym opisem |
 | Kolor | Firmowe Chalk, Ink i Lime; ciemny rozdział narzędzi | Akcent wskazuje działanie, a kontrast rozdziela części opowieści |
 | Funkcje | Numerowany rejestr zamiast sześciu kart | Szybkie porównanie narzędzi i ich zastosowania |
 | Roadmapa | Przywrócona oś w trzech kolumnach, pionowa na telefonie | Czytelna różnica między wersją dostępną a propozycjami |

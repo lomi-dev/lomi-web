@@ -13,7 +13,6 @@
     "test:remote-installers": "node --test scripts/remote-installers.test.mjs",
     "build": "astro check && astro build",
     "preview": "astro preview --host 127.0.0.1",
-    "render:remote-preview": "node scripts/render-remote-preview.mjs",
     "cms:dev": "bun run --cwd cms dev",
     "cms:seed": "bun run --cwd cms seed",
     "cms:check": "bun run --cwd cms check"
@@ -21,7 +20,6 @@
   "dependencies": {
     "@astrojs/react": "^6.0.6",
     "@astrojs/sitemap": "^3.7.4",
-    "@fontsource-variable/geist": "^5.3.0",
     "@tailwindcss/vite": "^4.3.3",
     "astro": "^7.3.3",
     "react": "^19.3.0",

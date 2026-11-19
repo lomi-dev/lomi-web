@@ -12,7 +12,7 @@ const page = remoteLaunchContent(content.pages.remote);
 const newsletter = activeLandingLinks([{ label: 'Newsletter', href: '/#newsletter' }], content.layout)[0];
 const newsletterForm = newsletter ? {
   ...content.newsletter.form,
-  ariaLabel: 'Lomi Remote launch newsletter',
+  ariaLabel: 'Lomi Remote release newsletter',
   submitLabel: remoteLaunch.newsletter.submitLabel,
   successLabel: remoteLaunch.newsletter.successLabel,
   successMessage: remoteLaunch.newsletter.successMessage,
@@ -29,8 +29,8 @@ const footerContent = {
 };
 ---
 
-<Layout title={page.seo.title} description={page.seo.description} website={content} themeColor={content.site.theme.paper} edgeColor="var(--color-lime)">
-  <Header content={content.navigation} site={content.site} layout={content.layout} theme="light" />
+<Layout title={page.seo.title} description={page.seo.description} website={content} themeColor="#0e0e11" edgeColor="var(--color-chalk)">
+  <Header content={content.navigation} site={content.site} layout={content.layout} theme="dark" />
   <main id="main" tabindex="-1">
     <RemotePage content={page} placeholderLogo={content.site.brand.logo} newsletterForm={newsletterForm} />
   </main>

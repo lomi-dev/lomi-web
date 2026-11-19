@@ -33,7 +33,8 @@ the workspace, follow development and obtain the application.
 ## Brand Commitments
 
 Preserve Lomi's existing name, logo and visual system. The download experience
-uses the homepage's light canvas, Geist typography and lime primary action.
+follows Lomi Brand Guidelines 4.0: dark Terminal Night ground, Mona Sans +
+Geist Mono, Signal lime primary action and Violet accent (see docs/brand.md).
 Real product imagery, clear download choices and restrained composition lead
 the page, following the user's DB Pro, Cap and Devin references.
 The download chooser groups system, format and action in one column beside

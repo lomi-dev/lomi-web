@@ -1,100 +1,75 @@
 ---
 import { Picture } from 'astro:assets';
-import clouds from '../assets/clouds.png';
+import workbench from '../assets/product/workbench.png';
 import type { HeroProps } from './hero/types';
 import HeroActions from './hero/Actions.astro';
-import WorkspaceDeck from './WorkspaceDeck.astro';
+import GlassBackdrop from './GlassBackdrop.astro';
+import releases from '../../content/releases.json';
 
 interface Props extends HeroProps {}
 const { content, layout } = Astro.props;
 ---
 
-<section class="hero desktop-hero" data-scroll-surface aria-labelledby="hero-title">
-  <div class="hero-wallpaper" aria-hidden="true">
-    <Picture src={clouds} alt="" widths={[768, 1280, 1536]} sizes="100vw" formats={['webp']} quality={78} loading="eager" fetchpriority="low" />
-  </div>
-
-  <div class="hero-layout">
+<section class="hero" data-enter aria-labelledby="hero-title">
+  <GlassBackdrop />
+  <div class="hero-inner shell">
     <div class="hero-copy">
-      <h1 id="hero-title"><span>{content.title}</span><span>{content.accent}</span></h1>
-      <p>{content.description}</p>
-      <HeroActions content={content} layout={layout} class="desktop-actions" />
+      <h1 id="hero-title">{content.title}</h1>
+      <p class="hero-description">{content.description}</p>
+      <HeroActions content={content} layout={layout} class="hero-cta" />
+      <p class="hero-meta">Free and open source <span aria-hidden="true">·</span> <a href="/devlog/#releases">v{releases[0].version}</a></p>
     </div>
-    <div class="hero-desktop"><WorkspaceDeck content={content} /></div>
+
+    <figure class="shot">
+      {/* A real capture of Lomi 0.6 (2880x1800), never a drawing of it. */}
+      <Picture src={workbench} formats={['avif', 'webp']} widths={[960, 1440, 2160, 2880]} sizes="(max-width: 1023px) 100vw, 1180px" alt={content.previewAlt} loading="eager" fetchpriority="high" />
+    </figure>
   </div>
 </section>
 
 <style>
-  .desktop-hero {
-    --scroll-surface-color:#f6f8f4;
-    --hero-viewport:100vh;
-    --hero-gutter:clamp(20px,2.8vw,28px);
-    position:relative;
-    min-height:var(--hero-viewport);
-    overflow:clip;
-    isolation:isolate;
-    background:#f6f8f4;
-    color:#101410;
-  }
-  @supports(height:100dvh) { .desktop-hero { --hero-viewport:100dvh; } }
-  .hero-wallpaper { position:absolute; z-index:-1; inset:0; overflow:hidden; background:#f6f8f4; }
-  .hero-wallpaper::after { position:absolute; inset:0; background:linear-gradient(105deg,rgb(248 250 246 / .88) 0%,rgb(248 250 246 / .72) 40%,rgb(248 250 246 / .52) 100%); content:''; }
-  :global(.hero-wallpaper picture), :global(.hero-wallpaper img) { display:block; width:100%; height:100%; }
-  :global(.hero-wallpaper img) { object-fit:cover; object-position:center 46%; filter:saturate(.55); }
-  .hero-layout {
-    position:relative;
-    display:grid;
-    grid-template-columns:minmax(0,1fr);
-    grid-template-rows:minmax(min-content,1.5fr) minmax(100px,1fr);
-    row-gap:clamp(8px,calc(var(--hero-viewport) * .02),20px);
-    width:100%;
-    min-height:var(--hero-viewport);
-    padding-top:calc(var(--site-header-height) + clamp(16px,calc(var(--hero-viewport) * .03),32px));
-  }
-  .hero-copy { position:relative; z-index:2; align-self:center; justify-self:center; width:min(780px,calc(100% - 2 * var(--hero-gutter))); min-width:0; overflow-wrap:anywhere; }
-  .desktop-hero h1 { max-width:580px; margin:0; font-size:clamp(36px,min(11vw,calc(var(--hero-viewport) * .075)),72px); font-weight:520; letter-spacing:-.076em; line-height:.98; text-wrap:balance; }
-  .desktop-hero h1 span { display:block; }
-  .desktop-hero h1 span + span { margin-top:.11em; }
-  .hero-copy > p { max-width:385px; margin:17px 0 0; color:#505a51; font-size:15px; line-height:1.7; text-wrap:pretty; }
-  .desktop-actions { margin-top:20px; }
-  .hero-desktop { position:relative; z-index:1; align-self:stretch; justify-self:center; width:min(100%,1100px); height:100%; min-height:100px; contain:size; }
-  .hero-desktop :global(.workspace-showcase) { height:100%; aspect-ratio:auto; }
-  .desktop-hero :focus-visible { outline:2px solid #345600; outline-offset:4px; }
+  .hero { position: relative; overflow: clip; isolation: isolate; height: 100svh; min-height: 720px; max-height: 1000px; background: var(--color-night-950); color: var(--color-ink); }
 
-  @media(min-width:900px) and (min-aspect-ratio:4/3), (min-width:560px) and (max-height:600px) and (orientation:landscape) {
-    .desktop-hero {
-      --hero-gutter:max(48px,calc((100vw - 1312px)/2));
-      --hero-copy-width:clamp(280px,32vw,420px);
-      /* The visible screen starts 31.6% into the transparent device artwork. */
-      --hero-device-space:calc((100vw - var(--hero-gutter) - var(--hero-copy-width) - 24px)/.6842);
-    }
-    .hero-layout { position:static; grid-template-columns:var(--hero-copy-width) minmax(0,1fr); grid-template-rows:auto; align-items:start; gap:0; width:min(1312px,calc(100% - 96px)); margin-inline:auto; padding:calc(var(--site-header-height) + clamp(24px,calc(var(--hero-viewport) * .1),116px)) 0 clamp(24px,calc(var(--hero-viewport) * .04),64px); }
-    .hero-copy { grid-column:1; align-self:start; justify-self:start; width:100%; max-width:420px; }
-    .desktop-hero h1 { font-size:clamp(36px,min(5.8vw,calc(var(--hero-viewport) * .09)),78px); }
-    .hero-copy > p { margin-top:clamp(16px,calc(var(--hero-viewport) * .024),23px); }
-    .desktop-actions { margin-top:clamp(18px,calc(var(--hero-viewport) * .027),26px); }
-    .hero-desktop { position:absolute; right:0; bottom:0; width:min(82vw,calc((var(--hero-viewport) - var(--site-header-height) - 16px) * 1.5),var(--hero-device-space),1920px); height:auto; min-height:0; contain:none; }
-    .hero-desktop :global(.workspace-showcase) { height:auto; aspect-ratio:3/2; }
+
+  .hero-inner { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); align-items: center; gap: clamp(40px, 5vw, 72px); height: 100%; padding-top: var(--site-header-height); }
+  .hero-copy { display: flex; flex-direction: column; align-items: flex-start; }
+  .hero h1 { font-size: clamp(48px, min(6.4vw, 12.5svh), 104px); line-height: .94; text-wrap: balance; }
+  .hero-description { max-width: 36ch; margin-top: 28px; color: #c8c8d0; font-size: clamp(17px, 1.4vw, 20px); line-height: 1.5; text-wrap: pretty; }
+  .hero :global(.hero-cta) { margin-top: 36px; }
+  .hero-meta { margin-top: 24px; color: var(--color-text-secondary); font-size: 14px; }
+  .hero-meta span { margin-inline: 6px; color: var(--color-night-600); }
+  .hero-meta a { color: #dcdce2; text-decoration: underline; text-decoration-color: var(--color-night-600); text-underline-offset: 4px; transition: text-decoration-color 120ms ease-out; }
+  .hero-meta a:hover { text-decoration-color: currentColor; }
+
+  /* The real app, bleeding off the right edge. */
+  .shot { position: relative; width: 1180px; margin: 0; border-radius: 11px; box-shadow: 0 0 0 1px rgb(247 247 249 / .14), 0 0 0 9px rgb(247 247 249 / .035), 0 50px 140px -30px rgb(0 0 0 / .9), 0 0 120px -20px rgb(114 59 250 / .45); }
+  .shot :global(img) { border-radius: 11px; }
+  /* one pass of light across the window glass on arrival */
+  .shot::after { position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(105deg, transparent 35%, rgb(255 255 255 / .09) 48%, rgb(255 255 255 / .02) 54%, transparent 62%) -120% 0 / 220% 100% no-repeat; pointer-events: none; content: ''; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .hero-copy > * { animation: hero-rise 800ms var(--ease-out) both; }
+    .hero-copy > :nth-child(2) { animation-delay: 80ms; }
+    .hero-copy > :nth-child(3) { animation-delay: 160ms; }
+    .hero-copy > :nth-child(4) { animation-delay: 240ms; }
+    .shot { animation: hero-shot 1300ms var(--ease-out) 250ms both; }
+    .shot::after { animation: hero-sheen 1600ms var(--ease-out) 1100ms both; }
   }
-  @media(min-width:560px) and (max-height:600px) and (orientation:landscape) {
-    .desktop-hero { --hero-action-height:44px; --hero-action-font-size:12px; --hero-action-padding:14px; --hero-action-gap:10px; --hero-actions-gap:10px; }
-    .hero-layout { padding-top:calc(var(--site-header-height) + clamp(16px,calc(var(--hero-viewport) * .04),24px)); padding-bottom:16px; }
-    .desktop-hero h1 { font-size:clamp(32px,min(5.8vw,calc(var(--hero-viewport) * .09)),54px); }
-    .hero-copy > p { margin-top:12px; font-size:13.5px; line-height:1.55; }
-    .desktop-actions { margin-top:16px; }
+  @keyframes hero-rise { from { opacity: 0; transform: translateY(16px); filter: blur(6px); } }
+  @keyframes hero-shot { from { opacity: 0; transform: translate(80px, 24px) scale(.97); } }
+  @keyframes hero-sheen { from { background-position: 120% 0; } to { background-position: -120% 0; } }
+
+  @media (max-width: 1023px) {
+    .hero { height: auto; min-height: 0; max-height: none; }
+    .hero-inner { grid-template-columns: minmax(0, 1fr); gap: 56px; padding-top: calc(var(--site-header-height) + 64px); padding-bottom: 0; }
+    .shot { width: 135%; border-radius: 11px 11px 0 0; }
   }
-  @media(min-width:560px) and (max-width:899px) and (max-height:600px) and (orientation:landscape) {
-    .desktop-hero { --hero-gutter:20px; }
-    .hero-layout { width:calc(100% - 40px); }
-  }
-  @media(max-width:374px) {
-    .desktop-hero { --hero-action-height:44px; --hero-action-font-size:13px; --hero-action-padding:12px; --hero-action-gap:10px; --hero-actions-gap:10px; }
-  }
-  @media(max-width:559px) and (max-height:500px) {
-    .hero-copy > p { margin-top:12px; font-size:14px; line-height:1.6; }
-    .desktop-actions { margin-top:16px; }
-  }
-  @media(min-width:900px) and (min-aspect-ratio:4/3) and (min-height:1600px) {
-    .hero-copy { align-self:center; }
+  @media (max-width: 767px) {
+    .hero-inner { gap: 40px; padding-top: calc(var(--site-header-height) + 40px); }
+      .hero h1 { font-size: clamp(44px, 13vw, 60px); }
+    .hero-description { margin-top: 20px; }
+    .hero :global(.hero-cta) { width: 100%; margin-top: 28px; }
+    .hero :global(.hero-cta .button) { flex: 1 1 100%; }
+    .shot { width: 190%; }
   }
 </style>

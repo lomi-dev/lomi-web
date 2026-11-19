@@ -4,8 +4,8 @@ import { site } from './site';
 const removedAnchors = new Set(['#workflow', '#principles', '#faq', '#roadmap']);
 
 export const agentWorkflowLinks = [
-  { label: 'Claude Code in lomi', href: '/claude-code/' },
-  { label: 'Codex CLI in lomi', href: '/codex/' },
+  { label: 'Claude Code in Lomi', href: '/claude-code/' },
+  { label: 'Codex CLI in Lomi', href: '/codex/' },
 ];
 
 export const workspaceResourceLinks = [

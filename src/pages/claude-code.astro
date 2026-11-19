@@ -25,12 +25,12 @@ const footerContent = {
   title={guide.seoTitle}
   description={guide.seoDescription}
   website={content}
-  themeColor={content.site.theme.paper}
-  edgeColor="var(--color-lime)"
+  themeColor="#0e0e11"
+  edgeColor="var(--color-chalk)"
   article={{}}
   breadcrumbs={[{ name: 'Home', href: '/' }, { name: guide.title, href: '/claude-code/' }]}
 >
-  <Header content={content.navigation} site={content.site} layout={content.layout} theme="light" />
+  <Header content={content.navigation} site={content.site} layout={content.layout} theme="dark" />
   <main id="main" tabindex="-1">
     <AgentGuide guide={guide} />
   </main>

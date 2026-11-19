@@ -17,8 +17,8 @@ const footerContent = {
 };
 ---
 
-<Layout title={page.seo.title} description={page.seo.description} website={content} themeColor={content.site.theme.paper} edgeColor="var(--color-lime)">
-  <Header content={content.navigation} site={content.site} layout={content.layout} theme="light" />
+<Layout title={page.seo.title} description={page.seo.description} website={content} themeColor="#0e0e11" edgeColor="var(--color-chalk)">
+  <Header content={content.navigation} site={content.site} layout={content.layout} theme="dark" />
   <main class="cookies-page" id="main" tabindex="-1" data-scroll-surface>
     <div class="cookies-shell">
       <header><h1>{page.title}</h1><p>{page.description}</p></header>
@@ -41,26 +41,33 @@ const footerContent = {
 </Layout>
 
 <style>
-  .cookies-page { --scroll-surface-color: var(--color-paper); padding: 132px 0 80px; color: var(--color-ink); background: var(--color-paper); }
+  .cookies-page { --scroll-surface-color: var(--color-chalk); padding: 132px 0 96px; color: var(--color-ink); background: var(--color-chalk); }
   .cookies-shell { width: min(760px, calc(100% - 80px)); margin-inline: auto; }
-  h1 { margin: 0; font-size: clamp(46px, 5vw, 64px); font-weight: 500; line-height: 1.06; letter-spacing: -.055em; text-wrap: balance; }
-  header > p { margin-top: 20px; color: var(--color-text-secondary); font-size: 17px; line-height: 1.65; }
-  section { margin-top: 40px; padding-top: 24px; border-top: 1px solid #dfe4d8; }
-  h2 { font-size: 24px; font-weight: 500; line-height: 1.25; letter-spacing: -.035em; }
-  section p { margin-top: 16px; color: var(--color-text-secondary); font-size: 14px; line-height: 1.8; }
-  section p a { color: #263b15; text-decoration: underline; text-underline-offset: 3px; }
+  h1 { font-size: clamp(40px, 6vw, 80px); }
+  header > p { max-width: 70ch; margin-top: 24px; color: var(--color-text-secondary); font-size: 17px; line-height: 1.65; text-wrap: pretty; }
+  header > .updated { margin-top: 20px; font-family: var(--font-mono); font-size: 12px; letter-spacing: .04em; text-transform: uppercase; }
+  section { margin-top: 48px; padding-top: 32px; border-top: 1px solid var(--line); }
+  h2 { font-size: clamp(24px, 3vw, 32px); line-height: 1.15; }
+  section p, section li { color: var(--color-text-secondary); font-size: 17px; line-height: 1.65; }
+  section p { max-width: 70ch; margin-top: 16px; }
+  section ul { display: grid; gap: 12px; max-width: 70ch; margin: 16px 0 0; padding-left: 22px; }
+  section li { padding-left: 3px; }
+  section li::marker { color: var(--color-night-500); }
+  section p a { color: var(--color-violet-300); text-decoration: underline; text-underline-offset: 3px; }
+  section p a:hover { color: var(--color-ink); }
+  section strong { color: var(--color-ink); font-weight: 600; }
   section :global(.cookie-settings-link) { margin-top: 16px; }
-  dl { margin: 20px 0; font-size: 13px; line-height: 1.65; }
-  dl > div { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 8px 24px; padding-block: 12px; border-bottom: 1px solid #edf0e9; }
+  dl { margin: 20px 0; font-size: 15px; line-height: 1.6; }
+  dl > div { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 8px 24px; padding-block: 12px; border-bottom: 1px solid var(--line); }
   dt { color: var(--color-text-secondary); }
   dd { margin: 0; overflow-wrap: anywhere; }
-  code { font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace; font-size: 12px; }
+  code { padding: 1px 6px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--color-night-850); color: var(--color-ink); font-size: .85em; }
   @media (max-width: 767px) {
-    .cookies-page { padding: 112px 0 48px; }
+    .cookies-page { padding: 112px 0 64px; }
     .cookies-shell { width: calc(100% - 40px); }
-    h1 { font-size: clamp(40px, 9vw, 56px); }
-    header > p { font-size: 15px; }
-    section { margin-top: 32px; }
+    h1 { font-size: clamp(36px, 10vw, 48px); }
+    section { margin-top: 40px; }
+    section p, section li, header > p { font-size: 16px; }
     dl > div { grid-template-columns: 1fr; gap: 4px; }
   }
 </style>

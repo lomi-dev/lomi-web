@@ -3,7 +3,6 @@ import { getImage } from 'astro:assets';
 import type { ImageMetadata } from 'astro';
 import type { Landing } from '../../content/landing-schema';
 import cues from '../../media/feature-demos/cues.json';
-import wallpaper from '../assets/product/renders/tahoe-light.jpg';
 
 interface Props {
   kind: Landing['features']['items'][number]['icon'];
@@ -18,18 +17,14 @@ const posters = import.meta.glob<ImageMetadata>('../assets/product/demos/*-poste
 const movie = movies[`../assets/product/demos/${kind}.mp4`];
 const poster = posters[`../assets/product/demos/${kind}-poster.webp`];
 if (!movie || !poster) throw new Error(`Missing native feature recording: ${kind}`);
-const [desktop, capture] = await Promise.all([
-  getImage({ src: wallpaper, width: 1600, format: 'webp', quality: 85 }),
-  getImage({ src: poster, format: 'webp', quality: 94 }),
-]);
+const capture = await getImage({ src: poster, widths: [640, 1280, poster.width], format: 'webp', quality: 90 });
 const camera = JSON.stringify({ ...cues.defaults, ...cues.features[kind] });
 ---
 
 <div class:list={['feature-capture', `feature-capture-${kind}`, className]} data-feature-preview={kind} data-feature-render data-feature-camera={camera} data-media-placeholder data-placeholder-variant="feature">
-  <img class="feature-desktop" src={desktop.src} alt="" aria-hidden="true"
-    width={desktop.attributes.width} height={desktop.attributes.height} loading={loading} decoding="async" />
+  <div class="aurora feature-aurora" aria-hidden="true"></div>
   <div class="feature-window" data-render-window>
-    <img class="feature-capture-poster" data-feature-poster src={capture.src} alt={alt}
+    <img class="feature-capture-poster" data-feature-poster src={capture.src} srcset={capture.srcSet.attribute} sizes="(min-width: 1024px) 50vw, 92vw" alt={alt}
       width={capture.attributes.width} height={capture.attributes.height} loading={loading} decoding="async" />
     <video class="feature-movie" data-feature-video data-feature-video-src={movie}
       width={capture.attributes.width} height={capture.attributes.height} preload="none"
@@ -41,18 +36,15 @@ const camera = JSON.stringify({ ...cues.defaults, ...cues.features[kind] });
   .feature-capture {
     position: relative; display: block; container-type: size; isolation: isolate;
     width: 100%; height: 100%; min-width: 0; min-height: 0; aspect-ratio: 8 / 5;
-    overflow: hidden; border: 0; border-radius: 16px; background: #76a8cc;
+    overflow: hidden; border: 0; border-radius: var(--radius-lg); background: var(--color-night-850);
   }
-  .feature-capture > .feature-desktop {
-    position: absolute; inset: 0; display: block; width: 100%; height: 100%;
-    object-fit: cover; object-position: center; pointer-events: none;
-  }
+  .feature-aurora::before { filter: blur(48px); }
   .feature-window {
     position: absolute; z-index: 1; top: 48%; left: 50%; width: min(80cqw, 128cqh);
     transform: translate(-50%, -50%); overflow: hidden;
     border: 0; border-radius: 1.15cqw;
-    background: #181a1c;
-    box-shadow: 0 .2cqw .5cqw rgb(9 30 60 / 22%), 0 2cqw 4cqw -.8cqw rgb(9 30 60 / 35%), 0 5cqw 8cqw -3cqw rgb(9 30 60 / 32%);
+    background: var(--color-night-950);
+    box-shadow: 0 0 0 1px rgb(247 247 249 / .12), 0 2cqw 4cqw -.8cqw rgb(0 0 0 / .5);
   }
   .feature-window > .feature-capture-poster { display: block; width: 100%; height: auto; object-fit: contain; }
   .feature-window > .feature-movie { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: contain; opacity: 0; pointer-events: none; }

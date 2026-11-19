@@ -1,0 +1,48 @@
+---
+import { Picture } from 'astro:assets';
+import history from '../assets/product/source-control.png';
+import type { Landing } from '../../content/landing-schema';
+interface Props { content: Landing['principles'] }
+const { content } = Astro.props;
+---
+
+<section class="section principles" id="local" aria-labelledby="principles-title">
+  <div class="shell principles-layout">
+    <div class="principles-copy">
+      <p class="eyebrow"><i class="sig" aria-hidden="true"></i>{content.eyebrow}</p>
+      <h2 id="principles-title">{content.title}</h2>
+      <p class="section-description">{content.description}</p>
+      <ol class="principles-list">
+        {content.items.map((item, index) => <li><span>{String(index + 1).padStart(2, '0')}</span><div><h3>{item.title}</h3><p>{item.description}</p></div></li>)}
+      </ol>
+    </div>
+
+    {/* A real capture of Lomi's Git history: the commits and diffs live on this machine. */}
+    <figure class="principles-shot">
+      <Picture src={history} formats={['avif', 'webp']} widths={[960, 1440, 2160]} sizes="(max-width: 960px) 150vw, 960px" alt="Lomi's Git history: a commit, its 13 changed files and a side-by-side diff of a Rust file." loading="lazy" />
+    </figure>
+  </div>
+</section>
+
+<style>
+  .principles { position: relative; overflow: clip; border-top: 1px solid var(--line); }
+  .principles-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: clamp(48px, 7vw, 112px); align-items: center; }
+  .principles h2 { margin-top: 20px; max-width: 12ch; }
+  .principles .section-description { margin-top: 24px; }
+  .principles-list { margin: 40px 0 0; padding: 0; list-style: none; }
+  .principles-list li { display: grid; grid-template-columns: 40px 1fr; gap: 8px; padding-block: 20px; border-top: 1px solid var(--line); }
+  .principles-list li > span { padding-top: 4px; color: var(--color-violet-300); font-family: var(--font-mono); font-size: 12px; font-weight: 500; }
+  .principles-list h3 { font-size: 18px; }
+  .principles-list p { margin-top: 6px; color: var(--color-text-secondary); font-size: 15px; line-height: 1.6; max-width: 46ch; }
+
+  .principles-shot { width: 960px; margin: 0; border-radius: 11px; box-shadow: 0 0 0 1px rgb(247 247 249 / .12), 0 40px 120px -30px rgb(0 0 0 / .85), 0 0 120px -30px rgb(114 59 250 / .4); }
+  .principles-shot :global(img) { border-radius: 11px; }
+
+  @media (max-width: 960px) {
+    .principles-layout { grid-template-columns: minmax(0, 1fr); }
+    .principles-shot { width: 130%; }
+  }
+  @media (max-width: 560px) {
+    .principles-shot { width: 170%; }
+  }
+</style>

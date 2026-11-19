@@ -1,7 +1,7 @@
 import type { IconName } from '../components/Icon';
 
 export const site = {
-  name: 'lomi',
+  name: 'Lomi',
   github: 'https://github.com/lomi-dev/lomi',
   releases: 'https://github.com/lomi-dev/lomi/releases',
   download: '/download/',

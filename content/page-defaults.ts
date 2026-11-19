@@ -1,8 +1,8 @@
 /** Editable subpage copy. Routes, platform IDs and release validation stay in code. */
 export const pageDefaults = {
   download: {
-    seo: { title: 'Download lomi | macOS, Windows & Linux', description: 'Get lomi for macOS, Windows or Linux. Choose your installer, or install on Arch Linux from the AUR.' },
-    title: 'Download lomi.', description: [{ text: 'Download Lomi for your desktop.' }, { text: 'Choose an installer for your operating system.' }],
+    seo: { title: 'Download Lomi | macOS, Windows & Linux', description: 'Get Lomi for macOS, Windows or Linux. Choose your installer, or install on Arch Linux from the AUR.' },
+    title: 'Download Lomi.', description: [{ text: 'Free and open source for macOS, Windows and Linux.' }],
     chooserLabel: 'Choose your download', systemLabel: 'Operating system', downloadLabel: 'Download for {platform}',
     platforms: {
       macos: { label: 'macOS', legend: 'Mac chip' }, windows: { label: 'Windows', legend: 'Installer format' }, linux: { label: 'Linux', legend: 'Installer format' },
@@ -22,28 +22,28 @@ export const pageDefaults = {
     feedback: { packageError: 'We couldn’t check package availability. Browse releases on GitHub.', packageReady: '{package} is ready to download.', packageMissing: '{package} is not in the latest release. Browse its files on GitHub.', packageFallback: 'This package', releaseReady: 'Latest release {tag} is ready.', releaseError: 'We couldn’t check the latest release. You can still browse releases on GitHub.' },
     showAur: true,
     aur: { title: 'On Arch Linux?', href: 'https://aur.archlinux.org/packages/lomi-bin', linkLabel: 'View on AUR', description: 'Install the x86_64 binary with your AUR helper.', command: 'yay -S lomi-bin', copyAriaLabel: 'Copy AUR install command', copyLabel: 'Copy', copiedLabel: 'Copied', copyFallbackLabel: 'Copy command', copiedStatus: 'Command copied.', copyError: 'Couldn’t copy the command. Select the code and copy it manually.' },
-    showScreenshot: true, screenshot: { image: null, alt: 'The lomi desktop app on macOS, with the project explorer, TypeScript editor and terminal in one workspace.', heading: 'Lomi on macOS', caption: 'The lomi workspace' },
+    showScreenshot: true, screenshot: { image: null, alt: 'The Lomi desktop app on macOS, with the project explorer, TypeScript editor and terminal in one workspace.', heading: 'Lomi on macOS', caption: 'The Lomi workspace' },
     showHelp: true, help: { text: 'Need a hand getting started?', label: 'Read the documentation', href: 'https://docs.lomi.dev' },
   },
   remote: {
-    seo: { title: 'Lomi Remote | Lomi', description: 'Lomi Remote is an upcoming CLI host for your workspaces and terminals. Join the newsletter for launch news about macOS, Windows and Linux.' },
-    title: 'Lomi Remote.', description: [{ text: 'Your workspaces and terminals, ready for another screen.' }, { text: 'Coming soon for your computer or server.' }],
-    // Retained for existing CMS documents; launch pages never render installer controls.
+    seo: { title: 'Lomi Remote | Lomi', description: 'Lomi Remote is a CLI host for your workspaces and terminals. Install it on macOS or Linux with one command; Windows is coming soon.' },
+    title: 'Lomi Remote.', description: [{ text: 'Host your workspaces anywhere. Reach them from any screen.' }],
+    // Retained for existing CMS documents; the page renders the commands from src/data/remote.ts.
     installerTitle: 'Install Lomi Remote CLI', systemLabel: 'Operating system',
     platforms: { unix: { label: 'macOS / Linux', command: 'curl -fsSL https://lomi.dev/download/remote | bash' }, windows: { label: 'Windows', command: 'Invoke-RestMethod "https://lomi.dev/download/remote.ps1" | Invoke-Expression' } },
     commandAriaLabel: '{platform} installation command. Scroll to read the full command.', copyAriaLabel: 'Copy {platform} install command', manualCopy: 'Select the command and copy it manually.',
     feedback: { waiting: 'Waiting for clipboard', copied: '{platform} command copied.', error: 'Couldn’t copy. The command is selected so you can copy it manually.' },
-    showScreenshot: true, screenshot: { image: null, alt: 'The lomi desktop app on macOS, with the project explorer, TypeScript editor and terminal in one workspace.' },
+    showScreenshot: true, screenshot: { image: null, alt: 'The Lomi desktop app on macOS, with the project explorer, TypeScript editor and terminal in one workspace.' },
   },
   devlog: {
-    seo: { title: 'Devlog | lomi', description: 'Development videos about Lomi: new features, fixes and project updates.' },
+    seo: { title: 'Devlog | Lomi', description: 'Development videos about Lomi: new features, fixes and project updates.' },
     label: 'Devlog', labelAccent: '/', title: [{ text: 'Devlog.' }], accent: '', description: [{ text: 'Videos about new features, fixes and experiments in Lomi.' }],
-    cta: { label: 'Back to lomi', href: '/' }, footerLabel: 'lomi / devlog', settingsLabel: 'Cookie settings', source: { label: 'Follow the source', href: 'https://github.com/lomi-dev/lomi' },
+    cta: { label: 'Back to Lomi', href: '/' }, footerLabel: 'Lomi / devlog', settingsLabel: 'Cookie settings', source: { label: 'Follow the source', href: 'https://github.com/lomi-dev/lomi' },
     latestLabel: 'Latest episode', archiveLabel: 'Previous episodes', watchLabel: 'Watch on YouTube',
     empty: { label: 'Coming soon', title: 'No recordings yet.', description: 'No devlogs have been published yet.', previewLabel: 'Not recorded yet', previewTitle: '' },
   },
   cookies: {
-    seo: { title: 'Cookies & privacy | lomi', description: 'How this website remembers your privacy choices and handles optional YouTube videos.' },
+    seo: { title: 'Cookies & privacy | Lomi', description: 'How this website remembers your privacy choices and handles optional YouTube videos.' },
     title: 'Cookies & privacy.', description: 'What this website stores, what it loads, and what you can choose.', settingsLabel: 'Open cookie settings',
     sections: [
       { title: 'Your choices', paragraphs: [{ text: 'YouTube videos stay off unless you allow external media. You can accept or reject optional media, or change your choice through Cookie settings at any time.' }], showSettings: true, showStorage: false, showNoscript: true, noscript: 'JavaScript is off, so embedded videos stay off and preferences cannot be saved here. You can still follow the video link to watch directly on YouTube.' },

@@ -52,6 +52,22 @@ const assetPatterns: Partial<Record<`${PlatformId}:${PackageId}`, RegExp>> = {
   'linux:rpm': new RegExp(`^Lomi-${version}-\\d+\\.x86_64\\.rpm$`),
 };
 
+// Direct file URL for a known release, built from the same names the patterns above match.
+// The page renders these at build time so its links work before (or without) the GitHub API.
+const assetNames: Record<`${PlatformId}:${PackageId}`, (version: string) => string> = {
+  'macos:apple-silicon': (v) => `Lomi_${v}_aarch64.dmg`,
+  'macos:intel': (v) => `Lomi_${v}_x64.dmg`,
+  'windows:exe': (v) => `Lomi_${v}_x64-setup.exe`,
+  'windows:msi': (v) => `Lomi_${v}_x64_en-US.msi`,
+  'linux:appimage': (v) => `Lomi_${v}_amd64.AppImage`,
+  'linux:deb': (v) => `Lomi_${v}_amd64.deb`,
+  'linux:rpm': (v) => `Lomi-${v}-1.x86_64.rpm`,
+} as Record<`${PlatformId}:${PackageId}`, (version: string) => string>;
+export function packageUrl(platform: PlatformId, packageId: PackageId, version: string): string {
+  const name = assetNames[`${platform}:${packageId}`];
+  return name ? `${releaseFallback}/download/v${version}/${name(version)}` : releaseFallback;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

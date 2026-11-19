@@ -1,0 +1,131 @@
+[
+  {
+    "version": "0.6.1",
+    "date": "2026-10-18",
+    "summary": "Lomi 0.6.1 brings Settings into the workspace, replaces legacy CLI routing with a durable account and task runtime, and unifies notification controls.",
+    "highlights": [
+      "Open preferences in one reusable Settings tab while preserving running terminals, editor history and form drafts.",
+      "Keep native CLI task history across attempts and explicit account changes, with guarded continuation and recovery for uncertain work.",
+      "Enable desktop and phone notifications independently for task and Chat completions, and forward supported terminal attention signals to your phone. Notifications are opt-in and disabled by default.",
+      "Keep application, Android and MCP alerts in the persistent notification inbox, including retry and recovery actions. Preserve inbox files written by newer versions."
+    ],
+    "href": "https://github.com/lomi-dev/lomi/releases/tag/v0.6.1"
+  },
+  {
+    "version": "0.6.0",
+    "date": "2026-10-05",
+    "summary": "Lomi 0.6.0 improves Remote workspace reliability and adds native CLI routing.",
+    "highlights": [
+      "Preserve active Remote sessions when account access and workspace approvals renew.",
+      "Pause Remote after more than one hour without terminal or window activity, and resume it without restarting local terminals or losing workspace sharing consent.",
+      "Recover the terminal helper from bounded checkpoints and ordered output journals; isolate terminal state that cannot be recovered safely.",
+      "Stop workspace sharing even when a terminal's Remote model is unavailable."
+    ],
+    "href": "https://github.com/lomi-dev/lomi/releases/tag/v0.6.0"
+  },
+  {
+    "version": "0.5.6",
+    "date": "2026-10-02",
+    "summary": "Lomi 0.5.6 hardens saved application settings and the plugin build toolchain.",
+    "highlights": [
+      "Save application settings with exclusive temporary files and atomic replacement. Reject symlink and nonregular destinations, preserve prior settings on failure, and restrict settings file permissions on macOS and Linux.",
+      "Bundle and verify the safe plugin SDK build helper, including checks that plugin builds stay inside their project and preserve unrelated files.",
+      "Require native security regressions on macOS Apple Silicon, macOS Intel, Linux x64, and Windows x64 before release packaging and publication.",
+      "Group CLI usage by account and place Source Control on the right by default."
+    ],
+    "href": "https://github.com/lomi-dev/lomi/releases/tag/v0.5.6"
+  },
+  {
+    "version": "0.5.5",
+    "date": "2026-10-02",
+    "summary": "Lomi 0.5.5 improves account recovery, remote workspace sharing, and everyday workspace navigation.",
+    "highlights": [
+      "Recover an unreadable saved account session from Account settings. Sign In opens the recovery options, and development builds use separate account storage from the installed app.",
+      "Remote sharing controls remain disabled until the account is signed in. Sharing confirmations, status, and errors are clearer, and shared workspace metadata includes tabs and terminal split layouts.",
+      "Personalize workspaces with icons, images, and colors, and see repository summaries in the workspace list. The Agents dialog limits terminal launches to the available pane space.",
+      "Improve terminal glyph rendering and make file-drop borders easier to see in split terminals."
+    ],
+    "href": "https://github.com/lomi-dev/lomi/releases/tag/v0.5.5"
+  },
+  {
+    "version": "0.5.3",
+    "date": "2026-10-01",
+    "summary": "Lomi 0.5.3 declares compatibility with the safe remote control renewal protocol.",
+    "highlights": [
+      "Native remote requests identify support for atomic lease renewal. Updated servers require this protocol before admitting a desktop host to live sharing.",
+      "If a server requires a newer desktop, Lomi displays “Update Lomi to share workspaces remotely.” Account sign-in remains separate from remote sharing.",
+      "This release includes the 0.5.2 renewal fix: valid renewal extends only the existing lease, while expired or locally preempted control remains observing until the browser explicitly requests control again."
+    ],
+    "href": "https://github.com/lomi-dev/lomi/releases/tag/v0.5.3"
+  },
+  {
+    "version": "0.5.2",
+    "date": "2026-10-01",
+    "summary": "Lomi 0.5.2 fixes remote terminal control renewal after local takeover.",
+    "highlights": [
+      "Local typing keeps priority over browser control. An expired or preempted browser lease cannot regain control through automatic renewal; the browser must request control again.",
+      "Valid renewal extends only the existing lease. Rejected renewal leaves the browser observing live terminal output."
+    ],
+    "href": "https://github.com/lomi-dev/lomi/releases/tag/v0.5.2"
+  },
+  {
+    "version": "0.5.1",
+    "date": "2026-10-01",
+    "summary": "Lomi 0.5.1 adds live remote access to shared workspaces from the browser.",
+    "highlights": [
+      "Share a workspace from its context menu. Its terminal tabs and split panes become available together, and new terminals join the shared workspace automatically.",
+      "Sign in with the same account to enroll the browser device and connect to your shared workspaces. Stop sharing to revoke browser access.",
+      "Keep terminals available while Lomi runs in the background, with live output, keyboard input, and workspace updates.",
+      "Remote hosting is currently enabled only on macOS Apple Silicon. Intel macOS, Windows, and Linux remain gated pending native qualification."
+    ],
+    "href": "https://github.com/lomi-dev/lomi/releases/tag/v0.5.1"
+  },
+  {
+    "version": "0.4.0",
+    "date": "2026-09-20",
+    "summary": "Lomi 0.4.0 adds Chat AI, managed local Android phones, image and SVG previews, and VS Code theme import and export.",
+    "highlights": [
+      "Chat with OpenAI, Anthropic, Google, xAI, OpenRouter, DeepSeek, and NVIDIA using your own provider connections. Stream responses, attach files explicitly, regenerate answers, and branch conversations by editing messages.",
+      "Search and reopen local conversations from the history sidebar, keep drafts across workspace switches, and export conversations as Markdown or JSON. Store API keys in the system key store or explicitly choose session-only storage.",
+      "Set up local Android phones from Settings and open them in tabs or split panels. Manage devices and system images, type with Unicode support, paste intentionally, install APKs, capture screenshots, and zoom the preview. Android setup and Start are currently enabled only on macOS Apple Silicon; Windows, Linux, and Intel macOS remain gated pending native qualification.",
+      "Preview supported images with fit and actual-size views, and view live SVG previews alongside their source code."
+    ],
+    "href": "https://github.com/lomi-dev/lomi/releases/tag/v0.4.0"
+  },
+  {
+    "version": "0.3.0",
+    "date": "2026-09-17",
+    "summary": "Lomi 0.3.0 adds trusted local plugins, JSONC themes, live Explorer refresh, and improvements to Git actions and macOS terminals.",
+    "highlights": [
+      "Customize themes with JSONC, separate light and dark surfaces, local assets, and CSS. Preview changes and keep the last working theme when a file cannot be loaded.",
+      "Manage plugins and themes from their dedicated Settings pages.",
+      "Refresh expanded Explorer folders when files change on disk.",
+      "Fetch remote Git changes and pull with fast-forward-only behavior from the Source Control remote actions menu."
+    ],
+    "href": "https://github.com/lomi-dev/lomi/releases/tag/v0.3.0"
+  },
+  {
+    "version": "0.2.0",
+    "date": "2026-09-13",
+    "summary": "Lomi 0.2.0 adds browser panels, more flexible layouts, and improvements to the Explorer, editor, Git, and terminals.",
+    "highlights": [
+      "Open websites and local development servers in persistent browser tabs or dock them beside terminals and editors.",
+      "Rearrange panels by dragging them and save custom names for every tab type.",
+      "Open full-file Git comparisons in separate, persistent read-only tabs.",
+      "See Git changes on files and ancestor folders in the Explorer, and create or rename files and folders directly in the tree."
+    ],
+    "href": "https://github.com/lomi-dev/lomi/releases/tag/v0.2.0"
+  },
+  {
+    "version": "0.1.0",
+    "date": "2026-09-12",
+    "summary": "The first public release of Lomi, a desktop workspace for terminal-driven development.",
+    "highlights": [
+      "Organize project folders into named workspaces with terminal, file, and commit tabs.",
+      "Split terminals and editors while keeping background shells running.",
+      "Browse files, edit with CodeMirror, and work with Git changes and history.",
+      "Restore layouts and working directories with fresh shells."
+    ],
+    "href": "https://github.com/lomi-dev/lomi/releases/tag/v0.1.0"
+  }
+]

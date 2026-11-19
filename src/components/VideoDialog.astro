@@ -186,23 +186,20 @@ import MediaPlaceholder from './MediaPlaceholder.astro';
     }).catch(() => revealPlayer(version, 'fallback'));
   }
 
-  // Sample the reference's unit-mass spring (stiffness 300, damping 30).
-  // Normalize its response to land exactly at the requested duration's endpoint.
-  const spring = (time: number) => 1 - Math.exp(-15 * time) * (
-    Math.cos(Math.sqrt(75) * time) + 15 / Math.sqrt(75) * Math.sin(Math.sqrt(75) * time)
-  );
+  // Brand motion: ease-out, no overshoot (matches --ease-out closely enough for sampled keyframes).
+  const easeOut = (t: number) => 1 - (1 - t) ** 3;
 
   function animateDialog(closing: boolean) {
     if (!dialog) return;
     const reduced = reducedMotion.matches;
-    const duration = reduced ? 100 : closing ? 220 : 300;
+    const duration = reduced ? 100 : closing ? 180 : 240;
     // Read the in-flight presentation before canceling it, so a rapid Escape
     // reverses from the visible scale and opacity without jumping.
     const current = getComputedStyle(dialog);
-    const fromScale = closing && current.transform !== 'none' ? new DOMMatrixReadOnly(current.transform).a : closing ? 1 : 0.5;
+    const fromScale = closing && current.transform !== 'none' ? new DOMMatrixReadOnly(current.transform).a : closing ? 1 : 0.98;
     const fromOpacity = closing ? Number(current.opacity) : 0;
     motion?.cancel();
-    const toScale = closing ? 0.5 : 1;
+    const toScale = closing ? 0.98 : 1;
     const toOpacity = closing ? 0 : 1;
     dialog.dataset.state = closing ? 'closing' : 'opening';
     if (typeof dialog.animate !== 'function') {
@@ -212,7 +209,7 @@ import MediaPlaceholder from './MediaPlaceholder.astro';
     }
     const frames: Keyframe[] = Array.from({ length: 31 }, (_, index) => {
       const offset = index / 30;
-      const progress = reduced ? offset : spring(offset * duration / 1000) / spring(duration / 1000);
+      const progress = reduced ? offset : easeOut(offset);
       return {
         offset,
         transform: reduced ? 'none' : `scale(${fromScale + (toScale - fromScale) * progress})`,
@@ -322,23 +319,23 @@ import MediaPlaceholder from './MediaPlaceholder.astro';
 </script>
 
 <style>
-  .video-dialog { width: min(1080px, calc(100vw - 32px), calc((100dvh - 32px) * 16 / 9)); max-width: none; max-height: calc(100dvh - 32px); margin: auto; padding: 0; overflow: auto; overscroll-behavior: contain; border: 0; border-radius: 12px; background: #050705; color: #f0f4e9; box-shadow: 0 30px 100px #0008; }
+  .video-dialog { width: min(1080px, calc(100vw - 32px), calc((100dvh - 32px) * 16 / 9)); max-width: none; max-height: calc(100dvh - 32px); margin: auto; padding: 0; overflow: auto; overscroll-behavior: contain; border: 1px solid var(--line-strong); border-radius: var(--radius-lg); background: var(--color-paper); color: var(--color-ink); box-shadow: 0 30px 100px rgb(0 0 0 / .6); }
   .video-dialog:focus { outline: none; }
-  .video-dialog:focus-visible { outline: 2px solid #d5f8a8; outline-offset: 3px; }
-  .video-dialog::backdrop { background: rgb(0 0 0 / 50%); backdrop-filter: blur(12px); opacity: 1; transition: opacity 300ms ease; }
-  .video-dialog[data-state='closing']::backdrop { opacity: 0; transition-duration: 220ms; }
+  .video-dialog:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 3px; }
+  .video-dialog::backdrop { background: rgb(14 14 17 / .6); backdrop-filter: blur(12px); opacity: 1; transition: opacity 240ms ease-out; }
+  .video-dialog[data-state='closing']::backdrop { opacity: 0; transition-duration: var(--dur); }
   @starting-style {
     .video-dialog[open]::backdrop { opacity: 0; }
   }
   .video-instructions { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-  .video-player { position: relative; width: 100%; min-width: 200px; min-height: 200px; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 12px; background: #050705; }
+  .video-player { position: relative; width: 100%; min-width: 200px; min-height: 200px; aspect-ratio: 16 / 9; overflow: hidden; border-radius: var(--radius-lg); background: var(--color-chalk); }
   .video-poster, .video-mount { position: absolute; inset: 0; transition: opacity 200ms ease; }
   .video-poster { pointer-events: none; }
   .video-poster :global(picture), .video-poster :global(img) { display: block; width: 100%; height: 100%; }
   .video-poster :global(img) { object-fit: cover; object-position: center; }
-  .video-loading { position: absolute; inset: 0; display: grid; place-items: center; background: rgb(5 7 5 / 16%); opacity: 0; transition: opacity 150ms ease; }
-  .video-loading-ring { display: grid; width: 64px; height: 64px; place-items: center; border: 1px solid #ffffff26; border-radius: 50%; background: rgb(5 7 5 / 76%); box-shadow: 0 8px 24px #0003; }
-  .video-loading-ring::after { content: ''; width: 25px; height: 25px; border: 2px solid #ffffff26; border-top-color: var(--color-lime); border-radius: 50%; animation: video-loading-spin 900ms linear infinite; animation-play-state: paused; }
+  .video-loading { position: absolute; inset: 0; display: grid; place-items: center; background: rgb(14 14 17 / .16); opacity: 0; transition: opacity 150ms ease; }
+  .video-loading-ring { display: grid; width: 64px; height: 64px; place-items: center; border: 1px solid var(--line-strong); border-radius: 50%; background: rgb(14 14 17 / .76); }
+  .video-loading-ring::after { content: ''; width: 25px; height: 25px; border: 2px solid var(--line-strong); border-top-color: var(--color-lime); border-radius: 50%; animation: video-loading-spin 900ms linear infinite; animation-play-state: paused; }
   .video-dialog[open]:not([data-state='closing']) .video-player[data-video-status='loading'] .video-loading { opacity: 1; }
   .video-dialog[open]:not([data-state='closing']) .video-player[data-video-status='loading'] .video-loading-ring::after { animation-play-state: running; }
   @keyframes video-loading-spin { to { transform: rotate(360deg); } }
@@ -346,12 +343,12 @@ import MediaPlaceholder from './MediaPlaceholder.astro';
   .video-player[data-video-status='consent'] .video-poster { opacity: 0.12; }
   .video-consent { position: relative; padding: clamp(24px, 5vw, 64px); }
   .video-consent[hidden], .video-consent-storage[hidden] { display: none; }
-  .video-consent-storage { margin: 0; padding: 12px 20px; color: #b8c0b2; font-size: 14px; line-height: 1.5; }
-  .video-consent-eyebrow { color: var(--color-lime); font-size: 13px; font-weight: 600; }
+  .video-consent-storage { margin: 0; padding: 12px 20px; color: var(--color-text-secondary); font-size: 14px; line-height: 1.5; }
+  .video-consent-eyebrow { color: var(--color-violet-300); font: 500 12px/1.5 var(--font-mono); letter-spacing: .04em; text-transform: uppercase; }
   .video-consent h2 { max-width: 560px; margin: 12px 0 16px; font-size: clamp(24px, 4vw, 36px); font-weight: 500; line-height: 1.15; letter-spacing: -0.04em; text-wrap: balance; }
-  .video-consent p { max-width: 600px; margin: 0 0 16px; color: #f0f4e9; font-size: 16px; line-height: 1.6; }
-  .video-consent .video-consent-note { color: #b8c0b2; font-size: 14px; }
-  .video-consent-actions { --button-secondary-background: #050705; --button-secondary-border: #f0f4e933; --button-secondary-color: #f0f4e9; --button-secondary-hover: #1c2515; --button-secondary-active: #243019; --button-focus-color: var(--color-lime); display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 28px; }
+  .video-consent p { max-width: 600px; margin: 0 0 16px; color: var(--color-ink); font-size: 16px; line-height: 1.6; }
+  .video-consent .video-consent-note { color: var(--color-text-secondary); font-size: 14px; }
+  .video-consent-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 28px; }
   .video-mount { opacity: 0; pointer-events: none; }
   .video-player[data-video-status='playing'] .video-mount, .video-player[data-video-status='fallback'] .video-mount { opacity: 1; pointer-events: auto; }
   .video-player[data-video-status='playing'] .video-poster, .video-player[data-video-status='fallback'] .video-poster { opacity: 0; }

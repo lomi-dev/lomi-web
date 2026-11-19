@@ -1,8 +1,8 @@
 import type { pageDefaults } from '../../content/page-defaults';
 import type { Editable } from '../../content/editor-schema';
 import {
-  downloadPlatforms, fetchLatestRelease, findPackage, releaseFallback,
-  type PlatformId, type Release,
+  downloadPlatforms, fetchLatestRelease, findPackage, packageUrl, releaseFallback,
+  type PackageId, type PlatformId, type Release,
 } from '../lib/downloads';
 
 type NavigatorHints = {
@@ -35,6 +35,8 @@ export function initDownloadPage(root: HTMLElement): void {
   const nav = root.querySelector<HTMLElement>('[data-platform-tabs]');
   const globalStatus = root.querySelector<HTMLElement>('[data-release-status]');
   const retry = root.querySelector<HTMLButtonElement>('[data-release-retry]');
+  // Cards: every platform stays visible; the active one is only marked as current.
+  const cards = root.dataset.downloadLayout === 'cards';
   const hints = (navigator as Navigator & { userAgentData?: NavigatorHints }).userAgentData;
   const explicitPlatform = platformId(location.hash.slice(1));
   let active = explicitPlatform ?? detectedPlatform(hints);
@@ -45,6 +47,16 @@ export function initDownloadPage(root: HTMLElement): void {
   let controller: AbortController | null = null;
 
   function updatePackages(announcePlatform?: PlatformId): void {
+    // Direct links to every installer, e.g. data-package-link="linux:deb".
+    for (const link of root.querySelectorAll<HTMLAnchorElement>('[data-package-link]')) {
+      const [platform, id] = (link.dataset.packageLink ?? '').split(':');
+      const target = platformId(platform);
+      const asset = target ? findPackage(release, target, id as PackageId) : null;
+      // Until the API answers (or if it fails), keep the direct link rendered at build time.
+      link.href = asset?.url ?? (state === 'ready' && release ? release.url : link.dataset.buildHref ?? releaseFallback);
+      const size = link.querySelector<HTMLElement>('[data-size]');
+      if (size) size.textContent = asset?.size ? `${(asset.size / 1_048_576).toFixed(asset.size < 10_485_760 ? 1 : 0)} MB` : '';
+    }
     for (const panel of panels) {
       const platform = platformId(panel.dataset.platformPanel);
       if (!platform) continue;
@@ -55,10 +67,15 @@ export function initDownloadPage(root: HTMLElement): void {
       const label = panel.querySelector<HTMLElement>('[data-action-label]');
       const status = panel.querySelector<HTMLElement>('[data-package-status]');
       panel.dataset.packageAvailable = String(Boolean(asset));
-      if (action) action.href = asset?.url ?? release?.url ?? releaseFallback;
-      if (label) label.textContent = asset
-        ? format(copy.downloadLabel, 'platform', copy.platforms[platform].label)
-        : copy.releasesLabel;
+      const meta = panel.querySelector<HTMLElement>('[data-package-meta]');
+      if (meta && option) meta.textContent = copy.packages[option.id].statusLabel;
+      const buildHref = option ? packageUrl(platform, option.id, root.dataset.version ?? '') : releaseFallback;
+      const missing = state === 'ready' && !asset;
+      if (action) action.href = asset?.url ?? (missing && release ? release.url : buildHref);
+      // The label stays "Download for …" while loading; only a release without this package changes it.
+      if (label) label.textContent = missing
+        ? copy.releasesLabel
+        : format(copy.downloadLabel, 'platform', copy.platforms[platform].label);
       if (status) {
         // Fetch results use the shared live region. Announce a package's own
         // availability only when the user changes that package selection.
@@ -82,7 +99,10 @@ export function initDownloadPage(root: HTMLElement): void {
       tab.setAttribute('aria-selected', String(selected));
       tab.tabIndex = selected ? 0 : -1;
     }
-    for (const panel of panels) panel.hidden = panel.dataset.platformPanel !== platform;
+    for (const panel of panels) {
+      if (cards) panel.dataset.current = String(panel.dataset.platformPanel === platform);
+      else panel.hidden = panel.dataset.platformPanel !== platform;
+    }
     if (updateHash) history.replaceState(history.state, '', `#${platform}`);
     updatePackages();
   }
@@ -122,8 +142,10 @@ export function initDownloadPage(root: HTMLElement): void {
   for (const panel of panels) {
     const platform = platformId(panel.dataset.platformPanel);
     if (!platform) continue;
-    panel.setAttribute('role', 'tabpanel');
-    panel.setAttribute('aria-labelledby', `tab-${platform}`);
+    if (!cards) {
+      panel.setAttribute('role', 'tabpanel');
+      panel.setAttribute('aria-labelledby', `tab-${platform}`);
+    }
     for (const fieldset of panel.querySelectorAll<HTMLFieldSetElement>('[data-package-options]')) fieldset.disabled = false;
     const radios = Array.from(panel.querySelectorAll<HTMLInputElement>('input[type="radio"]'));
     if (!radios.some((radio) => radio.checked) && radios[0]) radios[0].checked = true;
@@ -201,6 +223,7 @@ export function initDownloadPage(root: HTMLElement): void {
       if (current === request) {
         root.dataset.releaseState = state;
         updatePackages();
+        autoDownload();
         if (retry) {
           retry.removeAttribute('aria-disabled');
           retry.removeAttribute('aria-busy');
@@ -215,6 +238,28 @@ export function initDownloadPage(root: HTMLElement): void {
       }
     }
   }
+  // Start the visitor's installer once, like a download confirmation page. Skipped on phones,
+  // when a platform was chosen in the URL, and on repeat visits in the same tab session.
+  // root[data-mode] is "auto" only for visitors arriving from another page of this site (set inline
+  // before paint). The start uses the API's file when it answers within 1.2 s, else the build-time link.
+  let autoDone = false;
+  function autoDownload(): void {
+    if (autoDone || root.dataset.mode !== 'auto') return;
+    if (explicitPlatform || interacted) { root.dataset.mode = 'manual'; return; }
+    const action = panels.find((entry) => entry.dataset.platformPanel === active)?.querySelector<HTMLAnchorElement>('[data-download-action]');
+    const href = action?.href ?? '';
+    if (!/\/releases\/download\//.test(href)) { root.dataset.mode = 'manual'; return; }
+    autoDone = true;
+    const link = document.createElement('a');
+    link.href = href;
+    link.rel = 'noopener';
+    document.body.append(link);
+    link.click();
+    link.remove();
+    root.dataset.autoStarted = active;
+  }
+  setTimeout(autoDownload, 1200);
+
   retry?.addEventListener('click', () => {
     if (state !== 'loading') void loadRelease(true);
   });

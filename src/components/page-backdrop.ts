@@ -5,7 +5,7 @@ export function initPageBackdrop(): () => void {
   const probe = document.createElement('span');
   probe.hidden = true;
   probe.style.display = 'none';
-  probe.style.color = 'var(--scroll-surface-color, var(--color-chalk, #ecefe5))';
+  probe.style.color = 'var(--scroll-surface-color, var(--color-chalk, #0e0e11))';
 
   let observer: IntersectionObserver | undefined;
   let frame = 0;

@@ -1,52 +1,29 @@
-# Remote launch page
+# Remote page
 
 The separate [Remote installation endpoints](remote-installation.md) document
 the generated `/remote/install.sh` and `/remote/install.ps1` scripts and their
-release inputs. Their availability does not alter the launch page below.
+release inputs.
 
-`/remote/` presents Lomi Remote as an upcoming product. It keeps the original
-centered layout on a white canvas: opening, disabled platform badges, a wide
-static terminal render and a compact launch newsletter below the preview. There
-are no install commands, clipboard controls,
-operating-system selectors or active Remote download links.
+`/remote/` presents Lomi Remote as a CLI host installed with one command. The
+hero centres the real installers from `lomi-remote` (`src/data/remote.ts`):
 
-macOS, Windows and Linux are target platforms, not available release packages.
-Their buttons are natively disabled and accompanied by Coming soon text.
-The product is not publicly available. The page does not claim a working cloud
-connection, production login, qualified sharing or a completed security rollout.
+- macOS and Linux: `curl -fsSL https://lomi.dev/remote/install.sh | sh`, with a
+  copy button (clipboard, falling back to selecting the command).
+- Windows: the PowerShell `install.ps1` command is shown without a copy button
+  and marked coming soon, because Windows packages are not published yet.
 
-## CLI illustration
-
-The default preview is a static 1920×1200 WebP with a light terminal interface
-on the same original Tahoe wallpaper used by Features. The window occupies
-80% of the 8:5 stage and sits at its 48% vertical center, matching the feature
-composition. It has no titlebar, extra window border, caption or animation.
-Astro serves responsive AVIF/WebP variants with descriptive sample-data alt text.
-
-The rendered interface follows the current dashboard in
-`../lomi-remote/crates/lomiremote/src/ui.rs` and the checked-in 80×24 test
-snapshot. Its Workspaces and Local host panels use fictional workspace names.
-Host/workspace identifiers, connection status and sharing detail rows are
-omitted from the artwork. It does not depict a public release.
-
-`media/remote/cli-light.html` is the editable HTML/CSS render source. Run
-`bun run render:remote-preview` to capture it locally with Playwright and export
-`src/assets/product/remote/cli-light.webp`. The renderer checks the wallpaper,
-window dimensions, absent titlebar/caption and lack of animations. Its PNG
-review artifact is saved in ignored `artifacts/remote-render/`. No host or
-terminal command is executed. The website renders only the resulting image,
-with no CLI interaction controller, video, GIF or autoplay.
-
-An explicitly uploaded CMS image still overrides the default artwork, and
-`showScreenshot` controls preview visibility. Hiding artwork leaves the copy
-and newsletter available.
+The commands are code, not CMS fields; the old installer fields stay in the
+schema for existing documents but are not rendered (their URLs were outdated).
+Below the hero, real captures of Lomi on the desktop and of Lomi Mobile show
+one workspace on two screens. An uploaded CMS image replaces the desktop
+capture, and `showScreenshot` hides that section.
 
 ## Newsletter
 
 `#remote-newsletter` reuses `NewsletterSignup.astro` and the existing
 `PUBLIC_NEWSLETTER_ENDPOINT`. It sends only `{ email }`, with credentials
 omitted, and accepts only HTTP 202 with `{ "accepted": true }` as success.
-The page specializes its submit and accepted wording for Remote launch news.
+The page specializes its submit and accepted wording for Remote release news.
 Its optional newsletter note is omitted on this page, including the matching
 input description reference. Other signup instances retain their default note.
 Rate-limit, pending, unavailable, retry and no-JavaScript behavior remain shared.

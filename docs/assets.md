@@ -17,30 +17,12 @@ on the lime footer.
 The header wordmark is 82 px wide on desktop and 79 px on mobile.
 The social preview is a browser capture of the page with this logo.
 
-## Cloud background
-
-The selected desktop homepage hero uses `src/assets/clouds.png` (1536 × 1024)
-as its light wallpaper. The hero softens the image with reduced saturation and
-a pale overlay; the source image remains unchanged.
-
-Created using the built-in `image_gen` tool. The two user-supplied landing-page images were visual direction references, not copied into the website. Astro generates responsive WebP sources with the original PNG as a fallback.
-
-Exact generation prompt:
-
-> Generate a photorealistic natural sky photograph to use as the background of a minimalist, premium developer tool landing page. Wide landscape composition, 3:2 aspect ratio, high resolution. Clear pale powder-blue sky, airy luminous white cumulus clouds sweeping into the frame from the left and right edges and gathering along the bottom third. Keep the upper center and central 60 percent mostly uninterrupted blue negative space for dark navy headline text. Realistic finely detailed cloud vapor and soft blue-grey shadows, bright gentle daylight, atmospheric depth, optimistic tranquil feeling. The top edge should be soft sky blue, not saturated cobalt. Cloud edges naturally wispy, no artificial round blobs. No land, no mountains, no ocean, no buildings, no birds, no sun disc, no rainbow, no text, no logos, no interface, no grain. This is a standalone sky photograph, not a website mockup.
-
 ## Application screenshots
 
-The selected desktop hero combines `src/assets/hero/laptop-concrete.png`
-(1536 × 1024), a black laptop on concrete, with a real Lomi workspace capture
-projected into its screen. By default, `src/assets/product/workbench.png`
-(2880 × 1800) supplies the dark-theme Explorer, editor and terminal view.
-`src/components/WorkspaceDeck.astro` meshes the screenshot into the laptop
-display with a build-time SVG projection. An uploaded CMS Hero Poster replaces
-the screen image inside that same composition. The laptop artwork is served as
-responsive WebP with the original PNG as fallback; Astro creates an optimized
-WebP screen image for the local capture. The selected homepage hero is static
-and does not render a video, YouTube embed or player.
+The homepage hero uses a real Lomi workspace capture. By default,
+`src/assets/product/workbench.png` (2880 × 1800) supplies the dark-theme
+Explorer, editor and terminal view. The hero is static and does not render a
+video, YouTube embed or player.
 
 `src/assets/product/hero-workbench.png` remains the fallback used by Download
 and the legacy `HeroVideo.astro` component; it is not the selected homepage
@@ -56,11 +38,10 @@ Wordmark fallbacks are decorative, while app captures have descriptive alt
 text for their workspace interfaces.
 SVG assets remain sharp without responsive raster exports.
 
-`public/placeholders/lomi-mark.svg` contains the existing Lomi logo geometry.
+`public/placeholders/lomi-mark.svg` is the Brand Guidelines 4.0 wordmark.
 `public/placeholders/lomi-poster.svg` supplies the default design for generic
-native video posters. The old `hero-workspace.svg` remains in the public asset
-directory for compatibility; the selected hero uses the laptop artwork with a
-real workspace capture projected into its screen. The generic poster remains
+native video posters on Night. The homepage hero and the download page use the
+real dark workspace capture (`src/assets/product/workbench.png`). The generic poster remains
 a local, code-native SVG with no external requests. Old numbered PNGs remain
 archived in `src/assets/placeholders/` but are no longer imported by rendered
 pages.
@@ -82,7 +63,6 @@ terminal), now used as the selected hero's default screen; `source-control.png`
 (Git history and diff) and `browser.png` remain archived for future approved
 sections.
 
-`public/placeholders/download-workspace.svg` remains archived for compatibility.
 Remote uses the shared brand placeholder until its screenshot is uploaded in
 Payload.
 The archived desktop captures are available for a future
@@ -103,8 +83,8 @@ The icons are served with the site; no browser request to Iconify is needed.
 
 The root-level `src/assets/workbench.png`, `src/assets/workbench-light.png` and
 `src/assets/source-control.png` remain archived and unused by rendered pages.
-No interface was reconstructed for the selected hero; its laptop screen uses
-the real local workspace capture.
+No interface was reconstructed for the hero; it uses the real local
+workspace capture.
 
 `public/social-card.png` is the site's 1200 × 630 social preview image.
 
@@ -132,11 +112,9 @@ with uploaded thumbnails or the shared neutral media placeholder.
 
 The selected desktop hero has no agent dock. Local SVG marks remain archived
 in `public/agents/`, with no runtime Iconify request. Their sources and
-licenses are recorded in [docs/react-bits.md](react-bits.md).
+licenses are recorded beside each file.
 
 The Hermes MIT notice is distributed in `public/agents/LICENSE-thesvg-MIT.txt`.
-The upstream React Bits TiltedCard source and its MIT + Commons Clause notice
-are versioned together in `src/components/react-bits/`.
 
 The geometric background is drawn with code, with a three-path static SVG
 fallback generated during the Astro build. It is inspired by React Bits
@@ -147,11 +125,8 @@ and reference are recorded in [docs/shape-waves.md](shape-waves.md).
 
 `src/components/RemotePage.astro` reuses the download page's locally served
 Iconify Simple Icons for macOS, Linux and Windows, with unchanged geometry.
-The three platform badges are gray and disabled. `RemoteCliPreview.astro` draws
-a static light terminal render from `media/remote/cli-light.html`, with real
-interface labels, sample local workspaces and the original Tahoe wallpaper.
-`bun run render:remote-preview` captures the 1920×1200 composition locally;
-Astro serves responsive AVIF/WebP images. No external image service or icon
+The three platform buttons are disabled. The hero shows the real `src/assets/product/browser.png` capture (never a drawing of the app), served as
+responsive AVIF/WebP. No external image service or icon
 package is needed. An explicitly uploaded CMS image overrides that preview and
 retains intrinsic dimensions and lazy loading. See
 [Remote launch behavior and provenance](remote.md).
@@ -168,8 +143,5 @@ Iconify is needed. The upstream MIT notice is included in
 
 ## Typography
 
-Geist Variable is served locally from its Fontsource package, with its license
-at `node_modules/@fontsource-variable/geist/LICENSE`. JetBrains Mono Regular was
-copied from the desktop application's `public/fonts/jetbrains-mono/` directory.
-The font and its SIL Open Font License are included together at
-`public/fonts/jetbrains-mono/`. Instrument Serif is no longer used or installed.
+Mona Sans and Geist Mono are served locally from `public/fonts/`. Instrument
+Serif is no longer used or installed.

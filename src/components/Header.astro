@@ -1,12 +1,16 @@
 ---
+import { Image } from 'astro:assets';
 import Icon from './Icon';
 import logo from '../assets/lomi-wordmark.svg?raw';
+import workbench from '../assets/product/workbench.png';
+import browser from '../assets/product/browser.png';
+import phone from '../assets/product/mobile-app/workspace-home-dark.png';
 import { editorDefaults } from '../../content/editor-defaults';
 import { resolveMedia } from '../../content/editor-schema';
 import { activeLandingLinks, activeProductGroups } from '../data/navigation';
 import type { Landing } from '../../content/landing-schema';
 interface Props { content: Landing['navigation']; site?: Landing['site']; layout?: Landing['layout']; theme?: 'light' | 'dark' }
-const { content, theme, site = editorDefaults.site, layout = editorDefaults.layout } = Astro.props;
+const { content, site = editorDefaults.site, layout = editorDefaults.layout } = Astro.props;
 const navigationLinks = activeLandingLinks(content.links, layout);
 const brandLogo = resolveMedia(site.brand.logo, import.meta.env.CMS_URL);
 const isHome = Astro.url.pathname === '/';
@@ -15,49 +19,86 @@ const isPageLink = (href: string) => {
   const target = new URL(homeHref(href), Astro.url);
   return !target.hash || target.origin !== Astro.url.origin || target.pathname !== Astro.url.pathname;
 };
+const current = (href: string) => href.replace(/\/$/, '') === Astro.url.pathname.replace(/\/$/, '') ? 'page' : undefined;
 const productGroups = activeProductGroups(content.productGroups, layout);
-const productHref = productGroups[0]?.links[0]?.href ?? '/';
+const [cardGroup, ...listGroups] = productGroups;
 const action = activeLandingLinks([{ label: content.actionLabel, href: content.actionHref }], layout)[0];
+
+// Real captures of each product, and one line on what it is. Unknown CMS links show text only.
+const key = (href: string) => href.replace(/^\//, '').replace(/\/$/, '');
+const thumbs: Record<string, { src: ImageMetadata; position: string }> = {
+  '#features': { src: workbench, position: '0 0' },
+  remote: { src: browser, position: '0 0' },
+  'mobile-app': { src: phone, position: '50% 0' },
+};
+const notes: Record<string, string> = {
+  '#features': 'Terminals, editor, previews and Git in one native window.',
+  remote: 'Your workspaces and terminals, ready for another screen.',
+  'mobile-app': 'Follow and guide a running session from your phone.',
+  'https://docs.lomi.dev': 'Guides and reference.',
+  'https://github.com/lomi-dev/lomi': 'Apache 2.0, open on GitHub.',
+  download: 'macOS, Windows and Linux.',
+  'https://github.com/lomi-dev/lomi/releases': 'What changed in each release.',
+};
 ---
 
-<header class="site-header" data-theme={theme ?? (isHome ? 'light' : 'dark')}>
+<header class="site-header" data-intro>
+  {/* Liquid glass: the capsule's rim bends what is behind it (Chromium only; elsewhere plain frost). */}
+  <svg class="lens-defs" width="0" height="0" aria-hidden="true" focusable="false"><filter id="nav-lens" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feGaussianBlur in="SourceGraphic" stdDeviation="9" result="frost" /><feImage result="map" x="0" y="0" preserveAspectRatio="none" /><feDisplacementMap in="frost" in2="map" scale="70" xChannelSelector="R" yChannelSelector="G" /></filter></svg>
   <div class="navigation-backdrop" aria-hidden="true"></div>
-  <div class="header-inner shell">
+  <div class="header-inner">
     <a class="wordmark" href={isHome ? '#top' : '/'} aria-label={site.brand.logoAlt}>{brandLogo ? <img src={brandLogo.url} alt={site.brand.logoAlt} /> : <Fragment set:html={logo} />}</a>
     <nav class="desktop-navigation" aria-label={content.primaryAriaLabel}>
-      {productGroups.length > 0 && <><a class="product-fallback" href={homeHref(productHref)}>{content.productLabel}{isPageLink(productHref) && <Icon name="diagonal" width={13} height={13} />}</a>
-      <details class="product-menu" id="product-menu">
-        <summary>{content.productLabel}<svg class="menu-chevron" width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m4 6 4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" /></svg></summary>
+      <span class="nav-indicator" aria-hidden="true"></span>
+      {cardGroup && <><details class="product-menu" id="product-menu">
+        <summary>{content.productLabel}<svg class="menu-chevron" width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m4 6 4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /></svg></summary>
         <div class="product-panel">
-          <div class="product-panel-inner">
-            {productGroups.map((group) => <div class="product-group"><p class="product-group-label">{group.label}</p>{group.links.map((link) => <a class="product-link" href={homeHref(link.href)} aria-current={link.href.replace(/\/$/, '') === Astro.url.pathname.replace(/\/$/, '') ? 'page' : undefined}><span class="product-link-title">{link.label}</span>{isPageLink(link.href) && <Icon name="diagonal" width={14} height={14} />}</a>)}</div>)}
+          <div class="product-cards">
+            <p class="panel-label">{cardGroup.label}</p>
+            <div class="product-card-grid">
+              {cardGroup.links.map((link) => { const thumb = thumbs[key(link.href)]; return <a class="product-card" href={homeHref(link.href)} aria-current={current(link.href)}>
+                {thumb && <span class="product-thumb"><Image src={thumb.src} alt="" width={520} format="webp" quality={80} style={`object-position:${thumb.position}`} /></span>}
+                <span class="product-card-title">{link.label}</span>
+                {notes[key(link.href)] && <span class="product-card-note">{notes[key(link.href)]}</span>}
+              </a>; })}
+            </div>
           </div>
+          {listGroups.length > 0 && <div class="product-lists">
+            {listGroups.map((group) => <div class="product-group"><p class="panel-label">{group.label}</p>{group.links.map((link) => <a class="product-link" href={homeHref(link.href)} aria-current={current(link.href)}><span><span class="product-link-title">{link.label}</span>{notes[key(link.href)] && <span class="product-link-note">{notes[key(link.href)]}</span>}</span>{isPageLink(link.href) && <Icon name="diagonal" width={14} height={14} />}</a>)}</div>)}
+          </div>}
         </div>
       </details></>}
-      {navigationLinks.map((link) => <a class="navigation-link" href={homeHref(link.href)} aria-current={link.href.replace(/\/$/, '') === Astro.url.pathname.replace(/\/$/, '') ? 'page' : undefined}>{link.label}{isPageLink(link.href) && <Icon name="diagonal" width={13} height={13} />}</a>)}
+      {navigationLinks.map((link) => <a class="navigation-link" href={homeHref(link.href)} aria-current={current(link.href)}>{link.label}</a>)}
     </nav>
     <div class="header-actions">
-      <a class="header-source" href={site.githubUrl} aria-label={content.sourceAriaLabel}><Icon name="github" width={17} height={17} /><span>{content.sourceLabel}</span><Icon name="diagonal" width={13} height={13} /></a>
-      {action && <a class="button button-primary button-compact header-action" href={homeHref(action.href)}>{action.label}<Icon name="diagonal" width={16} height={16} /></a>}
+      <a class="header-source" href={site.githubUrl} aria-label={content.sourceAriaLabel}><Icon name="github" width={18} height={18} /></a>
+      {action && <a class="button button-compact header-action" href={homeHref(action.href)}><Icon name="download" width={16} height={16} />{action.label}</a>}
     </div>
     <details class="mobile-navigation" id="mobile-navigation">
-      <summary><span>{content.menuLabel}</span><span class="menu-symbol" aria-hidden="true"></span></summary>
+      <summary aria-label={content.menuLabel}><span class="menu-symbol" aria-hidden="true"></span></summary>
       <nav class="mobile-panel" aria-label={content.mobileAriaLabel}>
-        {productGroups.length > 0 && <details class="mobile-product" id="mobile-product">
-          <summary><span class="mobile-product-enter">{content.productLabel}<Icon name="arrow" width={17} height={17} /></span><span class="mobile-product-back"><Icon name="arrow" width={16} height={16} />{content.backLabel}</span></summary>
-          <div class="mobile-product-panel">
-            {productGroups.map((group) => <div class="product-group"><p class="product-group-label">{group.label}</p>{group.links.map((link) => <a class="product-link" href={homeHref(link.href)} aria-current={link.href.replace(/\/$/, '') === Astro.url.pathname.replace(/\/$/, '') ? 'page' : undefined}><span class="product-link-title">{link.label}</span>{isPageLink(link.href) && <Icon name="diagonal" width={14} height={14} />}</a>)}</div>)}
-          </div>
-        </details>}
-        {navigationLinks.map((link) => <a class="mobile-root-link" href={homeHref(link.href)} aria-current={link.href.replace(/\/$/, '') === Astro.url.pathname.replace(/\/$/, '') ? 'page' : undefined}>{link.label}<Icon name={isPageLink(link.href) ? 'diagonal' : 'arrow'} width={16} height={16} /></a>)}
-        <div class="mobile-utilities"><a href={site.githubUrl}>{content.sourceLabel}<Icon name="diagonal" width={15} height={15} /></a>{action && <a class="button button-primary button-compact mobile-download" href={homeHref(action.href)}>{action.label}<Icon name="diagonal" width={15} height={15} /></a>}</div>
+        {cardGroup && <div class="mobile-cards">{cardGroup.links.map((link) => { const thumb = thumbs[key(link.href)]; return <a class="mobile-card" href={homeHref(link.href)} aria-current={current(link.href)}>
+          {thumb && <span class="product-thumb"><Image src={thumb.src} alt="" width={320} format="webp" quality={75} style={`object-position:${thumb.position}`} /></span>}
+          <span class="product-card-title">{link.label}</span>
+        </a>; })}</div>}
+        <div class="mobile-links">
+          {navigationLinks.map((link) => <a class="mobile-root-link" href={homeHref(link.href)} aria-current={current(link.href)}>{link.label}<Icon name={isPageLink(link.href) ? 'diagonal' : 'arrow'} width={18} height={18} /></a>)}
+          {listGroups.flatMap((group) => group.links).filter((link) => !/download/i.test(link.href) && !navigationLinks.some((nav) => nav.href.replace(/\/$/, '') === link.href.replace(/\/$/, ''))).map((link) => <a class="mobile-root-link mobile-secondary" href={homeHref(link.href)}>{link.label}<Icon name="diagonal" width={16} height={16} /></a>)}
+        </div>
+        <div class="mobile-utilities">
+          <a class="button button-secondary mobile-source" href={site.githubUrl}><Icon name="github" width={17} height={17} />{content.sourceLabel}</a>
+          {action && <a class="button button-primary mobile-download" href={homeHref(action.href)}><Icon name="download" width={16} height={16} />{action.label}</a>}
+        </div>
       </nav>
     </details>
   </div>
 </header>
+<script is:inline>
+  // Arriving from another Lomi page: the capsule is already on screen, so skip its intro.
+  try { if (document.referrer && new URL(document.referrer).origin === location.origin) document.querySelector('.site-header')?.removeAttribute('data-intro'); } catch {}
+</script>
 
 <script>
-  import { initHeaderContrast } from './header-contrast';
 
   const header = document.querySelector<HTMLElement>('.site-header');
   const product = document.querySelector<HTMLDetailsElement>('#product-menu');
@@ -72,8 +113,27 @@ const action = activeLandingLinks([{ label: content.actionLabel, href: content.a
   let closeTimer: ReturnType<typeof setTimeout> | undefined;
   let lastHeaderFocus: HTMLElement | null = null;
   const clearTimers = () => { clearTimeout(openTimer); clearTimeout(closeTimer); };
-  const closeProduct = () => { clearTimers(); if (product) product.open = false; };
-  const closeMobile = () => { if (mobile) mobile.open = false; if (mobileProduct) mobileProduct.open = false; };
+  // Menus leave the way they came: a short fade before the disclosure really closes.
+  const still = matchMedia('(prefers-reduced-motion: reduce)');
+  const shut = (menu?: HTMLDetailsElement | null) => {
+    if (!menu?.open || menu.dataset.closing !== undefined) return;
+    if (still.matches) { menu.open = false; return; }
+    menu.dataset.closing = '';
+    setTimeout(() => { if (menu.dataset.closing === undefined) return; menu.open = false; delete menu.dataset.closing; }, 150);
+  };
+  const reopen = (menu?: HTMLDetailsElement | null) => { if (!menu) return; delete menu.dataset.closing; menu.open = true; };
+  const closeProduct = () => { clearTimers(); shut(product); };
+  const closeMobile = () => { shut(mobile); if (mobileProduct) mobileProduct.open = false; };
+  [[product, productSummary], [mobile, mobileSummary]].forEach(([menu, summary]) => summary?.addEventListener('click', (event) => {
+    const details = menu as HTMLDetailsElement | null;
+    if (!details?.open) return;
+    event.preventDefault();
+    // With a mouse, hover has already opened Product: a click keeps it open rather than
+    // toggling it shut. Keyboard activation (detail 0) still toggles.
+    if (details === product && event.detail > 0 && finePointer.matches && desktop.matches) { reopen(details); return; }
+    if (details.dataset.closing !== undefined) reopen(details);
+    else if (details === product) closeProduct(); else closeMobile();
+  }));
   const closeAll = () => { closeProduct(); closeMobile(); };
 
   // A browser may blur a control as CSS hides it, before the media-query
@@ -87,12 +147,14 @@ const action = activeLandingLinks([{ label: content.actionLabel, href: content.a
   productSummary?.addEventListener('pointerenter', () => {
     if (!finePointer.matches || !desktop.matches) return;
     clearTimers();
-    openTimer = setTimeout(() => { if (product) product.open = true; }, 100);
+    openTimer = setTimeout(() => reopen(product), 100);
   });
   product?.addEventListener('pointerenter', () => { clearTimeout(closeTimer); });
   product?.addEventListener('pointerleave', () => {
     clearTimeout(openTimer);
-    if (!finePointer.matches || product.contains(document.activeElement)) return;
+    // keyboard users keep the menu while they tab through it; a mouse click's focus does not hold it open
+    const keyboardFocus = document.activeElement instanceof HTMLElement && product.contains(document.activeElement) && document.activeElement.matches(':focus-visible');
+    if (!finePointer.matches || keyboardFocus) return;
     closeTimer = setTimeout(closeProduct, 180);
   });
   productSummary?.addEventListener('pointerdown', () => { clearTimers(); });
@@ -145,7 +207,9 @@ const action = activeLandingLinks([{ label: content.actionLabel, href: content.a
       }
     }
   }));
-  if (header) initHeaderContrast(header);
+  const markScrolled = () => header?.toggleAttribute('data-scrolled', scrollY > 24);
+  markScrolled();
+  addEventListener('scroll', markScrolled, { passive: true });
   if (header) header.dataset.navigationReady = '';
   desktop.addEventListener('change', () => {
     const active = document.activeElement;
@@ -158,126 +222,246 @@ const action = activeLandingLinks([{ label: content.actionLabel, href: content.a
     else closeProduct();
     if (focusWasInHiddenNavigation) (desktop.matches ? productSummary : mobileSummary)?.focus();
   });
+
+  // --- The capsule: lens map, light on the rim, sliding indicator, intro sweep.
+  const capsule = header?.querySelector<HTMLElement>('.header-inner');
+  const lensImage = header?.querySelector<SVGFEImageElement>('#nav-lens feImage');
+  // Chromium alone renders SVG filters in backdrop-filter; userAgentData exists only there.
+  if (capsule && lensImage && 'userAgentData' in navigator) {
+    const paintLens = () => {
+      const w = Math.round(capsule.offsetWidth), h = Math.round(capsule.offsetHeight);
+      if (!w || !h) return;
+      const r = parseFloat(getComputedStyle(capsule).borderTopLeftRadius) || 16, zone = Math.min(26, h / 2);
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const context = canvas.getContext('2d');
+      if (!context) return;
+      const image = context.createImageData(w, h);
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        const px = x + .5 - w / 2, py = y + .5 - h / 2;
+        const ix = w / 2 - Math.abs(px), iy = h / 2 - Math.abs(py);
+        const cx = Math.max(r - ix, 0), cy = Math.max(r - iy, 0);
+        let d, nx = 0, ny = 0;
+        if (cx > 0 && cy > 0) { const l = Math.hypot(cx, cy) || 1; d = r - l; nx = cx / l * Math.sign(px); ny = cy / l * Math.sign(py); }
+        else if (ix < iy) { d = ix; nx = Math.sign(px); } else { d = iy; ny = Math.sign(py); }
+        // the rim magnifies inward like the edge of a lens; the middle stays clear
+        const t = Math.max(0, 1 - d / zone), k = t * t;
+        const i = (y * w + x) * 4;
+        image.data[i] = 128 - nx * k * 127; image.data[i + 1] = 128 - ny * k * 127; image.data[i + 2] = 128; image.data[i + 3] = 255;
+      }
+      context.putImageData(image, 0, 0);
+      lensImage.setAttribute('href', canvas.toDataURL());
+      lensImage.setAttribute('width', String(w)); lensImage.setAttribute('height', String(h));
+      header?.setAttribute('data-lens', '');
+    };
+    paintLens();
+    capsule.addEventListener('transitionend', (event) => { if (event.propertyName === 'width') paintLens(); });
+    addEventListener('resize', () => requestAnimationFrame(paintLens));
+  }
+  capsule?.addEventListener('pointermove', (event) => {
+    const box = capsule.getBoundingClientRect();
+    capsule.style.setProperty('--mx', `${event.clientX - box.left}px`);
+    capsule.style.setProperty('--my', `${event.clientY - box.top}px`);
+    capsule.style.setProperty('--lit', '1');
+  });
+  capsule?.addEventListener('pointerleave', () => capsule.style.setProperty('--lit', '0'));
+  setTimeout(() => header?.removeAttribute('data-intro'), 1900);
+
+  // A capsule about as wide as the panel takes it flush, as one shape.
+  const syncFlush = () => header?.toggleAttribute('data-flush', !!capsule && capsule.offsetWidth <= 1120);
+  syncFlush();
+  addEventListener('resize', syncFlush);
+  capsule?.addEventListener('transitionend', (event) => { if (event.propertyName === 'width') syncFlush(); });
+  // the scrolled width is known ahead of its transition, so the panel never shows the wrong shape
+  addEventListener('scroll', () => requestAnimationFrame(syncFlush), { passive: true });
+
+  const nav = header?.querySelector<HTMLElement>('.desktop-navigation');
+  const indicator = nav?.querySelector<HTMLElement>('.nav-indicator');
+  const items = nav ? [...nav.querySelectorAll<HTMLElement>('.navigation-link, .product-menu > summary')] : [];
+  const resting = () => nav?.querySelector<HTMLElement>('.navigation-link[aria-current]') ?? null;
+  let shown: HTMLElement | null = null;
+  const moveTo = (item: HTMLElement | null) => {
+    if (!nav || !indicator) return;
+    shown = item;
+    if (!item) { indicator.style.opacity = '0'; return; }
+    // layout offsets, not screen rects: they ignore the capsule's own entrance transform
+    indicator.style.width = `${item.offsetWidth}px`;
+    indicator.style.transform = `translateX(${item.offsetLeft}px)`;
+    indicator.style.opacity = '1';
+  };
+  items.forEach((item) => { item.addEventListener('pointerenter', () => moveTo(item)); item.addEventListener('focus', () => moveTo(item)); });
+  nav?.addEventListener('pointerleave', () => moveTo(product?.open ? productSummary ?? null : resting()));
+  product?.addEventListener('toggle', () => { if (!product.open && !nav?.matches(':hover')) moveTo(resting()); });
+  requestAnimationFrame(() => { indicator?.classList.add('no-slide'); moveTo(resting()); requestAnimationFrame(() => indicator?.classList.remove('no-slide')); });
+  document.fonts?.ready.then(() => moveTo(shown ?? resting()));
+
+  // Links to sections of this page (e.g. Newsletter on the home page) become current while their
+  // section holds the middle of the screen, and at once when clicked.
+  const sectionLinks = nav ? [...nav.querySelectorAll<HTMLAnchorElement>('.navigation-link')].filter((link) =>
+    link.hash && link.pathname === location.pathname && document.getElementById(link.hash.slice(1))) : [];
+  const settleIndicator = () => { if (!nav?.matches(':hover') && !product?.open) moveTo(resting()); };
+  const markCurrent = (link: HTMLAnchorElement | null) => {
+    sectionLinks.forEach((other) => {
+      if (other === link) other.setAttribute('aria-current', 'location');
+      else if (other.getAttribute('aria-current') === 'location') other.removeAttribute('aria-current');
+    });
+    settleIndicator();
+  };
+  if (sectionLinks.length && 'IntersectionObserver' in window) {
+    const visible = new Set<Element>();
+    const spy = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => { if (entry.isIntersecting) visible.add(entry.target); else visible.delete(entry.target); });
+      markCurrent(sectionLinks.find((link) => visible.has(document.getElementById(link.hash.slice(1))!)) ?? null);
+    }, { rootMargin: '-45% 0px -45% 0px' });
+    sectionLinks.forEach((link) => {
+      spy.observe(document.getElementById(link.hash.slice(1))!);
+      link.addEventListener('click', () => markCurrent(link));
+    });
+  }
+  // The links move whenever the capsule changes width (the scrolled "island", a restored scroll
+  // position after navigation, a resize): follow them at once, without the slide.
+  if (capsule && indicator && 'ResizeObserver' in window) {
+    new ResizeObserver(() => {
+      if (!shown) return;
+      indicator.classList.add('no-slide');
+      moveTo(shown);
+      requestAnimationFrame(() => indicator.classList.remove('no-slide'));
+    }).observe(capsule);
+  }
 </script>
 
 <style>
-  .wordmark img { width: 70px; height: auto; max-height: 44px; object-fit: contain; }
-  .site-header {
-    --header-surface: rgb(15 20 14 / 72%);
-    --header-panel: #10150f;
-    --header-line: #303b2a;
-    --header-text: #f3f6ed;
-    --header-muted: #bcc9b1;
-    --header-subtle: #a7b69a;
-    --header-hover: #222d1b;
-    --header-icon: #c8ff3d;
-    --header-focus: var(--color-lime);
-    position: fixed; top: 0; inset-inline: 0; z-index: 20;
-    color: var(--header-text);
-  }
-  .site-header::before { content: ''; position: absolute; z-index: 0; inset: 0; pointer-events: none; background: rgb(255 255 255 / 6%); -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px); opacity: 0; }
-  .site-header[data-scrolled]::before, .site-header:not([data-navigation-ready])::before, .site-header:has(.product-menu[open], .mobile-navigation[open])::before { opacity: 1; }
-  .site-header:has(.product-menu[open], .mobile-navigation[open])::before { background: var(--header-panel); -webkit-backdrop-filter: none; backdrop-filter: none; }
-  .site-header:not([data-navigation-ready])::before { background: var(--header-surface); }
-  .site-header[data-theme='light'] { --header-surface: rgb(255 255 255 / 72%); --header-panel: var(--color-paper); --header-line: #dfe5d8; --header-text: #202c18; --header-muted: #3f4b36; --header-subtle: #5c6b4e; --header-hover: #eef3e8; --header-icon: #4b6c16; --header-focus: var(--color-focus); }
-  .site-header [data-contrast] {
-    --header-text: var(--adaptive-ink);
-    --header-muted: var(--adaptive-ink);
-    --header-line: color-mix(in srgb, var(--adaptive-ink) 28%, transparent);
-    --header-focus: var(--adaptive-ink);
-    color: var(--header-text);
-    transition: background-color 150ms ease;
-  }
-  .site-header [data-contrast='light'] { --adaptive-ink: #fff; --header-hover: rgb(0 0 0 / 9%); }
-  .site-header [data-contrast='dark'] { --adaptive-ink: #000; --header-hover: rgb(255 255 255 / 9%); }
-  .site-header:has(.product-menu[open], .mobile-navigation[open]) [data-contrast] { --header-text: inherit; --header-muted: inherit; --header-line: inherit; --header-hover: inherit; --header-focus: inherit; }
-  .navigation-backdrop { position: fixed; inset: 0; z-index: -1; visibility: hidden; opacity: 0; background: rgb(5 10 5 / 26%); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
-  .site-header[data-theme='light'] .navigation-backdrop { background: rgb(30 43 21 / 10%); }
-  .site-header[data-navigation-ready]:has(.product-menu[open], .mobile-navigation[open]) .navigation-backdrop { visibility: visible; opacity: 1; }
-  .header-inner { position: relative; z-index: 1; display: flex; align-items: center; width: min(1440px, calc(100% - clamp(40px, 10.4vw, 160px))); min-height: var(--site-header-height); padding: 0; gap: 24px; }
-  .wordmark { display: inline-flex; align-items: center; flex-shrink: 0; min-height: 44px; }
-  .wordmark :global(svg) { display: block; width: 70px; height: auto; }
-  .desktop-navigation { display: flex; align-items: stretch; gap: 4px; align-self: stretch; margin-left: 24px; margin-right: auto; }
-  .product-menu { display: none; align-items: center; align-self: stretch; }
-  .site-header[data-navigation-ready] .product-menu { display: flex; }
-  .navigation-link, .product-fallback, .product-menu > summary { display: inline-flex; align-items: center; justify-content: center; gap: 7px; align-self: center; min-height: 44px; padding-inline: 14px; border-radius: var(--button-radius); font-size: 13px; font-weight: 500; color: var(--header-muted); transition: color 150ms ease, background-color 150ms ease; }
-  .site-header[data-navigation-ready] .product-fallback { display: none; }
+  /* A floating capsule of frosted glass; the Product menu opens as a glass panel below it. */
+  .site-header { --cap-gap: 12px; --glass: rgb(16 16 20 / 46%); --glass-strong: rgb(18 18 22 / 98.5%); --glass-scrolled: rgb(16 16 20 / 58%); --edge: rgb(247 247 249 / 10%); position: fixed; top: 0; inset-inline: 0; z-index: 20; height: var(--site-header-height); padding-top: var(--cap-gap); color: var(--color-ink); pointer-events: none; }
+  .lens-defs { position: absolute; width: 0; height: 0; }
+  @property --mx { syntax: '<length-percentage>'; inherits: true; initial-value: 50%; }
+  @property --lit { syntax: '<number>'; inherits: true; initial-value: 0; }
+  .header-inner { --lit: 0; --my: 0px; position: relative; z-index: 1; isolation: isolate; contain: layout; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; width: min(1320px, calc(100% - 32px)); height: calc(var(--site-header-height) - var(--cap-gap)); margin-inline: auto; padding: 0 8px 0 20px; border: 1px solid var(--edge); border-radius: 20px; background: var(--glass); -webkit-backdrop-filter: blur(22px) saturate(170%); backdrop-filter: blur(22px) saturate(170%); box-shadow: inset 0 1px 0 rgb(255 255 255 / 9%), inset 0 -1px 0 rgb(255 255 255 / 3%), 0 18px 50px -24px rgb(0 0 0 / 80%); pointer-events: auto; transition: width 520ms var(--ease-out), background-color 240ms ease-out, border-color 240ms ease-out; }
+  .site-header[data-lens] .header-inner { -webkit-backdrop-filter: url(#nav-lens) saturate(170%) brightness(1.08); backdrop-filter: url(#nav-lens) saturate(170%) brightness(1.08); }
+  /* light that runs along the rim, under the pointer (and once around on arrival) */
+  .header-inner::before { position: absolute; inset: -1px; z-index: 2; padding: 1.5px; border-radius: inherit; background: radial-gradient(260px 140px at var(--mx) var(--my), rgb(198 255 40), rgb(185 245 0 / 90%) 18%, rgb(174 141 255 / 80%) 42%, transparent 75%); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; opacity: var(--lit); transition: opacity 320ms ease-out; pointer-events: none; content: ''; }
+  .header-inner::after { position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: radial-gradient(260px 120px at var(--mx) var(--my), rgb(114 59 250 / 20%), transparent 70%), linear-gradient(rgb(255 255 255 / 4%), transparent 50%); opacity: calc(.35 + var(--lit) * .65); transition: opacity 320ms ease-out; pointer-events: none; content: ''; }
+  /* the intro ends on its own (no script needed); `backwards` hands --lit back to the pointer afterwards */
+  .site-header[data-intro] .header-inner { animation: cap-in 900ms var(--ease-out) both, rim-sweep 1700ms ease-in-out 200ms backwards; }
+  @keyframes cap-in { from { opacity: 0; transform: translateY(-14px) scale(.98); filter: blur(6px); } }
+  @keyframes rim-sweep { 0% { --mx: -15%; --lit: 1; } 85% { --lit: 1; } 100% { --mx: 115%; --lit: 0; } }
+  .site-header[data-scrolled] .header-inner { width: min(980px, calc(100% - 32px)); }
+  .site-header[data-scrolled] .header-inner { background: var(--glass-scrolled); border-color: rgb(247 247 249 / 13%); }
+  .site-header:has(details[open]) .header-inner { background: var(--glass-strong); border-color: rgb(247 247 249 / 13%); }
+  .wordmark { display: inline-flex; align-items: center; justify-self: start; min-height: 44px; }
+  .wordmark :global(svg), .wordmark img { display: block; width: 68px; height: auto; color: var(--color-ink); }
+  .navigation-backdrop { position: fixed; inset: 0; z-index: -1; visibility: hidden; opacity: 0; background: rgb(8 8 10 / 55%); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); transition: opacity 180ms ease-out, visibility 180ms; pointer-events: auto; }
+  .site-header[data-navigation-ready]:has(details[open]) .navigation-backdrop { visibility: visible; opacity: 1; }
+
+  /* The indicator is placed against this row, so it moves with the links as the capsule resizes. */
+  .desktop-navigation { position: relative; display: flex; align-items: center; gap: 2px; }
+  .nav-indicator { position: absolute; top: 50%; left: 0; z-index: 0; width: 0; height: 38px; margin-top: -19px; border-radius: 11px; background: rgb(247 247 249 / 9%); box-shadow: inset 0 1px 0 rgb(255 255 255 / 7%); opacity: 0; transition: transform 260ms var(--ease-out), width 260ms var(--ease-out), opacity 180ms ease-out; pointer-events: none; }
+  .nav-indicator.no-slide { transition: none; }
+  .navigation-link, .product-menu > summary { position: relative; z-index: 1; }
+  .navigation-link, .product-menu > summary { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding-inline: 14px; border-radius: 10px; color: #c8c8d0; font-size: 14px; font-weight: 500; transition: color 120ms ease-out, background-color 120ms ease-out; }
+  .navigation-link[aria-current], .product-menu[open] > summary { color: var(--color-ink); }
+  .site-header:not([data-navigation-ready]) .navigation-link[aria-current] { background: rgb(247 247 249 / 8%); }
   summary { list-style: none; cursor: pointer; }
   summary::-webkit-details-marker { display: none; }
-  .navigation-link[aria-current], .product-menu[open] > summary { color: var(--header-text); background: var(--header-hover); }
-  .menu-chevron { transition: transform 180ms var(--ease-out); }
+  .menu-chevron { opacity: .7; transition: transform 180ms var(--ease-out); }
   .product-menu[open] .menu-chevron { transform: rotate(180deg); }
-  .product-panel { position: fixed; top: var(--site-header-height); inset-inline: 0; padding-block: 22px 32px; max-height: calc(100dvh - var(--site-header-height)); overflow: auto; overscroll-behavior: contain; background: var(--header-panel); box-shadow: 0 12px 24px -20px rgb(0 0 0 / 18%); }
-  .product-panel-inner { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px; width: min(1440px, calc(100% - clamp(40px, 10.4vw, 160px))); margin-inline: auto; }
-  .product-group-label { margin: 0 0 6px; font-size: 13px; font-weight: 400; line-height: 1.5; color: var(--header-subtle); }
-  .product-link { display: flex; align-items: center; gap: 8px; width: fit-content; min-width: 44px; max-width: 100%; min-height: 44px; padding-block: 8px; text-decoration-thickness: 1px; text-underline-offset: 4px; }
-  .product-link-title { font-size: 16px; font-weight: 400; line-height: 1.5; color: var(--header-text); }
-  .product-link:focus-visible { text-decoration-line: underline; }
-  .product-link[aria-current='page'] .product-link-title { text-decoration: underline; text-underline-offset: 4px; }
-  .header-actions { display: flex; align-items: center; flex-shrink: 0; gap: 12px; padding-left: 20px; }
-  .header-source { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-width: 44px; min-height: 44px; padding-inline: 10px; border-radius: var(--button-radius); color: var(--header-muted); font-size: 12px; font-weight: 500; transition: color 150ms ease, background-color 150ms ease; }
-  .header-action { gap: 10px; }
-  .site-header :focus-visible { outline: 2px solid var(--header-focus); outline-offset: 3px; }
+
+  /* The Product panel grows out of the capsule. On a wide capsule it hangs from the middle
+     like the iPhone 13 notch, joined by concave corners; on a narrow one (data-flush) it takes
+     the capsule's full width and the two become one shape. */
+  /* fixed + the capsule's layout containment: placed against the capsule, not the link row */
+  .product-panel { --join: 18px; position: fixed; top: calc(100% + 1px); left: 50%; display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 12px; width: min(980px, calc(100vw - 32px)); padding: 12px; border-radius: 0 0 24px 24px; background: var(--glass-strong); -webkit-backdrop-filter: blur(28px) saturate(160%); backdrop-filter: blur(28px) saturate(160%); box-shadow: 0 40px 100px -30px rgb(0 0 0 / 90%); transform: translateX(-50%); }
+  .product-panel::before, .product-panel::after { position: absolute; top: 0; width: var(--join); height: var(--join); background: var(--glass-strong); -webkit-backdrop-filter: blur(28px) saturate(160%); backdrop-filter: blur(28px) saturate(160%); content: ''; }
+  .product-panel::before { right: 100%; -webkit-mask: radial-gradient(circle at 0 100%, transparent calc(var(--join) - .5px), #000 var(--join)); mask: radial-gradient(circle at 0 100%, transparent calc(var(--join) - .5px), #000 var(--join)); }
+  .product-panel::after { left: 100%; -webkit-mask: radial-gradient(circle at 100% 100%, transparent calc(var(--join) - .5px), #000 var(--join)); mask: radial-gradient(circle at 100% 100%, transparent calc(var(--join) - .5px), #000 var(--join)); }
+  .site-header[data-flush] .product-panel { left: -1px; width: calc(100% + 2px); transform: none; }
+  .site-header[data-flush] .product-panel::before, .site-header[data-flush] .product-panel::after { display: none; }
+  /* while open, capsule and panel share one surface: no rim, no seam */
+  .site-header:has(.product-menu[open]) .header-inner { border-color: transparent; box-shadow: 0 18px 50px -24px rgb(0 0 0 / 80%); transition: width 520ms var(--ease-out), background-color 240ms ease-out, border-color 240ms ease-out, border-radius 180ms var(--ease-out); }
+  .site-header:has(.product-menu[open]) .header-inner::before, .site-header:has(.product-menu[open]) .header-inner::after { opacity: 0; }
+  .site-header[data-flush]:has(.product-menu[open]) .header-inner { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+  .header-inner { transition: width 520ms var(--ease-out), background-color 240ms ease-out, border-color 240ms ease-out, border-radius 180ms var(--ease-out) 120ms; }
+  .product-menu[open] .product-panel { animation: panel-enter 280ms var(--ease-out); }
+  .product-menu[open] .product-panel > * { animation: panel-content 260ms var(--ease-out) 70ms both; }
+  .product-menu[data-closing] .product-panel { animation: panel-leave 150ms var(--ease-press) forwards; }
+  .product-menu[data-closing] .product-panel > * { animation: none; opacity: 0; transition: opacity 90ms ease-out; }
+  .product-menu[data-closing] .menu-chevron { transform: none; }
+  .site-header[data-navigation-ready]:has(details[data-closing]) .navigation-backdrop { opacity: 0; }
+  @keyframes panel-enter { from { clip-path: inset(0 -40px 100% -40px); } to { clip-path: inset(0 -40px -140px -40px); } }
+  @keyframes panel-leave { from { clip-path: inset(0 -40px -140px -40px); } to { clip-path: inset(0 -40px 100% -40px); } }
+  @keyframes panel-content { from { opacity: 0; transform: translateY(-6px); } }
+  .panel-label { margin: 6px 10px 10px; color: var(--color-text-secondary); font-family: var(--font-mono); font-size: 11px; font-weight: 500; letter-spacing: .04em; text-transform: uppercase; }
+  .product-card-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .product-card { display: flex; flex-direction: column; padding: 8px 8px 14px; border: 1px solid transparent; border-radius: 16px; transition: background-color 120ms ease-out, border-color 120ms ease-out; }
+  .product-thumb { display: block; overflow: hidden; aspect-ratio: 16 / 10; margin-bottom: 14px; border-radius: 10px; background: var(--color-night-850); box-shadow: inset 0 0 0 1px rgb(247 247 249 / 8%); }
+  .product-thumb :global(img) { width: 100%; height: 100%; object-fit: cover; transition: transform 300ms var(--ease-out); }
+  .product-card-title { padding-inline: 6px; font-size: 15px; font-weight: 600; }
+  .product-card-note { margin-top: 4px; padding-inline: 6px; color: var(--color-text-secondary); font-size: 13px; line-height: 1.45; }
+  .product-card[aria-current] { border-color: rgb(247 247 249 / 10%); }
+  .product-lists { display: flex; flex-direction: column; gap: 8px; padding: 0 0 4px 12px; border-left: 1px solid rgb(247 247 249 / 8%); }
+  .product-link { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding: 8px 10px; border-radius: 12px; color: #9696a2; transition: background-color 120ms ease-out, color 120ms ease-out; }
+  .product-link > span { display: flex; flex-direction: column; }
+  .product-link-title { color: var(--color-ink); font-size: 14px; font-weight: 600; }
+  .product-link-note { margin-top: 2px; color: var(--color-text-secondary); font-size: 12.5px; }
+
+  .header-actions { display: flex; align-items: center; justify-self: end; gap: 6px; }
+  .header-source { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 10px; color: #c8c8d0; transition: color 120ms ease-out, background-color 120ms ease-out; }
+  .header-action { min-height: 40px; gap: 8px; padding-inline: 14px; border-radius: 11px; background: var(--color-ink); color: var(--color-night-950); }
+  .site-header :focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
   .mobile-navigation { display: none; }
-  .product-menu[open] .product-panel, .mobile-navigation[open] > .mobile-panel { animation: panel-enter 180ms var(--ease-out); }
-  @keyframes panel-enter { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+
   @media (hover: hover) {
-    .navigation-link:hover, .product-fallback:hover, .product-menu > summary:hover, .header-source:hover { color: var(--header-text); background: var(--header-hover); }
-    .product-link:hover { text-decoration-line: underline; }
+    .navigation-link:hover, .product-menu > summary:hover { color: var(--color-ink); }
+    .header-source:hover { color: var(--color-ink); background: rgb(247 247 249 / 8%); }
+    .product-card:hover { background: rgb(247 247 249 / 5%); border-color: rgb(247 247 249 / 8%); }
+    .product-card:hover .product-thumb :global(img) { transform: scale(1.03); }
+    .product-link:hover { background: rgb(247 247 249 / 6%); color: var(--color-ink); }
+    .header-action:hover { background: #fff; }
   }
-  @media (max-width: 1100px) { .header-source > span { display: none; } }
-  @media (max-width: 1000px) { .header-inner { gap: 16px; } .desktop-navigation { gap: 2px; margin-left: 8px; } .navigation-link, .product-fallback, .product-menu > summary { padding-inline: 10px; font-size: 12px; } .header-actions { gap: 8px; padding-left: 12px; } .header-action { padding-inline: 13px; font-size: 11px; } }
-  @media (min-width: 768px) and (max-width: 860px) {
-    .header-inner { width: calc(100% - 40px); gap: 12px; }
-    .desktop-navigation { margin-left: 0; gap: 0; }
-    .navigation-link, .product-fallback, .product-menu > summary { padding-inline: 8px; }
-    .header-actions { padding-left: 8px; }
-    .header-source { padding-inline: 6px; }
-  }
+
+  @media (max-width: 1100px) { .navigation-link, .product-menu > summary { padding-inline: 10px; } .product-panel { grid-template-columns: minmax(0, 1fr); } .product-lists { flex-direction: row; padding: 8px 0 0; border-left: 0; border-top: 1px solid rgb(247 247 249 / 8%); } .product-group { flex: 1; } }
+  @media (max-width: 900px) and (min-width: 768px) { .header-inner { padding-left: 16px; } .navigation-link, .product-menu > summary { padding-inline: 8px; font-size: 13px; } .header-action { padding-inline: 10px; font-size: 13px; } .header-action :global(svg) { display: none; } }
+
   @media (max-width: 767px) {
-    .header-inner { width: calc(100% - 40px); justify-content: space-between; }
-    .wordmark :global(svg), .wordmark img { width: 64px; }
+    .site-header { --cap-gap: 8px; }
+    .header-inner, .site-header[data-scrolled] .header-inner { display: flex; justify-content: space-between; width: calc(100% - 16px); padding: 0 6px 0 16px; border-radius: 16px; }
+    .wordmark :global(svg), .wordmark img { width: 60px; }
     .desktop-navigation, .header-actions { display: none; }
-    .site-header[data-navigation-ready] .mobile-navigation { display: flex; align-items: center; align-self: stretch; }
-    .site-header:not([data-navigation-ready]) .header-inner { gap: 8px; }
-    .site-header:not([data-navigation-ready]) .desktop-navigation { display: flex; flex-wrap: wrap; justify-content: flex-end; align-content: center; gap: 0; margin: 0 0 0 auto; }
-    .site-header:not([data-navigation-ready]) .navigation-link, .site-header:not([data-navigation-ready]) .product-fallback { min-width: 44px; padding-inline: 6px; font-size: 11px; }
-    .mobile-navigation > summary { display: inline-flex; align-items: center; gap: 12px; min-height: 44px; padding-inline: 12px; border: 1px solid var(--header-line); border-radius: var(--button-radius); font-size: 12px; font-weight: 500; color: var(--header-text); }
-    .mobile-navigation[open] > summary { background: var(--header-hover); }
-    .menu-symbol { position: relative; width: 16px; height: 8px; border-block: 1px solid currentColor; }
-    .mobile-navigation[open] .menu-symbol { height: 16px; border-block-color: transparent; }
-    .mobile-navigation[open] .menu-symbol::before, .mobile-navigation[open] .menu-symbol::after { content: ''; position: absolute; inset-inline: 0; top: 7px; height: 1px; background: currentColor; transform: rotate(45deg); }
-    .mobile-navigation[open] .menu-symbol::after { transform: rotate(-45deg); }
-    .mobile-panel { position: absolute; top: 100%; left: -20px; right: -20px; max-height: calc(100dvh - var(--site-header-height)); overflow: auto; overscroll-behavior: contain; padding: 8px 20px 20px; border-bottom: 1px solid var(--header-line); color: var(--header-text); background: var(--header-panel); box-shadow: 0 16px 32px rgb(0 0 0 / 10%); }
-    .mobile-root-link, .mobile-product > summary { display: flex; align-items: center; justify-content: space-between; min-height: 56px; border-bottom: 1px solid var(--header-line); font-size: 16px; }
-    .mobile-root-link[aria-current] { color: var(--header-icon); }
-    .mobile-product > summary > span { width: 100%; align-items: center; justify-content: space-between; gap: 10px; }
-    .mobile-product-enter { display: flex; }
-    .mobile-product-back { display: none; }
-    .mobile-product-back :global(svg) { transform: rotate(180deg); }
-    .mobile-product[open] > summary { border-bottom: 0; font-size: 12px; color: var(--header-icon); min-height: 48px; }
-    .mobile-product[open] .mobile-product-back { display: flex; justify-content: flex-start; }
-    .mobile-product[open] .mobile-product-enter { display: none; }
-    .mobile-panel:has(.mobile-product[open]) > .mobile-root-link, .mobile-panel:has(.mobile-product[open]) > .mobile-utilities { display: none; }
-    .mobile-utilities { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding-top: 20px; }
-    .mobile-utilities > a:not(.button) { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 44px; font-size: 12px; }
-    .mobile-product-panel { padding-bottom: 8px; }
-    .product-group + .product-group { margin-top: 20px; }
-    .product-group-label { margin-bottom: 4px; }
-    .product-link-title { font-size: 17px; }
-  }
-  @media (max-width: 480px) {
-    :global(html:has(.site-header:not([data-navigation-ready]))) { --site-header-height: 88px; }
-    :global(html:has(.site-header:not([data-navigation-ready])) main:not(:has(> .hero:first-child))) { margin-block-start: max(0px, calc(var(--site-header-height) - 64px)); }
-  }
-  @media (max-width: 360px) {
-    :global(html:has(.site-header:not([data-navigation-ready]))) { --site-header-height: 132px; }
+    .mobile-navigation { display: block; }
+    .mobile-navigation > summary { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; }
+    .mobile-navigation[open] > summary { background: rgb(247 247 249 / 8%); }
+    .menu-symbol { position: relative; width: 18px; height: 8px; }
+    .menu-symbol::before, .menu-symbol::after { position: absolute; left: 0; width: 100%; height: 1.5px; border-radius: 1px; background: currentColor; content: ''; transition: transform 200ms var(--ease-out), top 200ms var(--ease-out); }
+    .menu-symbol::before { top: 0; }
+    .menu-symbol::after { top: 6.5px; }
+    .mobile-navigation[open] .menu-symbol::before { top: 3.25px; transform: rotate(45deg); }
+    .mobile-navigation[open] .menu-symbol::after { top: 3.25px; transform: rotate(-45deg); }
+    .mobile-panel { position: absolute; top: calc(100% + 8px); left: 0; right: 0; max-height: calc(100dvh - var(--site-header-height) - 16px); overflow: auto; overscroll-behavior: contain; padding: 10px; border: 1px solid rgb(247 247 249 / 12%); border-radius: 20px; background: var(--glass-strong); -webkit-backdrop-filter: blur(28px) saturate(160%); backdrop-filter: blur(28px) saturate(160%); box-shadow: 0 40px 100px -30px rgb(0 0 0 / 90%); }
+    .mobile-navigation[open] > .mobile-panel { animation: sheet-enter 220ms var(--ease-out); }
+    .mobile-navigation[data-closing] > .mobile-panel { animation: sheet-leave 150ms var(--ease-press) forwards; }
+    .mobile-navigation[data-closing] .menu-symbol::before { top: 0; transform: none; }
+    .mobile-navigation[data-closing] .menu-symbol::after { top: 6.5px; transform: none; }
+    @keyframes sheet-leave { to { opacity: 0; transform: translateY(-6px) scale(.985); } }
+    @keyframes sheet-enter { from { opacity: 0; transform: translateY(-8px) scale(.985); } }
+    .mobile-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .mobile-card { display: flex; flex-direction: column; gap: 8px; padding: 6px 6px 10px; border-radius: 14px; background: rgb(247 247 249 / 4%); }
+    .mobile-card .product-thumb { aspect-ratio: 1; margin: 0; border-radius: 9px; }
+    .mobile-card .product-card-title { padding-inline: 4px; font-size: 13px; }
+    .mobile-links { margin-top: 8px; }
+    .mobile-root-link { display: flex; align-items: center; justify-content: space-between; min-height: 52px; padding-inline: 10px; border-bottom: 1px solid rgb(247 247 249 / 7%); font-size: 20px; font-weight: 650; font-stretch: 112%; letter-spacing: -.01em; }
+    .mobile-root-link :global(svg) { color: var(--color-text-secondary); }
+    .mobile-root-link[aria-current] { color: var(--color-lime); }
+    .mobile-secondary { min-height: 46px; color: #c8c8d0; font-size: 16px; font-weight: 500; font-stretch: 100%; }
+    .mobile-secondary:last-child { border-bottom: 0; }
+    .mobile-utilities { display: grid; grid-template-columns: 1fr 1.4fr; gap: 8px; margin-top: 12px; }
+    .mobile-utilities .button { min-height: 48px; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .product-menu[open] .product-panel, .mobile-navigation[open] > .mobile-panel { animation: none; }
-    .site-header::before, .menu-chevron, .navigation-backdrop { transition: none; }
+    .site-header[data-intro] .header-inner { animation: none; }
+    .header-inner, .nav-indicator { transition: none; }
+    .product-menu[open] .product-panel, .product-menu[open] .product-panel > *, .mobile-navigation[open] > .mobile-panel { animation: none; }
   }
   @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-    .site-header::before { background: var(--header-panel); }
+    .header-inner, .product-panel, .mobile-panel { background: #141418; }
   }
 </style>

@@ -23,7 +23,8 @@ export function initCookieConsent(root: HTMLElement): void {
   function syncChoice() {
     if (!banner || !media) return;
     if (!expanded) {
-      banner.hidden = getConsent() !== null;
+      // a fade-out in progress finishes on its own
+      if (banner.dataset.leaving === undefined) banner.hidden = getConsent() !== null;
       media.checked = hasMediaConsent();
     }
   }
@@ -58,6 +59,7 @@ export function initCookieConsent(root: HTMLElement): void {
 
   function openPreferences(trigger?: HTMLElement) {
     if (!banner || !preferences || !media || expanded || document.querySelector('dialog[open]')) return;
+    delete banner.dataset.leaving;
     returnFocus = trigger ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
     media.checked = hasMediaConsent();
     setExpanded(true);
@@ -82,21 +84,30 @@ export function initCookieConsent(root: HTMLElement): void {
     banner.dataset.expanded = 'false';
   }
 
+  // The banner fades out before it is hidden; reduced motion hides it at once.
+  function hideBanner() {
+    if (!banner) return;
+    if (reducedMotion.matches) { resetPanel(); banner.hidden = true; return; }
+    banner.dataset.leaving = '';
+    setTimeout(() => {
+      if (banner.dataset.leaving === undefined) return;
+      delete banner.dataset.leaving;
+      resetPanel();
+      banner.hidden = true;
+    }, 200);
+  }
+
   function closePreferences() {
     if (!banner) return;
     if (getConsent() === null) setExpanded(false);
-    else {
-      resetPanel();
-      banner.hidden = true;
-    }
+    else hideBanner();
     restoreFocus();
   }
 
   function saveChoice(allow: boolean) {
     if (!banner) return;
+    hideBanner();
     saveConsent(allow);
-    resetPanel();
-    banner.hidden = true;
     restoreFocus();
   }
   root.querySelectorAll<HTMLButtonElement>('[data-cookie-reject]').forEach((button) => button.addEventListener('click', () => saveChoice(false)));

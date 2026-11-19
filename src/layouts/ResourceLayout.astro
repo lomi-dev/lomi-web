@@ -41,12 +41,12 @@ const publishedBreadcrumbs = breadcrumbs.at(-1)?.href === Astro.url.pathname
   title={title}
   description={description}
   website={content}
-  themeColor={content.site.theme.paper}
-  edgeColor="var(--color-lime)"
+  themeColor="#0e0e11"
+  edgeColor="var(--color-chalk)"
   article={reviewDate ? { modifiedTime: reviewDate.toISOString() } : undefined}
   breadcrumbs={publishedBreadcrumbs}
 >
-  <Header content={content.navigation} site={content.site} layout={content.layout} theme="light" />
+  <Header content={content.navigation} site={content.site} layout={content.layout} theme="dark" />
   <main id="main" class="resource-page" tabindex="-1">
     <div class="resource-shell">
       <nav class="resource-breadcrumbs" aria-label="Breadcrumb">
@@ -59,7 +59,7 @@ const publishedBreadcrumbs = breadcrumbs.at(-1)?.href === Astro.url.pathname
       </nav>
 
       <header class="resource-opening">
-        {eyebrow && <p class="resource-eyebrow">{eyebrow}</p>}
+        {eyebrow && <p class="eyebrow resource-eyebrow">{eyebrow}</p>}
         <h1>{heading}</h1>
         <p class="resource-summary">{summary}</p>
         {reviewDate && <p class="resource-reviewed">Reviewed <time datetime={reviewDate.toISOString()}>{reviewDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' })}</time> · Lomi team</p>}
@@ -82,51 +82,53 @@ const publishedBreadcrumbs = breadcrumbs.at(-1)?.href === Astro.url.pathname
 </Layout>
 
 <style>
-  .resource-page { --scroll-surface-color: var(--color-paper); min-height: 70vh; padding: 0 0 clamp(64px, 9vw, 112px); background: var(--color-paper); color: var(--color-ink); overflow-wrap: break-word; }
+  .resource-page { --scroll-surface-color: var(--color-chalk); min-height: 70vh; padding: 0 0 clamp(64px, 9vw, 112px); background: var(--color-chalk); color: var(--color-ink); overflow-wrap: break-word; }
   .resource-shell { width: min(1200px, calc(100% - 80px)); margin-inline: auto; }
-  .resource-breadcrumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding-top: 112px; color: var(--color-text-secondary); font-size: .75rem; line-height: 1.6; }
-  .resource-breadcrumbs a { text-decoration-color: #9ba891; text-underline-offset: 3px; }
-  .resource-breadcrumbs a:hover { color: var(--color-ink); }
+  .resource-breadcrumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding-top: 112px; color: var(--color-text-secondary); font-size: .8125rem; line-height: 1.6; }
+  .resource-breadcrumbs a { text-decoration: underline; text-decoration-color: var(--color-night-600); text-underline-offset: 3px; }
+  .resource-breadcrumbs a:hover { color: var(--color-ink); text-decoration-color: currentColor; }
   .resource-breadcrumbs [aria-current="page"] { color: var(--color-ink); }
   .resource-opening { max-width: 780px; padding-top: 48px; }
-  .resource-eyebrow { margin: 0 0 16px; color: #56624e; font-size: .75rem; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; }
-  .resource-opening h1 { max-width: 16ch; margin: 0; font-size: clamp(44px, 6.6vw, 76px); font-weight: 500; letter-spacing: -.055em; line-height: 1.06; text-wrap: balance; }
-  .resource-summary { max-width: 66ch; margin: 22px 0 0; color: var(--color-text-secondary); font-size: clamp(1.0625rem, 1.5vw, 1.25rem); line-height: 1.65; text-wrap: pretty; }
-  .resource-reviewed { margin: 18px 0 0; color: var(--color-text-secondary); font-size: .875rem; line-height: 1.6; }
+  .resource-eyebrow { margin-bottom: 16px; }
+  .resource-opening h1 { max-width: 16ch; font-size: clamp(40px, 6vw, 80px); text-wrap: balance; }
+  .resource-summary { max-width: 66ch; margin: 24px 0 0; color: var(--color-text-secondary); font-size: clamp(1.0625rem, 1.5vw, 1.25rem); line-height: 1.65; text-wrap: pretty; }
+  .resource-reviewed { margin: 18px 0 0; color: var(--color-text-secondary); font-family: var(--font-mono); font-size: 12px; letter-spacing: .04em; line-height: 1.6; text-transform: uppercase; }
   .resource-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; margin-top: 28px; }
-  .resource-secondary { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; }
-  .resource-secondary { color: #304719; font-size: .875rem; text-decoration-color: #a2b091; text-underline-offset: 4px; }
+  .resource-secondary { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; color: var(--color-violet-300); font-size: .9375rem; text-decoration: underline; text-underline-offset: 4px; text-decoration-color: color-mix(in srgb, currentColor 40%, transparent); gap: 10px; }
+  .resource-secondary:hover { color: var(--color-ink); text-decoration-color: currentColor; }
   .resource-body { display: grid; grid-template-columns: minmax(180px, 220px) minmax(0, 740px); justify-content: space-between; gap: clamp(48px, 7vw, 100px); margin-top: 84px; }
   .resource-toc { position: sticky; top: calc(var(--site-header-height) + 30px); align-self: start; padding-top: 16px; border-top: 1px solid var(--line); }
-  .resource-toc h2 { margin: 0; font-size: .875rem; font-weight: 550; letter-spacing: -.01em; line-height: 1.6; }
+  .resource-toc h2 { margin: 0; color: var(--color-text-secondary); font-family: var(--font-mono); font-size: 12px; font-weight: 500; font-stretch: 100%; letter-spacing: .04em; line-height: 1.6; text-transform: uppercase; }
   .resource-toc ol { display: grid; gap: 3px; margin: 16px 0 0; padding: 0; list-style: none; }
-  .resource-toc a { display: block; padding: 8px 0; color: var(--color-text-secondary); font-size: .8125rem; line-height: 1.55; text-decoration: none; text-underline-offset: 4px; }
-  .resource-toc a:hover { color: var(--color-ink); text-decoration: underline; }
-  .resource-copy { min-width: 0; color: #293126; font-size: 1rem; line-height: 1.7; }
-  .resource-copy :global(section + section) { margin-top: 66px; padding-top: 30px; border-top: 1px solid var(--line); scroll-margin-top: calc(var(--site-header-height) + 24px); }
+  .resource-toc a { display: block; padding: 8px 0; color: var(--color-text-secondary); font-size: .875rem; line-height: 1.55; text-underline-offset: 4px; }
+  .resource-toc a { text-decoration: underline; text-decoration-color: transparent; }
+  .resource-toc a:hover { color: var(--color-ink); text-decoration-color: currentColor; }
+  .resource-copy { min-width: 0; color: var(--color-text-secondary); font-size: 1.0625rem; line-height: 1.65; }
   .resource-copy :global(section) { scroll-margin-top: calc(var(--site-header-height) + 24px); }
-  .resource-copy :global(h2) { max-width: 24ch; margin: 0; color: var(--color-ink); font-size: clamp(1.75rem, 3vw, 2.25rem); font-weight: 500; letter-spacing: -.035em; line-height: 1.2; text-wrap: balance; }
-  .resource-copy :global(h3) { margin: 32px 0 10px; color: var(--color-ink); font-size: 1.25rem; font-weight: 550; letter-spacing: -.02em; line-height: 1.3; }
+  .resource-copy :global(section + section) { margin-top: 64px; padding-top: 32px; border-top: 1px solid var(--line); }
+  .resource-copy :global(h2) { max-width: 24ch; margin: 0; color: var(--color-ink); font-size: clamp(1.75rem, 3vw, 2.25rem); line-height: 1.15; }
+  .resource-copy :global(h3) { margin: 32px 0 10px; color: var(--color-ink); font-size: 1.25rem; }
   .resource-copy :global(p) { max-width: 70ch; margin: 16px 0 0; text-wrap: pretty; }
-  .resource-copy :global(ul), .resource-copy :global(ol) { display: grid; gap: 10px; margin: 18px 0 0; padding-left: 1.3em; }
+  .resource-copy :global(ul), .resource-copy :global(ol) { display: grid; gap: 10px; max-width: 70ch; margin: 18px 0 0; padding-left: 1.3em; }
   .resource-copy :global(li) { padding-left: .1em; }
-  .resource-copy :global(li::marker) { color: #61754f; }
-  .resource-copy :global(a) { color: #304719; text-decoration: underline; text-decoration-color: #a2b091; text-underline-offset: 3px; }
+  .resource-copy :global(li::marker) { color: var(--color-night-500); }
+  .resource-copy :global(a) { color: var(--color-violet-300); text-decoration: underline; text-underline-offset: 3px; }
   .resource-copy :global(a:hover) { color: var(--color-ink); }
-  .resource-copy :global(strong) { color: #20251d; font-weight: 600; }
-  .resource-copy :global(code) { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: .9em; overflow-wrap: anywhere; }
-  .resource-copy :global(pre) { max-width: 100%; margin: 22px 0 0; padding: 18px; overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: #edf0e7; font-size: .8125rem; line-height: 1.75; white-space: pre-wrap; overflow-wrap: anywhere; }
-  .resource-copy :global(pre code) { font-size: inherit; }
-  .resource-copy :global(.table-scroll) { max-width: 100%; margin-top: 22px; overflow-x: auto; border: 1px solid color-mix(in srgb, var(--line) 85%, transparent); border-radius: 9px; background: color-mix(in srgb, white 40%, var(--color-paper)); scrollbar-width: thin; }
-  .resource-copy :global(table) { width: 100%; border-collapse: collapse; font-size: .875rem; line-height: 1.55; }
+  .resource-copy :global(strong) { color: var(--color-ink); font-weight: 600; }
+  .resource-copy :global(code) { padding: 1px 6px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--color-night-850); color: var(--color-ink); font-size: .85em; overflow-wrap: anywhere; }
+  .resource-copy :global(pre) { max-width: 100%; margin: 22px 0 0; padding: 18px; overflow-x: auto; border: 1px solid var(--line-strong); border-radius: var(--radius-md); background: var(--color-night-850); color: var(--color-ink); font-size: .8125rem; line-height: 1.75; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .resource-copy :global(pre code) { padding: 0; border: 0; background: none; font-size: inherit; }
+  .resource-copy :global(.table-scroll) { max-width: 100%; margin-top: 22px; overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--color-paper); scrollbar-width: thin; }
+  .resource-copy :global(table) { width: 100%; border-collapse: collapse; font-size: .9375rem; line-height: 1.55; }
   .resource-copy :global(caption) { padding: 14px 16px; color: var(--color-text-secondary); font-size: .8125rem; text-align: start; }
   .resource-copy :global(th), .resource-copy :global(td) { min-width: 140px; padding: 13px 15px; border-top: 1px solid var(--line); text-align: start; vertical-align: top; }
-  .resource-copy :global(th) { color: #384332; font-size: .75rem; font-weight: 600; letter-spacing: .025em; }
-  .resource-copy :global(td:first-child) { color: var(--color-ink); font-weight: 550; }
-  .resource-copy :global(.editorial-note) { margin-top: 26px; padding: 18px 20px; border: 1px solid color-mix(in srgb, var(--line) 85%, transparent); border-radius: 8px; background: color-mix(in srgb, var(--color-lime) 10%, var(--color-paper)); color: #394633; font-size: .9rem; }
+  .resource-copy :global(th) { color: var(--color-ink); font-weight: 600; }
+  .resource-copy :global(thead th) { font-family: var(--font-mono); font-size: 12px; font-weight: 500; letter-spacing: .04em; text-transform: uppercase; }
+  .resource-copy :global(td:first-child) { color: var(--color-ink); font-weight: 600; }
+  .resource-copy :global(.editorial-note) { margin-top: 26px; padding: 18px 20px; border: 1px solid var(--line-strong); border-radius: var(--radius-lg); background: var(--color-paper); font-size: 1rem; }
   .resource-copy :global(.editorial-note p) { margin-top: 0; }
   .resource-copy :global(.editorial-note p + p) { margin-top: 12px; }
-  .resource-copy :global(.source-list) { gap: 8px; font-size: .875rem; }
+  .resource-copy :global(.source-list) { gap: 8px; font-size: .9375rem; }
 
   @media (max-width: 999px) {
     .resource-shell { width: min(760px, calc(100% - 56px)); }
@@ -140,21 +142,21 @@ const publishedBreadcrumbs = breadcrumbs.at(-1)?.href === Astro.url.pathname
   @media (max-width: 767px) {
     .resource-page { padding-bottom: 62px; }
     .resource-shell { width: calc(100% - 40px); }
-    .resource-breadcrumbs { padding-top: 100px; font-size: .6875rem; }
+    .resource-breadcrumbs { padding-top: 100px; }
     .resource-opening { padding-top: 30px; }
-    .resource-opening h1 { max-width: 14ch; font-size: clamp(2.625rem, 10vw, 3.625rem); letter-spacing: -.05em; }
+    .resource-opening h1 { max-width: 14ch; font-size: clamp(36px, 10vw, 48px); }
     .resource-summary { margin-top: 17px; font-size: 1rem; }
     .resource-actions { gap: 5px 14px; margin-top: 20px; }
     .resource-primary { min-height: 46px; padding-inline: 15px; }
     .resource-secondary { min-height: 44px; }
     .resource-body { gap: 18px; margin-top: 46px; }
     .resource-toc ol { gap: 0 13px; }
-    .resource-toc a { padding-block: 6px; font-size: .75rem; }
-    .resource-copy { font-size: .9375rem; }
+    .resource-toc a { padding-block: 6px; font-size: .8125rem; }
+    .resource-copy { font-size: 1rem; }
     .resource-copy :global(section + section) { margin-top: 46px; padding-top: 24px; }
     .resource-copy :global(h2) { font-size: 1.75rem; }
     .resource-copy :global(h3) { margin-top: 27px; font-size: 1.125rem; }
-    .resource-copy :global(table) { font-size: .8125rem; }
+    .resource-copy :global(table) { font-size: .875rem; }
     .resource-copy :global(th), .resource-copy :global(td) { min-width: 125px; padding: 11px 12px; }
   }
 </style>
