@@ -24,7 +24,7 @@ file editing, browser previews, Git, and AI tools. The supplied Tahoe wallpaper
 fills the scene, with the application window at 80% of its width. Each silent
 MP4 shows the feature in use, with individual durations from 8.4 to 11.4 seconds.
 Terminals, workspaces, and browser previews use a stationary camera. Code, Git,
-and Chat each use one gentle zoom anchored to the action, returning to the full
+and AI tools (a Claude Code session in the terminal) each use one gentle zoom anchored to the action, returning to the full
 window before the next loop. The actual native
 titlebar and window controls are part of the recording; CSS supplies the shadow
 and responsive placement, with no added border. Preparation trims the thin
