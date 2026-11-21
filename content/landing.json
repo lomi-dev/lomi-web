@@ -30,7 +30,7 @@
     "secondaryHref": "https://github.com/lomi-dev/lomi",
     "note": "",
     "previewCaption": "The Lomi workspace: project files, an editor and a running terminal.",
-    "previewAlt": "Lomi's workspace with its project explorer, TypeScript editor and integrated terminal."
+    "previewAlt": "Lomi's workspace with two terminal panels: Claude Code above and Codex below."
   },
   "workflow": {
     "eyebrow": "Inside the workspace",

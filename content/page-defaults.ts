@@ -22,7 +22,7 @@ export const pageDefaults = {
     feedback: { packageError: 'We couldn’t check package availability. Browse releases on GitHub.', packageReady: '{package} is ready to download.', packageMissing: '{package} is not in the latest release. Browse its files on GitHub.', packageFallback: 'This package', releaseReady: 'Latest release {tag} is ready.', releaseError: 'We couldn’t check the latest release. You can still browse releases on GitHub.' },
     showAur: true,
     aur: { title: 'On Arch Linux?', href: 'https://aur.archlinux.org/packages/lomi-bin', linkLabel: 'View on AUR', description: 'Install the x86_64 binary with your AUR helper.', command: 'yay -S lomi-bin', copyAriaLabel: 'Copy AUR install command', copyLabel: 'Copy', copiedLabel: 'Copied', copyFallbackLabel: 'Copy command', copiedStatus: 'Command copied.', copyError: 'Couldn’t copy the command. Select the code and copy it manually.' },
-    showScreenshot: true, screenshot: { image: null, alt: 'The Lomi desktop app on macOS, with the project explorer, TypeScript editor and terminal in one workspace.', heading: 'Lomi on macOS', caption: 'The Lomi workspace' },
+    showScreenshot: true, screenshot: { image: null, alt: 'The Lomi desktop app on macOS, with Claude Code and Codex running in two terminal panels of one workspace.', heading: 'Lomi on macOS', caption: 'The Lomi workspace' },
     showHelp: true, help: { text: 'Need a hand getting started?', label: 'Read the documentation', href: 'https://docs.lomi.dev' },
   },
   remote: {
@@ -33,7 +33,7 @@ export const pageDefaults = {
     platforms: { unix: { label: 'macOS / Linux', command: 'curl -fsSL https://lomi.dev/download/remote | bash' }, windows: { label: 'Windows', command: 'Invoke-RestMethod "https://lomi.dev/download/remote.ps1" | Invoke-Expression' } },
     commandAriaLabel: '{platform} installation command. Scroll to read the full command.', copyAriaLabel: 'Copy {platform} install command', manualCopy: 'Select the command and copy it manually.',
     feedback: { waiting: 'Waiting for clipboard', copied: '{platform} command copied.', error: 'Couldn’t copy. The command is selected so you can copy it manually.' },
-    showScreenshot: true, screenshot: { image: null, alt: 'The Lomi desktop app on macOS, with the project explorer, TypeScript editor and terminal in one workspace.' },
+    showScreenshot: true, screenshot: { image: null, alt: 'The Lomi desktop app on macOS, with Claude Code and Codex running in two terminal panels of one workspace.' },
   },
   devlog: {
     seo: { title: 'Devlog | Lomi', description: 'Development videos about Lomi: new features, fixes and project updates.' },

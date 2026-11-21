@@ -57,9 +57,11 @@ invalidates old callbacks. The previous mobile placeholder and unused dialog
 component remain archived.
 The native `browser.png` capture remains a local asset for future sections.
 
-The desktop captures copied from `../lomi/docs/images/` include
-`src/assets/product/workbench.png` (project explorer, TypeScript editor and
-terminal), now used as the selected hero's default screen; `source-control.png`
+The desktop captures were recaptured on 21 November 2026 from the refreshed
+Lomi Dev build (`../lomi`, dark appearance, 2880 × 1800 Retina window); the
+feature recordings use a local demo project. They include
+`src/assets/product/workbench.png` (Claude Code and Codex in two stacked
+terminal panels), now used as the selected hero's default screen; `source-control.png`
 (Git history and diff) and `browser.png` remain archived for future approved
 sections.
 
