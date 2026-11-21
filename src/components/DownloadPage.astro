@@ -72,7 +72,7 @@ const fileType: Record<string, string> = { 'apple-silicon': '.dmg', intel: '.dmg
           <span class="num">2</span>
           {/* The real installer window: Lomi's DMG background, icons at the positions set in tauri.macos.conf.json. */}
           <div class="art art-dmg" aria-hidden="true">
-            <Image src={dmgBackground} alt="" width={720} />
+            <Image src={dmgBackground} alt="" width={720} densities={[1, 2]} />
             <span class="dmg-item dmg-app"><img src="/icons/lomi-app-icon.svg" width="64" height="64" alt="" />Lomi</span>
             <span class="dmg-item dmg-folder"><svg viewBox="0 0 64 52" width="64" height="52"><path d="M4 8a4 4 0 0 1 4-4h16l6 6h26a4 4 0 0 1 4 4v30a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4Z" fill="#63b3f3" /><path d="M4 16h56v28a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4Z" fill="#8cccfb" /></svg>Applications</span>
           </div>
