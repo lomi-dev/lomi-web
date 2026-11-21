@@ -223,6 +223,9 @@ const facts = [
     .phone :global(img) { border-radius: 25px; }
     .fact { padding: 28px; }
     .notify :global(.newsletter-controls) { grid-template-columns: minmax(0, 1fr); }
+    .notify { text-align: left; }
+    .notify .section-description { margin-inline: 0; }
+    .notify :global(.newsletter-note) { text-align: left; }
   }
   @media (forced-colors: active) {
     .command, .install-tabs { border-color: CanvasText; }

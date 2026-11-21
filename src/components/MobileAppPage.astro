@@ -113,5 +113,8 @@ const { content, newsletterForm } = Astro.props;
     .hero-description { margin-top: 20px; }
     .hero-copy { width: 100%; }
     .notify :global(.newsletter-controls) { grid-template-columns: minmax(0, 1fr); }
+    .notify { text-align: left; }
+    .notify .section-description { margin-inline: 0; }
+    .notify :global(.newsletter-note) { text-align: left; }
   }
 </style>

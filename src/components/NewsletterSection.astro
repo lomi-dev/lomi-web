@@ -44,6 +44,9 @@ const { content } = Astro.props;
   @media(max-width:600px) {
     .release-newsletter { padding:40px 0 48px; }
     .release-shell { width:calc(100% - 40px); gap:24px; }
-    .release-signup { --nl-controls-columns:minmax(0,1fr); }
+    .release-shell { justify-items:stretch; }
+    .release-intro { text-align:left; }
+    .release-intro h2 { margin-inline:0; }
+    .release-signup { --nl-controls-columns:minmax(0,1fr); --nl-note-align:left; }
   }
 </style>
