@@ -53,7 +53,8 @@ const mediaAlt = (item: Landing['features']['items'][number]) => item.alt || ite
     const tabs = [...root.querySelectorAll<HTMLButtonElement>('[data-feature-tab]')];
     const panels = [...root.querySelectorAll<HTMLElement>('[data-feature-panel]')];
     const track = root.querySelector<HTMLElement>('[data-features-track]');
-    const pinned = matchMedia('(min-width: 900px) and (min-height: 700px)');
+    const pinned = matchMedia('(min-width: 900px) and (min-height: 700px), (max-width: 899px) and (min-height: 560px)');
+    const tabRow = root.querySelector<HTMLElement>('.feature-tabs');
     let current = 0;
     const select = (index: number, focus = false) => {
       if (index === current && !focus) return;
@@ -80,8 +81,8 @@ const mediaAlt = (item: Landing['features']['items'][number]) => item.alt || ite
         }
       });
       if (focus) tabs[index]?.focus({ preventScroll: pinned.matches });
-      // keep the chosen tab in view in the phone's horizontal row
-      if (!pinned.matches) tabs[index]?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      // keep the chosen tab in view in the phone's horizontal row, without moving the page
+      if (tabRow && tabRow.scrollWidth > tabRow.clientWidth) tabRow.scrollTo({ left: tabs[index].offsetLeft - tabRow.offsetLeft - 20, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
     };
 
     // Pinned mode: progress through the tall track picks the feature and fills the progress line.
@@ -116,8 +117,15 @@ const mediaAlt = (item: Landing['features']['items'][number]) => item.alt || ite
     const schedule = () => { if (!frame) frame = requestAnimationFrame(onScroll); };
     addEventListener('scroll', schedule, { passive: true });
     addEventListener('resize', schedule);
-    pinned.addEventListener('change', () => { root.toggleAttribute('data-pinned', pinned.matches); schedule(); });
+    // Pinned on phones: the heading moves into the pin, so title, tabs and recording fill the screen together.
+    const head = root.querySelector<HTMLElement>('.features-head');
+    const headHome = head?.parentElement;
+    const pinShell = root.querySelector<HTMLElement>('.pin > .shell');
+    const narrowPinned = matchMedia('(max-width: 899px) and (min-height: 560px)');
+    const placeHead = () => { if (head && headHome && pinShell) (narrowPinned.matches ? pinShell.prepend(head) : headHome.append(head)); };
+    pinned.addEventListener('change', () => { root.toggleAttribute('data-pinned', pinned.matches); placeHead(); schedule(); });
     root.toggleAttribute('data-pinned', pinned.matches);
+    placeHead();
     schedule();
     // In pinned mode a choice scrolls the page to that feature's stretch of the track.
     const go = (index: number, focus = false) => {
@@ -214,5 +222,16 @@ const mediaAlt = (item: Landing['features']['items'][number]) => item.alt || ite
     .tab-desc { display: none; }
     .panel-media { border-radius: 18px; }
     .panel-desc { display: block; }
+    /* Pinned on phones: tabs row and stage centred in the screen; progress runs as a bar over the stage. */
+    [data-pinned] .track { height: calc(100svh + var(--count) * 45svh); }
+    [data-pinned] .pin > .shell { display: flex; flex-direction: column; justify-content: center; gap: 28px; }
+    [data-pinned] .features-body { height: auto; align-content: center; gap: 28px; }
+    [data-pinned] .features-head .section-description { font-size: 16px; }
+    /* descriptions run one to three lines; reserving three keeps the centred stack from jumping between features */
+    [data-pinned] .panel-desc { min-height: calc(3 * 1.55em); }
+    [data-pinned] .feature-tabs { padding-left: 20px; }
+    [data-pinned] .feature-tabs::before, [data-pinned] .feature-tabs::after { display: none; }
+    [data-pinned] .feature-stage::before, [data-pinned] .feature-stage::after { position: absolute; top: -14px; left: 0; width: 100%; height: 2px; border-radius: 1px; background: var(--line-strong); content: ''; }
+    [data-pinned] .feature-stage::after { width: calc(100% * var(--progress, 0)); background: var(--color-lime); box-shadow: 0 0 12px rgb(185 245 0 / .6); }
   }
 </style>
