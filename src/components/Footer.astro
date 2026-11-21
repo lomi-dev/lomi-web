@@ -245,29 +245,34 @@ const socials = (content.socials.length ? content.socials : editorDefaults.foote
     .footer-link-group a :global(svg), a.footer-social, .footer-takeoff-arrow { transform: none !important; }
   }
 
+  /* Phones: one column read top to bottom - invitation, links in ruled rows, wordmark, credits. */
   @media (max-width: 760px) {
-    .site-footer { height: auto; }
-    .footer-frame { height: auto; overflow: visible; }
+    .site-footer { height: auto; padding-top: 56px; padding-inline: var(--footer-gutter); }
+    .footer-frame { height: auto; overflow: visible; grid-template-rows: auto; gap: 40px; }
+    .footer-body { grid-template-columns: minmax(0, 1fr); gap: 40px; }
+    .footer-invitation h2 { font-size: clamp(40px, 11vw, 58px); max-width: 12ch; }
+    .footer-actions { flex-wrap: nowrap; margin-top: 24px; }
+    .footer-github { flex: 1; min-width: 0; min-height: 48px; padding-inline: 14px; gap: 10px; white-space: nowrap; }
+    .footer-github-arrow { display: none; }
+    .footer-navigation { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px 20px; padding-top: 0; }
+    .footer-link-group { padding: 14px 0 0; border-left: 0; border-top: 1px solid var(--footer-rule); }
+    .footer-link-group h3 { margin-bottom: 4px; font-size: 11px; }
+    .footer-link-group a { min-height: 40px; padding-block: 6px; font-size: 16px; font-weight: 500; }
+    .footer-link-group a :global(svg) { opacity: .45; }
+    /* the short legal group runs as one row across both columns instead of hanging alone */
+    .footer-link-group:last-child { grid-column: 1 / -1; }
+    .footer-link-group:last-child ul { display: flex; flex-wrap: wrap; gap: 0 24px; }
+    .footer-link-group:last-child a :global(svg) { display: none; }
     .footer-wordmark { min-height: 0; height: auto; }
     .footer-wordmark img, .footer-wordmark :global(svg) { width: 100%; height: auto; }
-    .footer-frame { gap: 20px; }
-    .footer-body { grid-template-columns: minmax(0, 1fr); gap: 28px; }
-    .footer-invitation h2 { font-size: clamp(42px, 10vw, 62px); max-width: 14ch; }
-    .footer-actions { margin-top: 20px; }
-    .footer-navigation { grid-template-columns: repeat(2, minmax(0, 1fr)); padding-top: 0; column-gap: 20px; }
-    .footer-link-group { padding-left: 15px; }
-    .footer-link-group h3 { margin-bottom: 10px; font-size: 9px; }
-    .footer-link-group a { font-size: 13px; }
-    .footer-frame { grid-template-rows: auto; }
-    .footer-bottom { gap: 12px; padding-top: 12px; }
-    .footer-credits { font-size: 10px; }
-    .footer-takeoff { gap: 8px; font-size: 11px; }
-    .footer-takeoff-arrow { width: 34px; height: 34px; font-size: 19px; }
-  }
-
-  @media (max-width: 420px) {
-    .footer-bottom { grid-template-columns: minmax(0, 1fr); gap: 2px; }
-    .footer-takeoff { justify-self: start; }
+    .footer-bottom { grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 16px; padding-top: 12px; }
+    .footer-credits { font-size: 11px; }
+    .footer-legal { flex-direction: column; align-items: flex-start; }
+    .footer-legal > * { display: inline-flex; align-items: center; min-height: 32px; }
+    .footer-legal a { min-height: 32px; }
+    .footer-legal > :not(.cookie-settings-link) { display: none; }
+    .footer-takeoff { gap: 10px; font-size: 13px; }
+    .footer-takeoff-arrow { width: 44px; height: 44px; font-size: 19px; }
   }
 
   @media (max-height: 700px) {
@@ -284,6 +289,11 @@ const socials = (content.socials.length ? content.socials : editorDefaults.foote
 
   @media (max-height: 200px) {
     .site-footer { padding: calc(var(--site-header-height) + 8px) 16px 8px; }
+  }
+
+  /* after the short-screen rules so phones always keep room below the last row (browser toolbars, home bar) */
+  @media (max-width: 760px) {
+    .site-footer { padding-bottom: calc(40px + env(safe-area-inset-bottom)); }
   }
 
   @media (forced-colors: active) {
