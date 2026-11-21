@@ -96,7 +96,11 @@ const { content = editorDefaults.site.cookie } = Astro.props;
   @keyframes cookie-enter { from { opacity: 0; transform: translateY(12px); } }
   .cookie-banner[data-leaving] { opacity: 0; transform: translateY(8px); transition: opacity 200ms var(--ease-press), transform 200ms var(--ease-press); pointer-events: none; }
   @media (max-width: 479px) {
-    .cookie-banner { right: max(12px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom)); width: calc(100% - 24px); max-height: calc(100dvh - 24px); padding: 20px 20px 8px; }
+    .cookie-banner { right: max(12px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom)); width: calc(100% - 24px); max-height: calc(100dvh - 24px); padding: 16px 16px 4px; }
+    .cookie-heading h2 { font-size: 18px; }
+    .cookie-introduction { margin-top: 8px; font-size: 13px; line-height: 1.55; }
+    .cookie-actions { margin-top: 14px; }
+    .cookie-button { min-height: 44px; }
     .cookie-feedback { right: 12px; bottom: 12px; width: calc(100% - 24px); }
     .cookie-button { padding-inline: 8px; }
   }
