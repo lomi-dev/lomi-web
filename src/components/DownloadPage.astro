@@ -50,7 +50,7 @@ const fileType: Record<string, string> = { 'apple-silicon': '.dmg', intel: '.dmg
           <p class="package-status" data-package-status role="status" aria-live="polite"></p>
         </section>)}
         <noscript><p class="download-noscript">{content.noscript}</p></noscript>
-        <div class="release-feedback"><p data-release-status role="status" aria-live="polite"></p><button type="button" data-release-retry hidden>{content.retryLabel}<Icon name="arrow" width={14} height={14} /></button></div>
+        <div class="release-feedback"><p data-release-status role="status" aria-live="polite"></p></div>
       </div>
     </div>
   </section>
@@ -206,8 +206,6 @@ const fileType: Record<string, string> = { 'apple-silicon': '.dmg', intel: '.dmg
   .package-status { margin-top: 8px; color: var(--color-text-secondary); font-size: 13px; }
   .package-status:empty { display: none; }
   .release-feedback { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 12px; color: var(--color-text-secondary); font-size: 13px; }
-  .release-feedback > button { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0; border: 0; background: transparent; color: var(--color-violet-300); font: inherit; text-decoration: underline; text-underline-offset: 4px; cursor: pointer; }
-  .release-feedback > button[hidden] { display: none; }
   .download-noscript { margin-top: 12px; color: var(--color-text-secondary); font-size: 13px; }
   .visually-hidden, .platform-panel[data-package-available='true'] [data-package-status], [data-release-state='ready'] [data-release-status] { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 

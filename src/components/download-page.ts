@@ -83,7 +83,7 @@ export function initDownloadPage(root: HTMLElement): void {
         status.textContent = state === 'loading'
           ? ''
           : state === 'error'
-            ? copy.feedback.packageError
+            ? ''
             : asset
               ? format(copy.feedback.packageReady, 'package', option ? copy.packages[option.id].statusLabel : copy.feedback.packageFallback)
               : format(copy.feedback.packageMissing, 'package', option ? copy.packages[option.id].statusLabel : copy.feedback.packageFallback);
@@ -217,7 +217,7 @@ export function initDownloadPage(root: HTMLElement): void {
     } catch {
       if (current !== request) return;
       state = 'error';
-      if (globalStatus) globalStatus.textContent = copy.feedback.releaseError;
+      if (globalStatus) globalStatus.textContent = '';
     } finally {
       clearTimeout(timeout);
       if (current === request) {
