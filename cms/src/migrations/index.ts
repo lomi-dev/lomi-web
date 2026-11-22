@@ -5,6 +5,7 @@ import * as migration_20261020_140000_hero_player_controls from './20261020_1400
 import * as migration_20261020_150000_devlogs from './20261020_150000_devlogs';
 import * as migration_20261020_160000_feature_previews from './20261020_160000_feature_previews';
 import * as migration_20261023_142209 from './20261023_142209';
+import * as migration_20261122_020000_brand_redesign_content from './20261122_020000_brand_redesign_content';
 
 export const migrations = [
   {
@@ -41,5 +42,10 @@ export const migrations = [
     up: migration_20261023_142209.up,
     down: migration_20261023_142209.down,
     name: '20261023_142209'
+  },
+  {
+    up: migration_20261122_020000_brand_redesign_content.up,
+    down: migration_20261122_020000_brand_redesign_content.down,
+    name: '20261122_020000_brand_redesign_content',
   },
 ];
