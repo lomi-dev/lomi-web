@@ -18,14 +18,14 @@
   },
   "features": {
     "terminal": {
-      "duration": 8.4,
-      "sourceDuration": 10,
+      "duration": 17,
+      "sourceDuration": 27,
       "focus": null,
       "zoom": 1
     },
     "panels": {
-      "duration": 9.2,
-      "sourceDuration": 10,
+      "duration": 15,
+      "sourceDuration": 21.5,
       "focus": null,
       "zoom": 1
     },
@@ -80,26 +80,10 @@
       "restAt": 10.1
     },
     "spark": {
-      "duration": 11.4,
-      "sourceDuration": 10,
-      "focus": {
-        "x": 0.59,
-        "y": 0.277
-      },
-      "zoom": 1.16,
-      "zoomIn": [
-        3.6,
-        4.2
-      ],
-      "focusHold": [
-        4.2,
-        10.0
-      ],
-      "pullback": [
-        10.0,
-        10.7
-      ],
-      "restAt": 10.7
+      "duration": 13,
+      "sourceDuration": 16.5,
+      "focus": null,
+      "zoom": 1
     }
   }
 }

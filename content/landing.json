@@ -89,9 +89,9 @@
       },
       {
         "icon": "spark",
-        "title": "Your AI tools",
-        "description": "Run your CLI agent, or chat with your own provider keys.",
-        "detail": "Agents & chat"
+        "title": "AI chat",
+        "description": "Ask Claude Code, Codex or your own API keys without leaving the workspace.",
+        "detail": "Threads & models"
       }
     ]
   },

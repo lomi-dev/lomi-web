@@ -20,12 +20,14 @@ shown again beside the heading.
 When a feature has no uploaded media, the stage shows a composed
 desktop composition built from a recording of the real native Lomi window.
 The six captures match the **Preview scene** choices: terminals, workspaces,
-file editing, browser previews, Git, and AI tools. The supplied Tahoe wallpaper
+file editing, browser previews, Git, and AI chat. The supplied Tahoe wallpaper
 fills the scene, with the application window at 80% of its width. Each silent
-MP4 shows the feature in use, with individual durations from 8.4 to 11.4 seconds.
-Terminals, workspaces, and browser previews use a stationary camera. Code, Git,
-and AI tools (a Claude Code session in the terminal) each use one gentle zoom anchored to the action, returning to the full
-window before the next loop. The actual native
+MP4 shows the feature in use, with individual durations from 8.8 to 17 seconds.
+The terminal capture runs Claude Code and Codex side by side, the workspace
+capture switches between workspaces in the Workspaces list, and the AI chat
+capture asks Chat AI a question. Terminals, workspaces, browser previews, and
+AI chat use a stationary camera. Code and Git each use one gentle zoom anchored
+to the action, returning to the full window before the next loop. The actual native
 titlebar and window controls are part of the recording; CSS supplies the shadow
 and responsive placement, with no added border. Preparation trims the thin
 native frame outline at the edge of the footage. The wallpaper stays stationary. On the stage the

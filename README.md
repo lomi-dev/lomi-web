@@ -249,8 +249,9 @@ PUBLIC_NEWSLETTER_ENDPOINT=https://auth.example.com/v1/newsletter/subscribe bun 
 Feature cards play recordings of the native Lomi window over the
 original Tahoe wallpaper. The recording contains the application's actual
 macOS titlebar. There is no additional window chrome drawn by the website.
-Each clip has its own duration (8.4–11.4 seconds). Terminals, workspaces, and
-browser previews keep a stationary camera; code, Git, and AI tools (Claude Code in the terminal) use one gentle
+Each clip has its own duration (8.8–17 seconds). Terminals (Claude Code and
+Codex), workspaces, browser previews, and AI chat keep a stationary camera;
+code and Git use one gentle
 zoom around the action and return to the full window before looping. Timing
 and camera cues live in `media/feature-demos/cues.json`. The app window has no
 added border, and preparation trims the thin captured macOS frame outline.
